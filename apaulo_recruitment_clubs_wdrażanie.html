@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>A PAULO - Wolontariat v1.0</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; }
+        .app { height: 100vh; display: flex; flex-direction: column; }
+        .navbar { background: linear-gradient(135deg, #333, #1a1a1a); color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .navbar h2 { font-size: 1.5rem; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .main { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 280px; background: linear-gradient(180deg, #222 0%, #1a1a1a 100%); color: #fff; padding: 1.5rem 0; overflow-y: auto; }
+        .nav-item { padding: 1rem 1.5rem; cursor: pointer; border-left: 4px solid transparent; transition: 0.3s; font-size: 0.9rem; }
+        .nav-item:hover { background: rgba(102, 126, 234, 0.1); border-left-color: #667eea; }
+        .nav-item.active { background: linear-gradient(90deg, rgba(102, 126, 234, 0.2), transparent); border-left-color: #667eea; font-weight: 600; }
+        .nav-separator { height: 1px; background: rgba(255,255,255,0.1); margin: 0.5rem 0; }
+        .nav-label { padding: 0.5rem 1.5rem; font-size: 0.7rem; color: #999; font-weight: 600; text-transform: uppercase; }
+        .content { flex: 1; padding: 2rem; overflow-y: auto; background: #f9f9f9; }
+        .page { display: none; }
+        .page.active { display: block; }
+        
+        /* FREEZE HEADER - STICKY TABLE */
+        .table-wrapper { overflow-x: auto; height: calc(100vh - 350px); }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); font-size: 0.7rem; }
+        thead { position: sticky; top: 0; z-index: 10; }
+        th { background: linear-gradient(135deg, #333, #2a2a2a); color: #fff; padding: 0.4rem; font-weight: 600; }
+        td { padding: 0.4rem; border-bottom: 1px solid #e8e8e8; }
+        tr:hover { background: rgba(102, 126, 234, 0.05); }
+        
+        .btn { padding: 0.5rem 0.8rem; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 0.3rem; margin-bottom: 0.3rem; font-size: 0.8rem; transition: all 0.2s; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4); }
+        .btn-small { padding: 0.2rem 0.4rem; font-size: 0.65rem; }
+        .btn-delete { background: #e74c3c; }
+        .btn-add { background: #27ae60; }
+        .btn-promote { background: #f39c12; }
+        .btn-action { background: #3498db; }
+        .btn-budget { background: #e67e22; }
+        .btn-accept { background: #27ae60; }
+        .badge { display: inline-block; padding: 0.2rem 0.4rem; border-radius: 6px; font-size: 0.65rem; font-weight: 600; background: #667eea; color: #fff; }
+        h2 { margin-bottom: 0.8rem; font-size: 1.2rem; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; overflow-y: auto; }
+        .modal.active { display: flex; }
+        .modal-content { background: #fff; padding: 1.5rem; border-radius: 12px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; margin: auto; }
+        .form-group { margin-bottom: 0.6rem; }
+        .form-group label { display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.8rem; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.3rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.8rem; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+        .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem; }
+        .modal-buttons { display: flex; gap: 0.8rem; margin-top: 1rem; }
+        .modal-buttons button { flex: 1; padding: 0.5rem; font-weight: 600; font-size: 0.85rem; }
+        .btn-secondary { background: #95a5a6; }
+        .msg { padding: 0.6rem; border-radius: 6px; margin-bottom: 0.8rem; display: none; background: #d4edda; color: #155724; font-size: 0.8rem; }
+        .msg.show { display: block; animation: fadeInOut 3s; }
+        @keyframes fadeInOut { 0% { opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { opacity: 0; } }
+        .search-bar { display: flex; gap: 0.3rem; margin-bottom: 0.8rem; }
+        .search-bar input { flex: 1; padding: 0.3rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.8rem; }
+        .pref-tag { display: inline-block; padding: 0.15rem 0.3rem; background: #667eea; color: white; border-radius: 3px; font-size: 0.6rem; font-weight: 600; margin: 0 2px; }
+        .pref-checkbox { margin: 0.2rem; display: inline-block; }
+        .pref-checkbox input { margin-right: 0.2rem; cursor: pointer; }
+        .status-badge { display: inline-block; padding: 0.15rem 0.4rem; border-radius: 4px; font-weight: 600; font-size: 0.65rem; }
+        .status-ok { background: #d4edda; color: #155724; }
+        .status-no { background: #f8d7da; color: #721c24; }
+        .date-badge { background: #d1ecf1; color: #0c5460; padding: 0.15rem 0.3rem; border-radius: 3px; font-size: 0.6rem; font-weight: 600; }
+        
+        .tasks-container { display: flex; flex-direction: column; gap: 1rem; }
+        .task-card { background: #fff; border-left: 4px solid #667eea; border-radius: 8px; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: grid; grid-template-columns: 2.5fr 1fr 1fr 1fr 1fr; gap: 1rem; align-items: center; }
+        .task-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .task-info { display: flex; flex-direction: column; gap: 0.3rem; cursor: pointer; }
+        .task-title { font-weight: 600; font-size: 0.95rem; color: #333; }
+        .task-club { display: inline-block; padding: 0.15rem 0.4rem; background: #667eea; color: white; border-radius: 3px; font-size: 0.6rem; font-weight: 600; width: fit-content; margin: 0.2rem 0; }
+        .task-details { font-size: 0.7rem; color: #666; line-height: 1.3; }
+        .task-stats { display: flex; gap: 0.3rem; align-items: center; }
+        .stat-box { display: flex; flex-direction: column; align-items: center; padding: 0.3rem 0.5rem; background: #f5f5f5; border-radius: 4px; min-width: 50px; }
+        .stat-number { font-size: 1.1rem; font-weight: 700; color: #333; }
+        .stat-label { font-size: 0.6rem; color: #666; }
+        .stat-yes { background: #d4edda; }
+        .stat-no { background: #f8d7da; }
+        .stat-pending { background: #fff3cd; }
+        .task-actions { display: flex; gap: 0.2rem; }
+        
+        .decision-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
+        .decision-modal.active { display: flex; }
+        .decision-content { background: #fff; padding: 2rem; border-radius: 12px; width: 90%; max-width: 600px; text-align: center; }
+        .decision-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #333; }
+        .decision-info { background: #f5f5f5; padding: 1rem; border-radius: 8px; margin: 1rem 0; text-align: left; font-size: 0.85rem; line-height: 1.6; }
+        .decision-info div { margin: 0.5rem 0; }
+        .decision-buttons { display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: center; }
+        .btn-yes-big { background: #27ae60; padding: 0.8rem 2rem; font-size: 0.9rem; }
+        .btn-no-big { background: #e74c3c; padding: 0.8rem 2rem; font-size: 0.9rem; }
+        .decision-buttons button:hover { transform: scale(1.05); }
+        
+        .bo-card-form { background: #f9f9f9; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+        .bo-summary { background: #d4edda; padding: 0.8rem; border-radius: 6px; margin-top: 0.5rem; font-size: 0.75rem; }
+        
+        .qr-section { background: #fff; padding: 1.5rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem; }
+        .qr-box { background: #f5f5f5; padding: 2rem; border-radius: 8px; margin: 1rem 0; display: inline-block; }
+        .qr-link { background: #3498db; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 1rem; cursor: pointer; font-weight: 600; }
+        .qr-link:hover { background: #2980b9; }
+        
+        .recruitment-form { background: #fff; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border: 2px solid #667eea; }
+        .recruitment-form h3 { color: #667eea; margin-bottom: 1rem; }
+        
+        .budget-summary { background: #fff; padding: 1rem; border-radius: 8px; margin: 1rem 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        .budget-card { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 1rem; border-radius: 6px; text-align: center; }
+        .budget-number { font-size: 1.5rem; font-weight: 700; }
+        .budget-label { font-size: 0.7rem; opacity: 0.9; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="navbar">
+        <h2>🤝 A PAULO - Wolontariat v1.0</h2>
+        <div style="display: flex; gap: 0.6rem; align-items: center;">
+            <select id="role" onchange="switchRole(this.value)" style="padding: 0.2rem 0.4rem; border-radius: 6px; border: 1px solid #555; background: #333; color: #fff; font-size: 0.75rem;">
+                <option value="admin">Admin</option>
+                <option value="coord">Koordynator</option>
+                <option value="vol">Wolontariusz</option>
+                <option value="fin">Finansista</option>
+            </select>
+            <span id="user" style="font-size: 0.7rem; background: rgba(102, 126, 234, 0.2); padding: 0.15rem 0.4rem; border-radius: 6px;">Admin</span>
+            <button class="btn btn-small" onclick="logout()">Wyloguj</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="sidebar">
+            <div class="nav-label">📊 Zarządzanie</div>
+            <div class="nav-item active" onclick="switchPage('ben', this)">📋 Podopieczni</div>
+            <div class="nav-item" onclick="switchPage('vol', this)">🙋 Wolontariusze</div>
+            <div class="nav-item" onclick="switchPage('recruit', this)">👥 Rekrutacja</div>
+            <div class="nav-item" onclick="switchPage('onboard', this)">🚀 Wdrażanie</div>
+            
+            <div class="nav-separator"></div>
+            <div class="nav-label">🎯 Operacje</div>
+            <div class="nav-item" onclick="switchPage('events', this)">🎯 Wydarzenia</div>
+            <div class="nav-item" onclick="switchPage('tasks', this)">📝 Zadania</div>
+            <div class="nav-item" onclick="switchPage('bo', this)">📋 Karty BO</div>
+            
+            <div class="nav-separator"></div>
+            <div class="nav-label">💼 Admin</div>
+            <div class="nav-item" onclick="switchPage('visits', this)">📅 Wizyty</div>
+            <div class="nav-item" onclick="switchPage('comm', this)">📢 Komunikacja</div>
+            <div class="nav-item" id="navBudget" onclick="switchPage('budget', this)">💰 Fundusze</div>
+        </div>
+
+        <div class="content">
+            <div id="msg" class="msg"></div>
+
+            <!-- PODOPIECZNI -->
+            <div id="ben" class="page active">
+                <h2>📋 Podopieczni</h2>
+                <button class="btn btn-add" onclick="openEdit('ben')">➕ Dodaj</button>
+                <button class="btn btn-action" onclick="exportCSV('benTable', 'Podopieczni')">📥 CSV</button>
+                <div class="search-bar"><input type="text" placeholder="Szukaj..." onkeyup="filterTable('benTable', this.value)"></div>
+                <div class="table-wrapper"><table id="benTable"><thead><tr><th>Imię</th><th>Adres</th><th>Tel</th><th>Grupa</th><th>BO</th><th>Status</th><th>Akcje</th></tr></thead><tbody></tbody></table></div>
+            </div>
+
+            <!-- WOLONTARIUSZE -->
+            <div id="vol" class="page">
+                <h2>🙋 Wolontariusze</h2>
+                <button class="btn btn-add" onclick="openEdit('vol')">➕ Dodaj</button>
+                <button class="btn btn-action" onclick="exportCSV('volTable', 'Wolontariusze')">📥 CSV</button>
+                <div class="search-bar"><input type="text" placeholder="Szukaj..." onkeyup="filterTable('volTable', this.value)"></div>
+                <div class="table-wrapper"><table id="volTable"><thead><tr><th>Imię</th><th>Email</th><th>Tel</th><th>Grupa</th><th>Status</th><th>Kluby</th><th>Akcje</th></tr></thead><tbody></tbody></table></div>
+            </div>
+
+            <!-- REKRUTACJA (ZARZĄDZANIE) -->
+            <div id="recruit" class="page">
+                <h2>👥 Rekrutacja</h2>
+                
+                <!-- QR SEKCJA -->
+                <div class="qr-section">
+                    <h3>📱 QR do Formularza Rekrutacyjnego</h3>
+                    <p style="font-size: 0.85rem; color: #666; margin: 0.5rem 0;">Potencjalni wolontariusze skanują kod i wypełniają formularz Google Forms</p>
+                    <div class="qr-box">
+                        <div style="width: 250px; height: 250px; background: white; border: 2px solid #667eea; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                            <div style="text-align: center; color: #667eea;">
+                                <div style="font-size: 3rem;">📲</div>
+                                <div style="font-size: 0.75rem; margin-top: 1rem;">QR Code<br>(Google Form Link)</div>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="https://forms.gle/example" class="qr-link" target="_blank">🔗 Kopia Linku Google Forms</a>
+                </div>
+
+                <!-- FORMULARZ REJESTRACJI NA STRONIE -->
+                <div class="recruitment-form">
+                    <h3>📝 Formularz Rekrutacji (Wpisz się tutaj)</h3>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Imię i Nazwisko</label><input type="text" id="recruit_n" placeholder="np. Jan Kowalski"></div>
+                        <div class="form-group"><label>Email</label><input type="email" id="recruit_e" placeholder="email@example.com"></div>
+                        <div class="form-group"><label>Telefon</label><input type="tel" id="recruit_t" placeholder="123456789"></div>
+                        <div class="form-group"><label>Link do FB (opcjonalnie)</label><input type="text" id="recruit_fb" placeholder="https://facebook.com/..."></div>
+                    </div>
+                    <div class="form-group"><label>Dyspozycyjność</label><input type="text" id="recruit_dysp" placeholder="np. poniedziałki-czwartki"></div>
+                    <div style="margin-top:1rem;">
+                        <button class="btn btn-add" onclick="submitRecruitmentForm()">✅ Wyślij zgłoszenie</button>
+                    </div>
+                </div>
+
+                <!-- TABELA KANDYDATÓW -->
+                <div class="search-bar"><input type="text" placeholder="Szukaj kandydata..." onkeyup="filterTable('recruitTable', this.value)"></div>
+                <h3 style="margin-bottom: 1rem;">📋 Kandydaci Czekający na Akceptację</h3>
+                <div class="table-wrapper"><table id="recruitTable"><thead><tr><th>Data</th><th>Imię i Nazwisko</th><th>Email</th><th>Telefon</th><th>FB</th><th>Dyspozycyjność</th><th>Status</th><th>Akcje</th></tr></thead><tbody></tbody></table></div>
+            </div>
+
+            <!-- WDRAŻANIE -->
+            <div id="onboard" class="page">
+                <h2>🚀 Wdrażanie Wolontariuszy</h2>
+                <button class="btn btn-add" onclick="openEdit('onboard')">➕ Nowy Kandydat</button>
+                <button class="btn btn-action" onclick="exportCSV('onboardTable', 'Wdrażanie')">📥 CSV</button>
+                <div class="search-bar"><input type="text" placeholder="Szukaj..." onkeyup="filterTable('onboardTable', this.value)"></div>
+                <div class="table-wrapper"><table id="onboardTable"><thead><tr><th>Imię i Nazwisko</th><th>Email</th><th>Telefon</th><th>Data Dołączenia</th><th>Dyspozycyjność</th><th>Charyzmat</th><th>Data Czar.</th><th>Wspólnota</th><th>Data Wsp.</th><th>Działanie</th><th>Data Dział.</th><th>Administracja</th><th>Data Admin.</th><th>Kluby</th><th>Akcje</th></tr></thead><tbody></tbody></table></div>
+            </div>
+
+            <!-- WYDARZENIA -->
+            <div id="events" class="page">
+                <h2>🎯 Wydarzenia</h2>
+                <button class="btn btn-add" onclick="openEdit('event')">➕ Nowe</button>
+                <button class="btn btn-action" onclick="exportCSV('eventsTable', 'Wydarzenia')">📥 CSV</button>
+                <div class="search-bar"><input type="text" placeholder="Szukaj..." onkeyup="filterTable('eventsTable', this.value)"></div>
+                <div class="table-wrapper"><table id="eventsTable"><thead><tr><th>Nazwa</th><th>Klub</th><th>Data</th><th>Lokalizacja</th><th>Opis</th><th>Organizator</th><th>Akcje</th></tr></thead><tbody></tbody></table></div>
+            </div>
+
+            <!-- ZADANIA -->
+            <div id="tasks" class="page">
+                <h2>📝 Zadania</h2>
+                <div class="search-bar"><input type="text" placeholder="Szukaj..." onkeyup="filterTasks(this.value)"></div>
+                <div id="tasksContainer" class="tasks-container"></div>
+            </div>
+
+            <!-- KARTY BO -->
+            <div id="bo" class="page">
+                <h2>📋 Karty Odwiedzin (BO)</h2>
+                <button class="btn btn-add" onclick="openBOForm()">➕ Nowa Karta</button>
+                <button class="btn btn-action" onclick="exportCSV('boTable', 'Karty_BO')">📥 CSV</button>
+                <div class="search-bar"><input type="text" placeholder="Szukaj..." onkeyup="filterTable('boTable', this.value)"></div>
+                <div class="table-wrapper"><table id="boTable"><thead><tr><th>Data</th><th>Podopieczny</th><th>Wolontariusz</th><th>Typ Wizyty</th><th>Status</th><th>Notatki</th><th>Akcje</th></tr></thead><tbody></tbody></table></div>
+            </div>
+
+            <!-- WIZYTY -->
+            <div id="visits" class="page">
+                <h2>📅 Wizyty</h2>
+                <button class="btn btn-add" onclick="openEdit('visit')">➕ Dodaj</button>
+                <button class="btn btn-action" onclick="exportCSV('visTable', 'Wizyty')">📥 CSV</button>
+                <div class="table-wrapper"><table id="visTable"><thead><tr><th>Podopieczny</th><th>Data</th><th>Wolontariusz</th><th>Typ</th><th>Notatki</th><th>Akcje</th></tr></thead><tbody></tbody></table></div>
+            </div>
+
+            <!-- KOMUNIKACJA -->
+            <div id="comm" class="page">
+                <h2>📢 Komunikacja</h2>
+                <button class="btn btn-add" onclick="openEdit('comm')">➕ Ogłoszenie</button>
+                <button class="btn btn-action" onclick="exportCSV('commTable', 'Komunikacja')">📥 CSV</button>
+                <div class="table-wrapper"><table id="commTable"><thead><tr><th>Temat</th><th>Data</th><th>Kategoria</th><th>Dla</th><th>Treść</th><th>Akcje</th></tr></thead><tbody></tbody></table></div>
+            </div>
+
+            <!-- FUNDUSZE -->
+            <div id="budget" class="page">
+                <h2>💰 Zarządzanie Funduszami</h2>
+                <button class="btn btn-add btn-budget" onclick="openEdit('budget')">➕ Wydatek</button>
+                <button class="btn btn-action" onclick="exportCSV('budTable', 'Fundusze')">📥 CSV</button>
+                
+                <div class="budget-summary">
+                    <div class="budget-card">
+                        <div class="budget-number" id="budTotal">0</div>
+                        <div class="budget-label">RAZEM</div>
+                    </div>
+                    <div class="budget-card">
+                        <div class="budget-number" id="budMat">0</div>
+                        <div class="budget-label">Materiały</div>
+                    </div>
+                    <div class="budget-card">
+                        <div class="budget-number" id="budTrans">0</div>
+                        <div class="budget-label">Transport</div>
+                    </div>
+                    <div class="budget-card">
+                        <div class="budget-number" id="budFood">0</div>
+                        <div class="budget-label">Jedzenie</div>
+                    </div>
+                </div>
+                
+                <div class="search-bar"><input type="text" placeholder="Szukaj..." onkeyup="filterTable('budTable', this.value)"></div>
+                <div class="table-wrapper"><table id="budTable"><thead><tr><th>Data</th><th>Typ</th><th>Grupa</th><th>Kwota PLN</th><th>Notatki</th><th>Akcje</th></tr></thead><tbody></tbody></table></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDYCJI -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3 id="editTitle">Edycja</h3>
+        <div id="editForm"></div>
+        <div class="modal-buttons">
+            <button class="btn btn-add" onclick="saveEdit()">💾 Zapisz</button>
+            <button class="btn btn-secondary" onclick="closeEdit()">❌ Anuluj</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL BO FORM -->
+<div id="boModal" class="modal">
+    <div class="modal-content">
+        <h3>📋 Wypełnianie Karty BO</h3>
+        <div class="bo-card-form">
+            <div class="form-grid">
+                <div class="form-group"><label>Data Wizyty</label><input type="date" id="bo_date"></div>
+                <div class="form-group"><label>Podopieczny</label><select id="bo_ben"></select></div>
+                <div class="form-group"><label>Wolontariusz</label><select id="bo_vol"></select></div>
+                <div class="form-group"><label>Typ Wizyty</label><select id="bo_type"><option>Wizyta</option><option>BO</option><option>Konsultacja</option></select></div>
+            </div>
+            <div class="form-group"><label>Status</label><select id="bo_status"><option>Wysłana</option><option>Oddana</option><option>Brak odwiedzin</option></select></div>
+            <div class="form-group"><label>Notatki</label><textarea id="bo_notes" rows="3"></textarea></div>
+            <div class="bo-summary">
+                ✅ Wszystkie dane zostaną zapisane i będą dostępne dla koordynatora
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn btn-add" onclick="saveBOForm()">💾 Zapisz Kartę</button>
+            <button class="btn btn-secondary" onclick="closeBOModal()">❌ Anuluj</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DECYZJI (ZADANIA) -->
+<div id="decisionModal" class="decision-modal">
+    <div class="decision-content">
+        <div class="decision-title" id="decisionTitle">📌 Zadanie</div>
+        <div class="decision-info" id="decisionInfo"></div>
+        <div class="decision-buttons">
+            <button class="btn btn-yes-big" onclick="respondToTask('TAK')">✅ BĘDĘ</button>
+            <button class="btn btn-no-big" onclick="respondToTask('NIE')">❌ NIE BĘDĘ</button>
+            <button class="btn btn-secondary" onclick="closeDecisionModal()">← Wróć</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const CLUBS = ['Odwiedziny', 'Remonty', 'Sprzątania', 'Klub', 'Muzyczni', 'Fizjo', 'Gastro', 'Księgowość', 'Festyny', 'Szkolenia', 'Media'];
+
+let volData = [{"id":"1","n":"Imie i Nazwisko1","e":"adres.email@email.com1","t":"111222333","g":"A","s":"Aktywny","clubs":["Odwiedziny","Sprzątania"]},{"id":"2","n":"Imie i Nazwisko2","e":"adres.email@email.com2","t":"111222333","g":"A","s":"Byli","clubs":["Odwiedziny","Sprzątania"]},{"id":"3","n":"Imie i Nazwisko3","e":"adres.email@email.com3","t":"111222333","g":"A","s":"Byli","clubs":["Odwiedziny","Szkolenia"]},{"id":"4","n":"Imie i Nazwisko4","e":"adres.email@email.com4","t":"111222333","g":"A","s":"Byli","clubs":["Sprzątania"]},{"id":"5","n":"Imie i Nazwisko5","e":"adres.email@email.com5","t":"111222333","g":"A","s":"Byli","clubs":[]},{"id":"6","n":"Imie i Nazwisko6","e":"adres.email@email.com6","t":"111222333","g":"A","s":"Byli","clubs":["Odwiedziny","Remonty","Sprzątania"]},{"id":"7","n":"Imie i Nazwisko7","e":"adres.email@email.com7","t":"111222333","g":"B","s":"Aktywny","clubs":["Remonty","Sprzątania"]},{"id":"8","n":"Imie i Nazwisko8","e":"adres.email@email.com8","t":"111222333","g":"B","s":"Aktywny","clubs":["Odwiedziny","Remonty"]},{"id":"9","n":"Imie i Nazwisko9","e":"adres.email@email.com9","t":"111222333","g":"B","s":"Aktywny","clubs":["Odwiedziny","Festyny"]},{"id":"10","n":"Imie i Nazwisko10","e":"adres.email@email.com10","t":"111222333","g":"B","s":"Aktywny","clubs":["Muzyczni","Sprzątania"]}];
+for(let i = 11; i <= 148; i++) {
+    const status = i % 4 === 0 ? 'Byli' : 'Aktywny';
+    const randClubs = CLUBS.sort(() => Math.random() - 0.5).slice(0, Math.floor(Math.random() * 4) + 1);
+    volData.push({"id":i.toString(),"n":`Imie i Nazwisko${i}`,"e":`adres.email@email.com${i}`,"t":"111222333","g":["A","B","C","D"][i % 4],"s":status,"clubs":randClubs});
+}
+
+let benData = [{"id":"1","n":"Imię Nazwisko1","a":"742 Evergreen Terrace","t":"111111111","g":"A","b":"TAK","s":"OBECNY"},{"id":"2","n":"Imię Nazwisko2","a":"Springfield","t":"111111112","g":"A","b":"TAK","s":"OBECNY"},{"id":"3","n":"Imię Nazwisko3","a":"USA 221B Baker Street","t":"111111113","g":"A","b":"NIE","s":"OBECNY"},{"id":"4","n":"Imię Nazwisko4","a":"London","t":"111111114","g":"A","b":"NIE","s":"OBECNY"},{"id":"5","n":"Imię Nazwisko5","a":"UK 1600 Pennsylvania Ave","t":"111111115","g":"A","b":"NIE","s":"OBECNY"},{"id":"6","n":"Imię Nazwisko6","a":"Washington","t":"111111116","g":"A","b":"TAK","s":"OBECNY"},{"id":"7","n":"Imię Nazwisko7","a":"USA 10 Downing Street","t":"111111117","g":"B","b":"TAK","s":"OBECNY"},{"id":"8","n":"Imię Nazwisko8","a":"London","t":"111111118","g":"B","b":"NIE","s":"OBECNY"},{"id":"9","n":"Imię Nazwisko9","a":"UK 4 Privet Drive","t":"111111119","g":"B","b":"TAK","s":"OBECNY"},{"id":"10","n":"Imię Nazwisko10","a":"Little Whinging","t":"111111120","g":"B","b":"TAK","s":"OBECNY"}];
+for(let i = 11; i <= 65; i++) {
+    benData.push({"id":i.toString(),"n":`Imię Nazwisko${i}`,"a":`Adres ${i}`,"t":"111111130","g":["A","B","C","D"][i % 4],"b":i % 2 === 0 ? "TAK" : "NIE","s":"OBECNY"});
+}
+
+let onboardData = [
+    {"id":"1","n":"Imie i Nazwisko66","e":"adres.email@email.com66","t":"111222333","d":"19.10.22","dysp":"śr - wolna!","ch":"ok","ch_d":"15.10.22","ws":"ok","ws_d":"22.10.22","dz":"","dz_d":"","ad":"","ad_d":"","clubs":[]},
+    {"id":"2","n":"Imie i Nazwisko67","e":"adres.email@email.com67","t":"111222333","d":"20.10.22","dysp":"mam studia","ch":"nb","ch_d":"17.10.22","ws":"ok","ws_d":"24.10.22","dz":"","dz_d":"","ad":"","ad_d":"","clubs":[]},
+    {"id":"3","n":"Imie i Nazwisko68","e":"adres.email@email.com68","t":"111222333","d":"21.10.22","dysp":"dostępny","ch":"","ch_d":"","ws":"","ws_d":"","dz":"ok","dz_d":"29.10.22","ad":"ok","ad_d":"05.11.22","clubs":[]}
+];
+
+let eventData = [
+    {"id":"1","n":"Remont podjazdni dla osób niepełnosprawnych","club":"Remonty","d":"2024-05-20","l":"Dom seniora ul. Kwiatowa 5","desc":"Zespół będzie remontować podjazd","org":"Marek Kowalski (szef Remontów)"},
+    {"id":"2","n":"Sprzątanie i dekorowanie sali","club":"Sprzątania","d":"2024-05-22","l":"Sala Parafii","desc":"Przygotowanie sali do świąt","org":"Anna Nowak (szef Sprzątania)"},
+    {"id":"3","n":"Koncert muzyki folklorystycznej","club":"Muzyczni","d":"2024-05-25","l":"Świetlica wiejska","desc":"Występ zespołu dla podopiecznych","org":"Jan Müller (szef Zespołu Muzycznego)"},
+    {"id":"4","n":"Zajęcia rehabilitacji dla seniorów","club":"Fizjo","d":"2024-06-01","l":"Sala Fitness","desc":"Ćwiczenia pod opieką fizjoterapeuty","org":"Dr Tomasz Lewandowski (szef Fizjo)"},
+    {"id":"5","n":"Festyn rodzinny z zabawami","club":"Festyny","d":"2024-06-05","l":"Park Miejski","desc":"Wielki festyn z grami i konkursy","org":"Katarzyna Zając (szef Festynów)"},
+    {"id":"6","n":"Kurs nauki obsługi komputera","club":"Szkolenia","d":"2024-06-10","l":"Sala Informatyczna","desc":"Kurs podstaw pracy na komputerze","org":"Robert Zawadzki (szef Szkoleń)"}
+];
+
+let taskData = [];
+let visitData = [{"id":"1","bn":"Imię Nazwisko1","vn":"Imie i Nazwisko1","d":"2024-05-10","t":"Wizyta","notes":"Wizyta kontrolna"},{"id":"2","bn":"Imię Nazwisko2","vn":"Imie i Nazwisko7","d":"2024-05-12","t":"BO","notes":"Badanie lekarskie"},{"id":"3","bn":"Imię Nazwisko3","vn":"Imie i Nazwisko2","d":"2024-05-15","t":"Wizyta","notes":"Zakupienie leków"}];
+let commData = [{"id":"1","s":"Zmiana grafiku wizyt","c":"Ważne","d":"2024-05-10","for":"Wszyscy","t":"Zmiana grafiku wizyt na tydzień z 20 maja"},{"id":"2","s":"Wolontariat w wakacje","c":"Ogólne","d":"2024-05-15","for":"Wolontariusze","t":"Zachęcamy do udziału w projekcie letnim"},{"id":"3","s":"Urlop zespołu","c":"Urlopowe","d":"2024-05-18","for":"Koordynatorzy","t":"Zespół będzie niedostępny od 25 maja do 5 czerwca"}];
+let budData = [{"id":"1","d":"2024-05-10","t":"Materiały","g":"B","a":"800","n":"Farba, pędzle i materiały na remont"},{"id":"2","d":"2024-05-12","t":"Transport","g":"A","a":"200","n":"Benzyna do samochodu dojazdowego"},{"id":"3","d":"2024-05-15","t":"Opał","g":"C","a":"1500","n":"Zakup drewna na opał na zimę"},{"id":"4","d":"2024-05-18","t":"Jedzenie","g":"D","a":"350","n":"Ciasta i napoje na festyn"}];
+let boData = [{"id":"1","d":"2024-05-10","bn":"Imię Nazwisko1","vn":"Imie i Nazwisko1","t":"Wizyta","st":"Wysłana","n":"Wizyta przebiegła pomyślnie"},{"id":"2","d":"2024-05-12","bn":"Imię Nazwisko2","vn":"Imie i Nazwisko7","t":"BO","st":"Oddana","n":"Badanie przeprowadzone"}];
+let recruitData = [{"id":"1","d":"19.10.22","n":"Imie i Nazwisko66","e":"adres.email@email.com66","t":"111222333","fb":"link do FB","dysp":"śr - wolna!","st":"Nowy"},{"id":"2","d":"20.10.22","n":"Imie i Nazwisko67","e":"adres.email@email.com67","t":"111222333","fb":"link do FB","dysp":"mam studia","st":"W trakcie"},{"id":"3","d":"21.10.22","n":"Imie i Nazwisko68","e":"adres.email@email.com68","t":"111222333","fb":"link do FB","dysp":"dostępny","st":"Zaakceptowany"}];
+
+let currentEdit = null, currentTaskId = null;
+
+function submitRecruitmentForm() {
+    const n = document.getElementById('recruit_n').value.trim();
+    const e = document.getElementById('recruit_e').value.trim();
+    const t = document.getElementById('recruit_t').value.trim();
+    const fb = document.getElementById('recruit_fb').value.trim();
+    const dysp = document.getElementById('recruit_dysp').value.trim();
+
+    if(!n || !e || !t) {
+        showMsg('❌ Wypełnij wymagane pola: Imię, Email, Telefon');
+        return;
+    }
+
+    const today = new Date().toLocaleDateString('pl-PL');
+    const newRecruitment = {
+        id: Date.now().toString(),
+        d: today,
+        n: n,
+        e: e,
+        t: t,
+        fb: fb || '—',
+        dysp: dysp,
+        st: "Nowy"
+    };
+
+    recruitData.push(newRecruitment);
+    
+    document.getElementById('recruit_n').value = '';
+    document.getElementById('recruit_e').value = '';
+    document.getElementById('recruit_t').value = '';
+    document.getElementById('recruit_fb').value = '';
+    document.getElementById('recruit_dysp').value = '';
+
+    renderRecruitTable();
+    showMsg(`✅ Zgłoszenie ${n} zostało przyjęte!`);
+}
+
+function updateBOSelects() {
+    const benSelect = document.getElementById('bo_ben');
+    const volSelect = document.getElementById('bo_vol');
+    if(benSelect && volSelect) {
+        benSelect.innerHTML = benData.map(b => `<option>${b.n}</option>`).join('');
+        volSelect.innerHTML = volData.slice(0, 20).map(v => `<option>${v.n}</option>`).join('');
+    }
+}
+
+function generateTasksSmartly() {
+    taskData = [];
+    let id = 1;
+    eventData.forEach(event => {
+        const eventClub = event.club;
+        const eligibleVols = volData.filter(v => v.clubs.includes(eventClub) && v.s === 'Aktywny');
+        eligibleVols.forEach((vol) => {
+            const respOptions = ['TAK', 'NIE', ''];
+            const resp = respOptions[Math.floor(Math.random() * 3)];
+            taskData.push({"id": id.toString(),"eid": event.id,"vid": vol.id,"resp": resp});
+            id++;
+        });
+    });
+}
+generateTasksSmartly();
+
+function updateBudgetSummary() {
+    const total = budData.reduce((s, b) => s + parseInt(b.a), 0);
+    const mat = budData.filter(b => b.t === 'Materiały').reduce((s, b) => s + parseInt(b.a), 0);
+    const trans = budData.filter(b => b.t === 'Transport').reduce((s, b) => s + parseInt(b.a), 0);
+    const food = budData.filter(b => b.t === 'Jedzenie').reduce((s, b) => s + parseInt(b.a), 0);
+    document.getElementById('budTotal').textContent = total + ' PLN';
+    document.getElementById('budMat').textContent = mat + ' PLN';
+    document.getElementById('budTrans').textContent = trans + ' PLN';
+    document.getElementById('budFood').textContent = food + ' PLN';
+}
+
+function switchRole(r) {
+    const roles = {admin:'Admin', coord:'Koordynator', vol:'Wolontariusz', fin:'Finansista'};
+    document.getElementById('user').textContent = roles[r] || r;
+    const budgetVisible = (r === 'admin' || r === 'fin');
+    document.getElementById('navBudget').style.display = budgetVisible ? '' : 'none';
+}
+
+function switchPage(p, el) {
+    document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+    document.getElementById(p).classList.add('active');
+    el.classList.add('active');
+    
+    if(p === 'ben') renderTable('benTable', benData, 'ben');
+    else if(p === 'vol') renderTable('volTable', volData, 'vol');
+    else if(p === 'recruit') renderRecruitTable();
+    else if(p === 'onboard') renderOnboardTable();
+    else if(p === 'events') renderTable('eventsTable', eventData, 'event');
+    else if(p === 'tasks') renderTasksCardView();
+    else if(p === 'bo') { renderBOTable(); updateBOSelects(); }
+    else if(p === 'visits') renderTable('visTable', visitData, 'visit');
+    else if(p === 'comm') renderTable('commTable', commData, 'comm');
+    else if(p === 'budget') { renderTable('budTable', budData, 'budget'); updateBudgetSummary(); }
+}
+
+function renderTable(tableId, data, type) {
+    const tbl = document.getElementById(tableId);
+    if(!tbl) return;
+    const tbody = tbl.querySelector('tbody');
+    tbody.innerHTML = '';
+    
+    data.forEach(d => {
+        const tr = document.createElement('tr');
+        if(type === 'ben') {
+            tr.innerHTML = `<td>${d.n}</td><td style="font-size:0.65rem;">${d.a}</td><td>${d.t}</td><td>${d.g}</td><td>${d.b}</td><td><span class="status-badge status-ok">${d.s}</span></td><td><button class="btn btn-small" onclick="openEdit('${type}','${d.id}')">✏️</button><button class="btn btn-small btn-delete" onclick="deleteItem('${type}','${d.id}')">🗑️</button></td>`;
+        } else if(type === 'vol') {
+            const clubs = d.clubs && d.clubs.length ? d.clubs.map(c => `<span class="pref-tag">${c}</span>`).join('') : '—';
+            tr.innerHTML = `<td>${d.n}</td><td style="font-size:0.6rem;">${d.e}</td><td>${d.t}</td><td>${d.g}</td><td><span class="status-badge status-ok">${d.s}</span></td><td style="font-size:0.65rem;">${clubs}</td><td><button class="btn btn-small" onclick="openEdit('${type}','${d.id}')">✏️</button><button class="btn btn-small btn-delete" onclick="deleteItem('${type}','${d.id}')">🗑️</button></td>`;
+        } else if(type === 'event') {
+            tr.innerHTML = `<td>${d.n}</td><td><span class="badge">${d.club}</span></td><td>${d.d}</td><td style="font-size:0.6rem;">${d.l}</td><td style="font-size:0.6rem;">${d.desc}</td><td style="font-size:0.6rem;">${d.org}</td><td><button class="btn btn-small" onclick="openEdit('${type}','${d.id}')">✏️</button><button class="btn btn-small btn-delete" onclick="deleteItem('${type}','${d.id}')">🗑️</button></td>`;
+        } else if(type === 'visit') {
+            tr.innerHTML = `<td>${d.bn}</td><td>${d.d}</td><td>${d.vn}</td><td>${d.t}</td><td style="font-size:0.6rem;">${d.notes}</td><td><button class="btn btn-small" onclick="openEdit('${type}','${d.id}')">✏️</button><button class="btn btn-small btn-delete" onclick="deleteItem('${type}','${d.id}')">🗑️</button></td>`;
+        } else if(type === 'comm') {
+            tr.innerHTML = `<td>${d.s}</td><td>${d.d}</td><td>${d.c}</td><td>${d.for}</td><td style="font-size:0.6rem;">${d.t}</td><td><button class="btn btn-small" onclick="openEdit('${type}','${d.id}')">✏️</button><button class="btn btn-small btn-delete" onclick="deleteItem('${type}','${d.id}')">🗑️</button></td>`;
+        } else if(type === 'budget') {
+            tr.innerHTML = `<td>${d.d}</td><td>${d.t}</td><td>${d.g}</td><td><strong>${d.a} PLN</strong></td><td style="font-size:0.6rem;">${d.n}</td><td><button class="btn btn-small" onclick="openEdit('${type}','${d.id}')">✏️</button><button class="btn btn-small btn-delete" onclick="deleteItem('${type}','${d.id}')">🗑️</button></td>`;
+        }
+        tbody.appendChild(tr);
+    });
+}
+
+function renderOnboardTable() {
+    const tbl = document.getElementById('onboardTable');
+    const tbody = tbl.querySelector('tbody');
+    tbody.innerHTML = '';
+    onboardData.forEach(d => {
+        const tr = document.createElement('tr');
+        const clubs = d.clubs && d.clubs.length ? d.clubs.map(c => `<span class="pref-tag">${c}</span>`).join('') : '—';
+        tr.innerHTML = `<td>${d.n}</td><td style="font-size:0.6rem;">${d.e}</td><td>${d.t}</td><td>${d.d}</td><td style="font-size:0.65rem;">${d.dysp}</td><td style="text-align:center;font-size:0.65rem;background:${d.ch?'#d4edda':'#f0f0f0'}">${d.ch || '—'}</td><td style="font-size:0.65rem;text-align:center;"><span class="date-badge">${d.ch_d || '—'}</span></td><td style="text-align:center;font-size:0.65rem;background:${d.ws?'#d4edda':'#f0f0f0'}">${d.ws || '—'}</td><td style="font-size:0.65rem;text-align:center;"><span class="date-badge">${d.ws_d || '—'}</span></td><td style="text-align:center;font-size:0.65rem;background:${d.dz?'#d4edda':'#f0f0f0'}">${d.dz || '—'}</td><td style="font-size:0.65rem;text-align:center;"><span class="date-badge">${d.dz_d || '—'}</span></td><td style="text-align:center;font-size:0.65rem;background:${d.ad?'#d4edda':'#f0f0f0'}">${d.ad || '—'}</td><td style="font-size:0.65rem;text-align:center;"><span class="date-badge">${d.ad_d || '—'}</span></td><td style="font-size:0.65rem;">${clubs}</td><td><button class="btn btn-small btn-promote" onclick="promoteToVolunteer('${d.id}')">✅ Promuj</button><button class="btn btn-small" onclick="openEdit('onboard','${d.id}')">✏️</button><button class="btn btn-small btn-delete" onclick="deleteItem('onboard','${d.id}')">🗑️</button></td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderRecruitTable() {
+    const tbl = document.getElementById('recruitTable');
+    const tbody = tbl.querySelector('tbody');
+    tbody.innerHTML = '';
+    recruitData.forEach(d => {
+        const tr = document.createElement('tr');
+        const statusColor = d.st === 'Nowy' ? '#fff3cd' : d.st === 'W trakcie' ? '#d1ecf1' : '#d4edda';
+        tr.innerHTML = `<td>${d.d}</td><td>${d.n}</td><td style="font-size:0.6rem;">${d.e}</td><td>${d.t}</td><td><span style="font-size:0.6rem;">FB</span></td><td style="font-size:0.65rem;">${d.dysp}</td><td><span style="background:${statusColor};padding:0.2rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:600;">${d.st}</span></td><td><button class="btn btn-small btn-accept" onclick="moveToOnboard('${d.id}')">✅ Zaakceptuj</button><button class="btn btn-small btn-delete" onclick="deleteItem('recruit','${d.id}')">🗑️</button></td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function moveToOnboard(recruitId) {
+    const candidate = recruitData.find(c => c.id === recruitId);
+    if(!candidate) return;
+    
+    const newOnboard = {
+        id: Date.now().toString(),
+        n: candidate.n,
+        e: candidate.e,
+        t: candidate.t,
+        d: candidate.d,
+        dysp: candidate.dysp,
+        ch: "",
+        ch_d: "",
+        ws: "",
+        ws_d: "",
+        dz: "",
+        dz_d: "",
+        ad: "",
+        ad_d: "",
+        clubs: []
+    };
+    
+    onboardData.push(newOnboard);
+    recruitData = recruitData.filter(c => c.id !== recruitId);
+    
+    renderRecruitTable();
+    showMsg(`✅ ${candidate.n} przeniesiony do Wdrażania!`);
+}
+
+function promoteToVolunteer(candidateId) {
+    const candidate = onboardData.find(c => c.id === candidateId);
+    if(!candidate) return;
+    
+    const newVol = {
+        id: Date.now().toString(),
+        n: candidate.n,
+        e: candidate.e,
+        t: candidate.t,
+        g: "A",
+        s: "Aktywny",
+        clubs: candidate.clubs || []
+    };
+    
+    volData.push(newVol);
+    onboardData = onboardData.filter(c => c.id !== candidateId);
+    
+    renderOnboardTable();
+    showMsg(`✅ ${candidate.n} promowany(a) do Wolontariusza!`);
+}
+
+function renderTasksCardView() {
+    const container = document.getElementById('tasksContainer');
+    container.innerHTML = '';
+    eventData.forEach(event => {
+        const tasksForEvent = taskData.filter(t => t.eid === event.id);
+        const yes = tasksForEvent.filter(t => t.resp === 'TAK').length;
+        const no = tasksForEvent.filter(t => t.resp === 'NIE').length;
+        const pending = tasksForEvent.filter(t => t.resp === '').length;
+        const card = document.createElement('div');
+        card.className = 'task-card';
+        card.innerHTML = `<div class="task-info" onclick="openDecisionModal('${event.id}')"><div class="task-title">📌 ${event.n}</div><span class="task-club">${event.club}</span><div class="task-details"><strong>${event.desc}</strong><br>📍 ${event.l}<br>📅 ${event.d}<br>👤 <em>${event.org}</em></div></div><div class="task-stats"><div class="stat-box stat-yes"><div class="stat-number">${yes}</div><div class="stat-label">✅</div></div></div><div class="task-stats"><div class="stat-box stat-no"><div class="stat-number">${no}</div><div class="stat-label">❌</div></div></div><div class="task-stats"><div class="stat-box stat-pending"><div class="stat-number">${pending}</div><div class="stat-label">⏳</div></div></div><div class="task-actions"><button class="btn btn-action btn-small" onclick="openDecisionModal('${event.id}')">Odpowiedz</button><button class="btn btn-small" onclick="openEdit('event','${event.id}')">✏️</button><button class="btn btn-small btn-delete" onclick="deleteItem('event','${event.id}')">🗑️</button></div>`;
+        container.appendChild(card);
+    });
+}
+
+function renderBOTable() {
+    const tbl = document.getElementById('boTable');
+    const tbody = tbl.querySelector('tbody');
+    tbody.innerHTML = '';
+    boData.forEach(d => {
+        const tr = document.createElement('tr');
+        const statusColor = d.st === 'Wysłana' ? '#fff3cd' : d.st === 'Oddana' ? '#d4edda' : '#f8d7da';
+        tr.innerHTML = `<td>${d.d}</td><td>${d.bn}</td><td>${d.vn}</td><td>${d.t}</td><td><span style="background:${statusColor};padding:0.2rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:600;">${d.st}</span></td><td style="font-size:0.6rem;">${d.n}</td><td><button class="btn btn-small" onclick="openEdit('bo','${d.id}')">✏️</button><button class="btn btn-small btn-delete" onclick="deleteItem('bo','${d.id}')">🗑️</button></td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function openBOForm() {
+    updateBOSelects();
+    document.getElementById('boModal').classList.add('active');
+}
+
+function saveBOForm() {
+    const d = new Date(document.getElementById('bo_date').value);
+    const newBO = {
+        id: Date.now().toString(),
+        d: d.toISOString().split('T')[0],
+        bn: document.getElementById('bo_ben').value,
+        vn: document.getElementById('bo_vol').value,
+        t: document.getElementById('bo_type').value,
+        st: document.getElementById('bo_status').value,
+        n: document.getElementById('bo_notes').value
+    };
+    boData.push(newBO);
+    renderBOTable();
+    closeBOModal();
+    showMsg('✅ Karta BO zapisana!');
+}
+
+function closeBOModal() { document.getElementById('boModal').classList.remove('active'); }
+
+function openDecisionModal(eventId) {
+    const event = eventData.find(e => e.id === eventId);
+    if(!event) return;
+    currentTaskId = eventId;
+    document.getElementById('decisionTitle').textContent = `📌 ${event.n}`;
+    const tasksForEvent = taskData.filter(t => t.eid === eventId);
+    const yes = tasksForEvent.filter(t => t.resp === 'TAK').length;
+    const no = tasksForEvent.filter(t => t.resp === 'NIE').length;
+    const pending = tasksForEvent.filter(t => t.resp === '').length;
+    document.getElementById('decisionInfo').innerHTML = `<div><strong>Typ:</strong> ${event.club}</div><div><strong>Kiedy:</strong> ${event.d}</div><div><strong>Gdzie:</strong> ${event.l}</div><div><strong>Co:</strong> ${event.desc}</div><div><strong>Organizator:</strong> ${event.org}</div><hr><div style="text-align: center;"><strong>Odpowiedzi:</strong><br>✅ BĘDĘ: ${yes} | ❌ NIE BĘDĘ: ${no} | ⏳ Oczekuje: ${pending}</div>`;
+    document.getElementById('decisionModal').classList.add('active');
+}
+
+function respondToTask(resp) {
+    const task = taskData.find(t => t.eid === currentTaskId && t.resp === '');
+    if(task) { task.resp = resp; showMsg(resp === 'TAK' ? '✅ Potwierdzono!' : '❌ Odmówiono'); renderTasksCardView(); closeDecisionModal(); }
+}
+
+function closeDecisionModal() { document.getElementById('decisionModal').classList.remove('active'); currentTaskId = null; }
+
+function filterTable(tbl, q) { document.querySelectorAll(`#${tbl} tbody tr`).forEach(r => { r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none'; }); }
+
+function filterTasks(q) { document.querySelectorAll('.task-card').forEach(card => { card.style.display = card.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none'; }); }
+
+function openEdit(type, id) {
+    currentEdit = {type, id};
+    let formHtml = '';
+    if(type === 'onboard') {
+        const item = onboardData.find(x => x.id === id) || {};
+        const clubCheckboxes = CLUBS.map(c => `<label class="pref-checkbox"><input type="checkbox" value="${c}" ${item.clubs && item.clubs.includes(c) ? 'checked' : ''}>${c}</label>`).join('');
+        formHtml = `<div class="form-grid"><div class="form-group"><label>Imię i Nazwisko</label><input id="edit_n" value="${item.n || ''}"></div><div class="form-group"><label>Email</label><input id="edit_e" value="${item.e || ''}"></div><div class="form-group"><label>Telefon</label><input id="edit_t" value="${item.t || ''}"></div><div class="form-group"><label>Data Dołączenia</label><input type="date" id="edit_d" value="${item.d || ''}"></div><div class="form-group"><label>Dyspozycyjność</label><input id="edit_dysp" value="${item.dysp || ''}"></div></div><h4 style="color:#667eea;margin-top:0.8rem;">Zainteresowania (Kluby):</h4><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.4rem;margin:0.8rem 0;">${clubCheckboxes}</div><h4 style="color:#667eea;margin-top:0.8rem;">Spotkania Formacyjne:</h4><div class="form-grid-3"><div><div class="form-group"><label>Charyzmat</label><select id="edit_ch"><option value="">—</option><option value="ok" ${item.ch==='ok'?'selected':''}>ok</option><option value="nb" ${item.ch==='nb'?'selected':''}>nb</option></select></div><div class="form-group"><label>Data Charyzmat</label><input type="date" id="edit_ch_d" value="${item.ch_d || ''}"></div></div><div><div class="form-group"><label>Wspólnota</label><select id="edit_ws"><option value="">—</option><option value="ok" ${item.ws==='ok'?'selected':''}>ok</option><option value="nb" ${item.ws==='nb'?'selected':''}>nb</option></select></div><div class="form-group"><label>Data Wspólnota</label><input type="date" id="edit_ws_d" value="${item.ws_d || ''}"></div></div><div><div class="form-group"><label>Działanie</label><select id="edit_dz"><option value="">—</option><option value="ok" ${item.dz==='ok'?'selected':''}>ok</option><option value="nb" ${item.dz==='nb'?'selected':''}>nb</option></select></div><div class="form-group"><label>Data Działanie</label><input type="date" id="edit_dz_d" value="${item.dz_d || ''}"></div></div></div><h4 style="color:#667eea;margin-top:0.8rem;">Administracja:</h4><div class="form-grid"><div class="form-group"><label>Administracja</label><select id="edit_ad"><option value="">—</option><option value="ok" ${item.ad==='ok'?'selected':''}>ok</option><option value="nb" ${item.ad==='nb'?'selected':''}>nb</option></select></div><div class="form-group"><label>Data Administracja</label><input type="date" id="edit_ad_d" value="${item.ad_d || ''}"></div></div>`;
+    } else if(type === 'ben') {
+        const item = benData.find(x => x.id === id) || {};
+        formHtml = `<div class="form-grid"><div class="form-group"><label>Imię</label><input id="edit_n" value="${item.n || ''}"></div><div class="form-group"><label>Adres</label><input id="edit_a" value="${item.a || ''}"></div><div class="form-group"><label>Telefon</label><input id="edit_t" value="${item.t || ''}"></div><div class="form-group"><label>Grupa</label><select id="edit_g"><option ${item.g === 'A' ? 'selected' : ''}>A</option><option ${item.g === 'B' ? 'selected' : ''}>B</option><option ${item.g === 'C' ? 'selected' : ''}>C</option><option ${item.g === 'D' ? 'selected' : ''}>D</option></select></div><div class="form-group"><label>BO</label><select id="edit_b"><option ${item.b === 'TAK' ? 'selected' : ''}>TAK</option><option ${item.b === 'NIE' ? 'selected' : ''}>NIE</option></select></div></div>`;
+    } else if(type === 'vol') {
+        const item = volData.find(x => x.id === id) || {};
+        const clubCheckboxes = CLUBS.map(c => `<label class="pref-checkbox"><input type="checkbox" value="${c}" ${item.clubs && item.clubs.includes(c) ? 'checked' : ''}>${c}</label>`).join('');
+        formHtml = `<div class="form-grid"><div class="form-group"><label>Imię</label><input id="edit_n" value="${item.n || ''}"></div><div class="form-group"><label>Email</label><input id="edit_e" value="${item.e || ''}"></div><div class="form-group"><label>Telefon</label><input id="edit_t" value="${item.t || ''}"></div><div class="form-group"><label>Grupa</label><select id="edit_g"><option ${item.g === 'A' ? 'selected' : ''}>A</option><option ${item.g === 'B' ? 'selected' : ''}>B</option><option ${item.g === 'C' ? 'selected' : ''}>C</option><option ${item.g === 'D' ? 'selected' : ''}>D</option></select></div></div><h4 style="color:#667eea;margin-top:0.8rem;">Zainteresowania (Kluby):</h4><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.4rem;margin:0.8rem 0;">${clubCheckboxes}</div>`;
+    } else if(type === 'event') {
+        const item = eventData.find(x => x.id === id) || {};
+        const clubOptions = CLUBS.map(c => `<option ${item.club === c ? 'selected' : ''}>${c}</option>`).join('');
+        formHtml = `<div class="form-grid"><div class="form-group"><label>Nazwa</label><input id="edit_n" value="${item.n || ''}"></div><div class="form-group"><label>Klub</label><select id="edit_club">${clubOptions}</select></div><div class="form-group"><label>Data</label><input type="date" id="edit_d" value="${item.d || ''}"></div><div class="form-group"><label>Lokalizacja</label><input id="edit_l" value="${item.l || ''}"></div></div><div class="form-group"><label>Opis</label><textarea id="edit_desc" rows="2">${item.desc || ''}</textarea></div><div class="form-group"><label>Organizator (szef klubu)</label><input id="edit_org" value="${item.org || ''}"></div>`;
+    } else if(type === 'budget') {
+        const item = budData.find(x => x.id === id) || {};
+        formHtml = `<div class="form-grid"><div class="form-group"><label>Data</label><input type="date" id="edit_d" value="${item.d || ''}"></div><div class="form-group"><label>Typ</label><select id="edit_t"><option ${item.t === 'Materiały' ? 'selected' : ''}>Materiały</option><option ${item.t === 'Transport' ? 'selected' : ''}>Transport</option><option ${item.t === 'Opał' ? 'selected' : ''}>Opał</option><option ${item.t === 'Jedzenie' ? 'selected' : ''}>Jedzenie</option></select></div><div class="form-group"><label>Grupa</label><select id="edit_g"><option ${item.g === 'A' ? 'selected' : ''}>A</option><option ${item.g === 'B' ? 'selected' : ''}>B</option><option ${item.g === 'C' ? 'selected' : ''}>C</option><option ${item.g === 'D' ? 'selected' : ''}>D</option></select></div><div class="form-group"><label>Kwota PLN</label><input type="number" id="edit_a" value="${item.a || 0}"></div></div><div class="form-group"><label>Notatki</label><textarea id="edit_n" rows="2">${item.n || ''}</textarea></div>`;
+    }
+    document.getElementById('editTitle').textContent = `Edycja (${type === 'onboard' ? 'Kandydat' : type})`;
+    document.getElementById('editForm').innerHTML = formHtml;
+    document.getElementById('editModal').classList.add('active');
+}
+
+function closeEdit() { document.getElementById('editModal').classList.remove('active'); }
+
+function saveEdit() {
+    if(!currentEdit) return;
+    const {type, id} = currentEdit;
+    if(type === 'onboard') {
+        let item = onboardData.find(x => x.id === id);
+        if(!item) { item = {id: Date.now().toString()}; onboardData.push(item); }
+        item.n = document.getElementById('edit_n').value;
+        item.e = document.getElementById('edit_e').value;
+        item.t = document.getElementById('edit_t').value;
+        item.d = document.getElementById('edit_d').value;
+        item.dysp = document.getElementById('edit_dysp').value;
+        item.ch = document.getElementById('edit_ch').value;
+        item.ch_d = document.getElementById('edit_ch_d').value;
+        item.ws = document.getElementById('edit_ws').value;
+        item.ws_d = document.getElementById('edit_ws_d').value;
+        item.dz = document.getElementById('edit_dz').value;
+        item.dz_d = document.getElementById('edit_dz_d').value;
+        item.ad = document.getElementById('edit_ad').value;
+        item.ad_d = document.getElementById('edit_ad_d').value;
+        item.clubs = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        renderOnboardTable();
+    } else if(type === 'ben') {
+        let item = benData.find(x => x.id === id);
+        if(!item) { item = {id: Date.now().toString()}; benData.push(item); }
+        item.n = document.getElementById('edit_n').value;
+        item.a = document.getElementById('edit_a').value;
+        item.t = document.getElementById('edit_t').value;
+        item.g = document.getElementById('edit_g').value;
+        item.b = document.getElementById('edit_b').value;
+        renderTable('benTable', benData, 'ben');
+    } else if(type === 'vol') {
+        let item = volData.find(x => x.id === id);
+        if(!item) { item = {id: Date.now().toString()}; volData.push(item); }
+        item.n = document.getElementById('edit_n').value;
+        item.e = document.getElementById('edit_e').value;
+        item.t = document.getElementById('edit_t').value;
+        item.g = document.getElementById('edit_g').value;
+        item.clubs = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        generateTasksSmartly();
+        renderTable('volTable', volData, 'vol');
+    } else if(type === 'event') {
+        let item = eventData.find(x => x.id === id);
+        if(!item) { item = {id: Date.now().toString()}; eventData.push(item); }
+        item.n = document.getElementById('edit_n').value;
+        item.club = document.getElementById('edit_club').value;
+        item.d = document.getElementById('edit_d').value;
+        item.l = document.getElementById('edit_l').value;
+        item.desc = document.getElementById('edit_desc').value;
+        item.org = document.getElementById('edit_org').value;
+        generateTasksSmartly();
+        renderTable('eventsTable', eventData, 'event');
+        renderTasksCardView();
+    } else if(type === 'budget') {
+        let item = budData.find(x => x.id === id);
+        if(!item) { item = {id: Date.now().toString()}; budData.push(item); }
+        item.d = document.getElementById('edit_d').value;
+        item.t = document.getElementById('edit_t').value;
+        item.g = document.getElementById('edit_g').value;
+        item.a = document.getElementById('edit_a').value;
+        item.n = document.getElementById('edit_n').value;
+        renderTable('budTable', budData, 'budget');
+        updateBudgetSummary();
+    }
+    showMsg('✅ Zapisano!');
+    closeEdit();
+}
+
+function deleteItem(type, id) {
+    if(confirm('Usunąć?')) {
+        if(type === 'ben') benData = benData.filter(x => x.id !== id);
+        else if(type === 'vol') { volData = volData.filter(x => x.id !== id); generateTasksSmartly(); }
+        else if(type === 'onboard') onboardData = onboardData.filter(x => x.id !== id);
+        else if(type === 'event') { eventData = eventData.filter(x => x.id !== id); generateTasksSmartly(); }
+        else if(type === 'recruit') recruitData = recruitData.filter(x => x.id !== id);
+        else if(type === 'bo') boData = boData.filter(x => x.id !== id);
+        else if(type === 'visit') visitData = visitData.filter(x => x.id !== id);
+        else if(type === 'comm') commData = commData.filter(x => x.id !== id);
+        else if(type === 'budget') { budData = budData.filter(x => x.id !== id); updateBudgetSummary(); }
+        showMsg('❌ Usunięto!');
+        const pageMap = {ben:'ben', vol:'vol', onboard:'onboard', event:'events', recruit:'recruit', bo:'bo', visit:'visits', comm:'comm', budget:'budget'};
+        switchPage(pageMap[type], document.querySelector('.nav-item.active'));
+    }
+}
+
+function exportCSV(tbl, name) {
+    const table = document.getElementById(tbl);
+    if(!table) return;
+    let csv = [];
+    table.querySelectorAll('tr').forEach(row => {
+        const cols = row.querySelectorAll('td, th');
+        const rowData = [];
+        cols.forEach((col, idx) => { if(idx < cols.length - 1) rowData.push('"' + col.textContent.trim() + '"'); });
+        if(rowData.length > 0) csv.push(rowData.join(','));
+    });
+    const blob = new Blob([csv.join('\n')], {type: 'text/csv;charset=utf-8;'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = name + '.csv';
+    link.click();
+    showMsg('✅ Plik pobrano!');
+}
+
+function showMsg(msg) {
+    const el = document.getElementById('msg');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function logout() { if(confirm('Wylogować się?')) window.location.reload(); }
+
+switchRole('admin');
+switchPage('ben', document.querySelector('.nav-item.active'));
+updateBudgetSummary();
+</script>
+</body>
+</html>
