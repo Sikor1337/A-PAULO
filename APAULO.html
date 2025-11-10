@@ -1,0 +1,2418 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NGO Dashboard - Zarządzanie Wolontariatem</title>
+    <style>
+        /* DESIGN SYSTEM */
+        :root {
+            --color-white: rgba(255, 255, 255, 1);
+            --color-black: rgba(0, 0, 0, 1);
+            --color-cream-50: rgba(252, 252, 249, 1);
+            --color-cream-100: rgba(255, 255, 253, 1);
+            --color-gray-200: rgba(245, 245, 245, 1);
+            --color-gray-300: rgba(167, 169, 169, 1);
+            --color-gray-400: rgba(119, 124, 124, 1);
+            --color-slate-500: rgba(98, 108, 113, 1);
+            --color-brown-600: rgba(94, 82, 64, 1);
+            --color-charcoal-700: rgba(31, 33, 33, 1);
+            --color-charcoal-800: rgba(38, 40, 40, 1);
+            --color-slate-900: rgba(19, 52, 59, 1);
+            --color-teal-300: rgba(50, 184, 198, 1);
+            --color-teal-400: rgba(45, 166, 178, 1);
+            --color-teal-500: rgba(33, 128, 141, 1);
+            --color-teal-600: rgba(29, 116, 128, 1);
+            --color-teal-700: rgba(26, 104, 115, 1);
+            --color-red-400: rgba(255, 84, 89, 1);
+            --color-red-500: rgba(192, 21, 47, 1);
+            --color-orange-400: rgba(230, 129, 97, 1);
+            --color-orange-500: rgba(168, 75, 47, 1);
+            --color-brown-600-rgb: 94, 82, 64;
+            --color-teal-500-rgb: 33, 128, 141;
+            --color-slate-900-rgb: 19, 52, 59;
+            --color-background: var(--color-cream-50);
+            --color-surface: var(--color-cream-100);
+            --color-text: var(--color-slate-900);
+            --color-text-secondary: var(--color-slate-500);
+            --color-primary: var(--color-teal-500);
+            --color-primary-hover: var(--color-teal-600);
+            --color-border: rgba(var(--color-brown-600-rgb), 0.2);
+            --color-card-border: rgba(var(--color-brown-600-rgb), 0.12);
+            --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-size-sm: 12px;
+            --font-size-base: 14px;
+            --font-size-lg: 16px;
+            --font-size-xl: 18px;
+            --font-size-2xl: 20px;
+            --font-size-3xl: 24px;
+            --space-8: 8px;
+            --space-12: 12px;
+            --space-16: 16px;
+            --space-24: 24px;
+            --space-32: 32px;
+            --radius-base: 8px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="dark"] {
+            --color-background: var(--color-charcoal-700);
+            --color-surface: var(--color-charcoal-800);
+            --color-text: var(--color-gray-200);
+            --color-text-secondary: var(--color-gray-300);
+            --color-primary: var(--color-teal-300);
+            --color-primary-hover: var(--color-teal-400);
+            --color-border: rgba(119, 124, 124, 0.3);
+            --color-card-border: rgba(119, 124, 124, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family-base);
+            background-color: var(--color-background);
+            color: var(--color-text);
+            font-size: var(--font-size-base);
+            line-height: 1.5;
+        }
+
+        /* LAYOUT */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 260px;
+            background-color: var(--color-surface);
+            border-right: 1px solid var(--color-border);
+            padding: var(--space-24);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-logo {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            margin-bottom: var(--space-32);
+            color: var(--color-primary);
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: var(--space-8);
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            padding: var(--space-12) var(--space-16);
+            color: var(--color-text);
+            text-decoration: none;
+            border-radius: var(--radius-base);
+            transition: all 0.2s;
+        }
+
+        .sidebar-menu a:hover {
+            background-color: rgba(var(--color-teal-500-rgb), 0.1);
+        }
+
+        .sidebar-menu a.active {
+            background-color: var(--color-primary);
+            color: white;
+        }
+
+        .sidebar-menu .icon {
+            margin-right: var(--space-12);
+            font-size: var(--font-size-lg);
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            min-height: 100vh;
+        }
+
+        /* TOP NAV */
+        .top-nav {
+            background-color: var(--color-surface);
+            border-bottom: 1px solid var(--color-border);
+            padding: var(--space-16) var(--space-32);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .breadcrumb {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+        }
+
+        .theme-toggle {
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            padding: var(--space-8) var(--space-16);
+            border-radius: var(--radius-base);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+        }
+
+        .theme-toggle:hover {
+            background: var(--color-primary-hover);
+        }
+
+        /* CONTENT AREA */
+        .content {
+            padding: var(--space-32);
+        }
+
+        .page-title {
+            font-size: var(--font-size-3xl);
+            font-weight: 600;
+            margin-bottom: var(--space-24);
+        }
+
+        /* STATS BOXES */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-24);
+            margin-bottom: var(--space-32);
+        }
+
+        .stat-box {
+            background: var(--color-surface);
+            padding: var(--space-24);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--color-card-border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-label {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+            margin-bottom: var(--space-8);
+        }
+
+        .stat-value {
+            font-size: var(--font-size-3xl);
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+
+        /* CARD */
+        .card {
+            background: var(--color-surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--color-card-border);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: var(--space-24);
+        }
+
+        .card-header {
+            padding: var(--space-24);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .card-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: var(--space-24);
+        }
+
+        /* TOOLBAR */
+        .toolbar {
+            display: flex;
+            gap: var(--space-16);
+            margin-bottom: var(--space-24);
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: var(--space-12);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-base);
+            background: var(--color-surface);
+            color: var(--color-text);
+            font-size: var(--font-size-base);
+        }
+
+        .filter-select select {
+            padding: var(--space-12);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-base);
+            background: var(--color-surface);
+            color: var(--color-text);
+            font-size: var(--font-size-base);
+        }
+
+        .btn {
+            padding: var(--space-12) var(--space-24);
+            border: none;
+            border-radius: var(--radius-base);
+            cursor: pointer;
+            font-size: var(--font-size-base);
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--color-primary-hover);
+        }
+
+        .btn-secondary {
+            background: var(--color-surface);
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
+        }
+
+        .btn-sm {
+            padding: var(--space-8) var(--space-12);
+            font-size: var(--font-size-sm);
+        }
+
+        /* TABLE */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--color-surface);
+        }
+
+        th {
+            text-align: left;
+            padding: var(--space-12);
+            font-weight: 600;
+            border-bottom: 2px solid var(--color-border);
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+        }
+
+        td {
+            padding: var(--space-12);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        tr:hover {
+            background: rgba(var(--color-teal-500-rgb), 0.05);
+        }
+
+        /* BADGES */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge-success { background: rgba(33, 128, 141, 0.15); color: var(--color-teal-500); }
+        .badge-danger { background: rgba(192, 21, 47, 0.15); color: var(--color-red-500); }
+        .badge-warning { background: rgba(168, 75, 47, 0.15); color: var(--color-orange-500); }
+        .badge-secondary { background: rgba(var(--color-brown-600-rgb), 0.15); color: var(--color-slate-500); }
+        .badge-info { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+
+        .club-badges {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .club-badge {
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .club-badge.active {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .club-badge.inactive {
+            background: var(--color-border);
+            color: var(--color-text-secondary);
+        }
+
+        /* PAGINATION */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: var(--space-8);
+            margin-top: var(--space-24);
+        }
+
+        .pagination button {
+            padding: var(--space-8) var(--space-12);
+            border: 1px solid var(--color-border);
+            background: var(--color-surface);
+            color: var(--color-text);
+            border-radius: var(--radius-base);
+            cursor: pointer;
+        }
+
+        .pagination button.active {
+            background: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* TABS */
+        .tabs {
+            display: flex;
+            gap: var(--space-8);
+            border-bottom: 2px solid var(--color-border);
+            margin-bottom: var(--space-24);
+        }
+
+        .tab {
+            padding: var(--space-12) var(--space-24);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--color-primary);
+        }
+
+        .tab.active {
+            color: var(--color-primary);
+            border-bottom-color: var(--color-primary);
+            font-weight: 600;
+        }
+
+        /* GROUP CARD */
+        .group-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-card-border);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-24);
+            overflow: hidden;
+        }
+
+        .group-header {
+            background: var(--color-primary);
+            color: white;
+            padding: var(--space-16) var(--space-24);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .group-content {
+            padding: var(--space-24);
+        }
+
+        .group-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-16);
+            margin-bottom: var(--space-16);
+        }
+
+        .beneficiary-item {
+            padding: var(--space-16);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-base);
+            margin-bottom: var(--space-12);
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .toolbar {
+                flex-direction: column;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: var(--space-32);
+            color: var(--color-text-secondary);
+        }
+
+        /* MODAL */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--color-surface);
+            border-radius: var(--radius-lg);
+            padding: var(--space-32);
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-24);
+        }
+
+        .modal-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+        }
+
+        .form-group {
+            margin-bottom: var(--space-16);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: var(--space-8);
+            font-weight: 500;
+            font-size: var(--font-size-sm);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: var(--space-12);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-base);
+            background: var(--color-background);
+            color: var(--color-text);
+            font-size: var(--font-size-base);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: var(--space-12);
+            justify-content: flex-end;
+            margin-top: var(--space-24);
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-8);
+            margin-top: var(--space-8);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: var(--space-8);
+            font-size: var(--font-size-sm);
+        }
+
+        .btn-danger {
+            background: var(--color-red-500);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: var(--color-red-400);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-logo">💚 NGO Dashboard</div>
+            <ul class="sidebar-menu">
+                <li><a href="#" class="active" data-page="dashboard"><span class="icon">📊</span> Dashboard</a></li>
+                <li><a href="#" data-page="volunteers"><span class="icon">👥</span> Wolontariusze</a></li>
+                <li><a href="#" data-page="beneficiaries"><span class="icon">❤️</span> Podopieczni</a></li>
+                <li><a href="#" data-page="groups"><span class="icon">📋</span> Grupy Przewodników</a></li>
+                <li>
+                    <a href="#" data-page="recruitment-volunteers"><span class="icon">📝</span> Rekrutacja Wolontariuszy</a>
+                </li>
+                <li>
+                    <a href="#" data-page="recruitment-beneficiaries-rec"><span class="icon">📋</span> Rekrutacja Podopiecznych</a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <!-- TOP NAV -->
+            <nav class="top-nav">
+                <div class="breadcrumb" id="breadcrumb">Panel &gt; Dashboard</div>
+                <button class="theme-toggle" id="themeToggle">🌙 Tryb ciemny</button>
+            </nav>
+
+            <!-- CONTENT -->
+            <div class="content" id="content">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // EMBEDDED DATABASE
+        const DATABASE = {
+            wolontariusze: [
+                {id:1,imie_nazwisko:"Imie i Nazwisko1",email:"adres.email@email.com1",telefon:"111222333",grupa:"E",podopieczny:"Podopieczny Nazwisko37",status:"Aktywny",kluby:["Pomoc indywidualna","Grupa porządkowa"]},
+                {id:2,imie_nazwisko:"Imie i Nazwisko2",email:"adres.email@email.com2",telefon:"111222333",grupa:"B",podopieczny:"Podopieczny Nazwisko10",status:"Były",kluby:["Pomoc indywidualna","Grupa porządkowa"]},
+                {id:3,imie_nazwisko:"Imie i Nazwisko3",email:"adres.email@email.com3",telefon:"111222333",grupa:"A",podopieczny:"Podopieczny Nazwisko1",status:"Aktywny",kluby:["Pomoc indywidualna","Remonty"]},
+                {id:4,imie_nazwisko:"Imie i Nazwisko4",email:"adres.email@email.com4",telefon:"111222333",grupa:"A",podopieczny:"Podopieczny Nazwisko2",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:5,imie_nazwisko:"Imie i Nazwisko5",email:"adres.email@email.com5",telefon:"111222333",grupa:"A",podopieczny:"Podopieczny Nazwisko3",status:"Aktywny",kluby:["Pomoc indywidualna","Festyn Seniora"]},
+                {id:6,imie_nazwisko:"Imie i Nazwisko6",email:"adres.email@email.com6",telefon:"111222333",grupa:"A",podopieczny:"Podopieczny Nazwisko4",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:7,imie_nazwisko:"Imie i Nazwisko7",email:"adres.email@email.com7",telefon:"111222333",grupa:"A",podopieczny:"Podopieczny Nazwisko5",status:"Aktywny",kluby:["Pomoc indywidualna","Festyn Seniora","Klub seniora"]},
+                {id:8,imie_nazwisko:"Imie i Nazwisko8",email:"adres.email@email.com8",telefon:"111222333",grupa:"A",podopieczny:"Podopieczny Nazwisko6",status:"Aktywny",kluby:["Pomoc indywidualna","Grupa porządkowa"]},
+                {id:9,imie_nazwisko:"Imie i Nazwisko9",email:"adres.email@email.com9",telefon:"111222333",grupa:"A",podopieczny:"Podopieczny Nazwisko7",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:10,imie_nazwisko:"Imie i Nazwisko10",email:"adres.email@email.com10",telefon:"111222333",grupa:"A",podopieczny:"Podopieczny Nazwisko8",status:"Aktywny",kluby:["Pomoc indywidualna","Grupa porządkowa"]},
+                {id:11,imie_nazwisko:"Imie i Nazwisko11",email:"adres.email@email.com11",telefon:"111222333",grupa:"B",podopieczny:"Podopieczny Nazwisko9",status:"Aktywny",kluby:["Pomoc indywidualna","Remonty"]},
+                {id:12,imie_nazwisko:"Imie i Nazwisko12",email:"adres.email@email.com12",telefon:"111222333",grupa:"B",podopieczny:"Podopieczny Nazwisko10",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:13,imie_nazwisko:"Imie i Nazwisko13",email:"adres.email@email.com13",telefon:"111222333",grupa:"B",podopieczny:"Podopieczny Nazwisko11",status:"Aktywny",kluby:["Pomoc indywidualna","Festyn Seniora"]},
+                {id:14,imie_nazwisko:"Imie i Nazwisko14",email:"adres.email@email.com14",telefon:"111222333",grupa:"B",podopieczny:"Podopieczny Nazwisko12",status:"Aktywny",kluby:["Pomoc indywidualna","Fizjoterapia"]},
+                {id:15,imie_nazwisko:"Imie i Nazwisko15",email:"adres.email@email.com15",telefon:"111222333",grupa:"B",podopieczny:"Podopieczny Nazwisko13",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:16,imie_nazwisko:"Imie i Nazwisko16",email:"adres.email@email.com16",telefon:"111222333",grupa:"B",podopieczny:"Podopieczny Nazwisko14",status:"Aktywny",kluby:["Pomoc indywidualna","Grupa porządkowa"]},
+                {id:17,imie_nazwisko:"Imie i Nazwisko17",email:"adres.email@email.com17",telefon:"111222333",grupa:"C",podopieczny:"Podopieczny Nazwisko15",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:18,imie_nazwisko:"Imie i Nazwisko18",email:"adres.email@email.com18",telefon:"111222333",grupa:"C",podopieczny:"Podopieczny Nazwisko16",status:"Aktywny",kluby:["Pomoc indywidualna","Remonty"]},
+                {id:19,imie_nazwisko:"Imie i Nazwisko19",email:"adres.email@email.com19",telefon:"111222333",grupa:"C",podopieczny:"Podopieczny Nazwisko17",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:20,imie_nazwisko:"Imie i Nazwisko20",email:"adres.email@email.com20",telefon:"111222333",grupa:"C",podopieczny:"Podopieczny Nazwisko18",status:"Aktywny",kluby:["Pomoc indywidualna","Festyn Seniora"]},
+                {id:21,imie_nazwisko:"Imie i Nazwisko21",email:"adres.email@email.com21",telefon:"111222333",grupa:"C",podopieczny:"Podopieczny Nazwisko19",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:22,imie_nazwisko:"Imie i Nazwisko22",email:"adres.email@email.com22",telefon:"111222333",grupa:"C",podopieczny:"Podopieczny Nazwisko20",status:"Aktywny",kluby:["Pomoc indywidualna","Grupa porządkowa"]},
+                {id:23,imie_nazwisko:"Imie i Nazwisko23",email:"adres.email@email.com23",telefon:"111222333",grupa:"C",podopieczny:"Podopieczny Nazwisko21",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:24,imie_nazwisko:"Imie i Nazwisko24",email:"adres.email@email.com24",telefon:"111222333",grupa:"C",podopieczny:"Podopieczny Nazwisko22",status:"Aktywny",kluby:["Pomoc indywidualna","Remonty"]},
+                {id:25,imie_nazwisko:"Imie i Nazwisko25",email:"adres.email@email.com25",telefon:"111222333",grupa:"C",podopieczny:"Podopieczny Nazwisko23",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:26,imie_nazwisko:"Imie i Nazwisko26",email:"adres.email@email.com26",telefon:"111222333",grupa:"C",podopieczny:"Podopieczny Nazwisko24",status:"Aktywny",kluby:["Pomoc indywidualna","Festyn Seniora"]},
+                {id:27,imie_nazwisko:"Imie i Nazwisko27",email:"adres.email@email.com27",telefon:"111222333",grupa:"C",podopieczny:"Podopieczny Nazwisko25",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:28,imie_nazwisko:"Imie i Nazwisko28",email:"adres.email@email.com28",telefon:"111222333",grupa:"C",podopieczny:"Podopieczny Nazwisko26",status:"Aktywny",kluby:["Pomoc indywidualna","Grupa porządkowa"]},
+                {id:29,imie_nazwisko:"Imie i Nazwisko29",email:"adres.email@email.com29",telefon:"111222333",grupa:"D",podopieczny:"Podopieczny Nazwisko27",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:30,imie_nazwisko:"Imie i Nazwisko30",email:"adres.email@email.com30",telefon:"111222333",grupa:"D",podopieczny:"Podopieczny Nazwisko28",status:"Aktywny",kluby:["Pomoc indywidualna","Remonty"]},
+                {id:31,imie_nazwisko:"Imie i Nazwisko31",email:"adres.email@email.com31",telefon:"111222333",grupa:"D",podopieczny:"Podopieczny Nazwisko29",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:32,imie_nazwisko:"Imie i Nazwisko32",email:"adres.email@email.com32",telefon:"111222333",grupa:"D",podopieczny:"Podopieczny Nazwisko30",status:"Aktywny",kluby:["Pomoc indywidualna","Festyn Seniora"]},
+                {id:33,imie_nazwisko:"Imie i Nazwisko33",email:"adres.email@email.com33",telefon:"111222333",grupa:"D",podopieczny:"Podopieczny Nazwisko31",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:34,imie_nazwisko:"Imie i Nazwisko34",email:"adres.email@email.com34",telefon:"111222333",grupa:"D",podopieczny:"Podopieczny Nazwisko32",status:"Aktywny",kluby:["Pomoc indywidualna","Grupa porządkowa"]},
+                {id:35,imie_nazwisko:"Imie i Nazwisko35",email:"adres.email@email.com35",telefon:"111222333",grupa:"D",podopieczny:"Podopieczny Nazwisko33",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:36,imie_nazwisko:"Imie i Nazwisko36",email:"adres.email@email.com36",telefon:"111222333",grupa:"D",podopieczny:"Podopieczny Nazwisko34",status:"Aktywny",kluby:["Pomoc indywidualna","Remonty"]},
+                {id:37,imie_nazwisko:"Imie i Nazwisko37",email:"adres.email@email.com37",telefon:"111222333",grupa:"D",podopieczny:"Podopieczny Nazwisko35",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:38,imie_nazwisko:"Imie i Nazwisko38",email:"adres.email@email.com38",telefon:"111222333",grupa:"D",podopieczny:"Podopieczny Nazwisko36",status:"Aktywny",kluby:["Pomoc indywidualna","Festyn Seniora"]},
+                {id:39,imie_nazwisko:"Imie i Nazwisko39",email:"adres.email@email.com39",telefon:"111222333",grupa:"E",podopieczny:"Podopieczny Nazwisko37",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:40,imie_nazwisko:"Imie i Nazwisko40",email:"adres.email@email.com40",telefon:"111222333",grupa:"E",podopieczny:"Podopieczny Nazwisko38",status:"Aktywny",kluby:["Pomoc indywidualna","Grupa porządkowa"]},
+                {id:41,imie_nazwisko:"Imie i Nazwisko41",email:"adres.email@email.com41",telefon:"111222333",grupa:"E",podopieczny:"Podopieczny Nazwisko39",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:42,imie_nazwisko:"Imie i Nazwisko42",email:"adres.email@email.com42",telefon:"111222333",grupa:"E",podopieczny:"Podopieczny Nazwisko40",status:"Aktywny",kluby:["Pomoc indywidualna","Remonty"]},
+                {id:43,imie_nazwisko:"Imie i Nazwisko43",email:"adres.email@email.com43",telefon:"111222333",grupa:"E",podopieczny:"Podopieczny Nazwisko41",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:44,imie_nazwisko:"Imie i Nazwisko44",email:"adres.email@email.com44",telefon:"111222333",grupa:"E",podopieczny:"Podopieczny Nazwisko42",status:"Aktywny",kluby:["Pomoc indywidualna","Festyn Seniora"]},
+                {id:45,imie_nazwisko:"Imie i Nazwisko45",email:"adres.email@email.com45",telefon:"111222333",grupa:"E",podopieczny:"Podopieczny Nazwisko43",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:46,imie_nazwisko:"Imie i Nazwisko46",email:"adres.email@email.com46",telefon:"111222333",grupa:"E",podopieczny:"Podopieczny Nazwisko44",status:"Aktywny",kluby:["Pomoc indywidualna","Grupa porządkowa"]},
+                {id:47,imie_nazwisko:"Imie i Nazwisko47",email:"adres.email@email.com47",telefon:"111222333",grupa:"E",podopieczny:"Podopieczny Nazwisko45",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:48,imie_nazwisko:"Imie i Nazwisko48",email:"adres.email@email.com48",telefon:"111222333",grupa:"E",podopieczny:"Podopieczny Nazwisko46",status:"Aktywny",kluby:["Pomoc indywidualna","Remonty"]},
+                {id:49,imie_nazwisko:"Imie i Nazwisko49",email:"adres.email@email.com49",telefon:"111222333",grupa:"E",podopieczny:"Podopieczny Nazwisko47",status:"Aktywny",kluby:["Pomoc indywidualna"]},
+                {id:50,imie_nazwisko:"Imie i Nazwisko50",email:"adres.email@email.com50",telefon:"111222333",grupa:"E",podopieczny:"Podopieczny Nazwisko48",status:"Aktywny",kluby:["Pomoc indywidualna","Festyn Seniora"]},
+                {id:51,imie_nazwisko:"Imie i Nazwisko51",email:"adres.email@email.com51",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Remonty","Grupa porządkowa"]},
+                {id:52,imie_nazwisko:"Imie i Nazwisko52",email:"adres.email@email.com52",telefon:"111222333",grupa:"B",podopieczny:"",status:"Aktywny",kluby:["Księgowość","Festyn Seniora"]},
+                {id:53,imie_nazwisko:"Imie i Nazwisko53",email:"adres.email@email.com53",telefon:"111222333",grupa:"A",podopieczny:"",status:"Aktywny",kluby:["Festyn Seniora"]},
+                {id:54,imie_nazwisko:"Imie i Nazwisko54",email:"adres.email@email.com54",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Remonty"]},
+                {id:55,imie_nazwisko:"Imie i Nazwisko55",email:"adres.email@email.com55",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Grupa porządkowa"]},
+                {id:56,imie_nazwisko:"Imie i Nazwisko56",email:"adres.email@email.com56",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Fizjoterapia"]},
+                {id:57,imie_nazwisko:"Imie i Nazwisko57",email:"adres.email@email.com57",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Księgowość"]},
+                {id:58,imie_nazwisko:"Imie i Nazwisko58",email:"adres.email@email.com58",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Festyn Seniora"]},
+                {id:59,imie_nazwisko:"Imie i Nazwisko59",email:"adres.email@email.com59",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Festyn Seniora"]},
+                {id:60,imie_nazwisko:"Imie i Nazwisko60",email:"adres.email@email.com60",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Festyn Seniora"]},
+                {id:61,imie_nazwisko:"Imie i Nazwisko61",email:"adres.email@email.com61",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Festyn Seniora"]},
+                {id:62,imie_nazwisko:"Imie i Nazwisko62",email:"adres.email@email.com62",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Festyn Seniora"]},
+                {id:63,imie_nazwisko:"Imie i Nazwisko63",email:"adres.email@email.com63",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Festyn Seniora"]},
+                {id:64,imie_nazwisko:"Imie i Nazwisko64",email:"adres.email@email.com64",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Szkolenia"]},
+                {id:65,imie_nazwisko:"Imie i Nazwisko65",email:"adres.email@email.com65",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Szkolenia"]},
+                {id:66,imie_nazwisko:"Imie i Nazwisko66",email:"adres.email@email.com66",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Media"]},
+                {id:67,imie_nazwisko:"Imie i Nazwisko67",email:"adres.email@email.com67",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Klub seniora"]},
+                {id:68,imie_nazwisko:"Imie i Nazwisko68",email:"adres.email@email.com68",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Klub seniora"]},
+                {id:69,imie_nazwisko:"Imie i Nazwisko69",email:"adres.email@email.com69",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Klub seniora"]},
+                {id:70,imie_nazwisko:"Imie i Nazwisko70",email:"adres.email@email.com70",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Klub seniora"]},
+                {id:71,imie_nazwisko:"Imie i Nazwisko71",email:"adres.email@email.com71",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Klub seniora"]},
+                {id:72,imie_nazwisko:"Imie i Nazwisko72",email:"adres.email@email.com72",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Klub seniora"]},
+                {id:73,imie_nazwisko:"Imie i Nazwisko73",email:"adres.email@email.com73",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Klub seniora"]},
+                {id:74,imie_nazwisko:"Imie i Nazwisko74",email:"adres.email@email.com74",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Klub seniora"]},
+                {id:75,imie_nazwisko:"Imie i Nazwisko75",email:"adres.email@email.com75",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Klub seniora"]},
+                {id:76,imie_nazwisko:"Imie i Nazwisko76",email:"adres.email@email.com76",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Muzyczni"]},
+                {id:77,imie_nazwisko:"Imie i Nazwisko77",email:"adres.email@email.com77",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Muzyczni"]},
+                {id:78,imie_nazwisko:"Imie i Nazwisko78",email:"adres.email@email.com78",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Gastronomia"]},
+                {id:79,imie_nazwisko:"Imie i Nazwisko79",email:"adres.email@email.com79",telefon:"111222333",grupa:"",podopieczny:"",status:"Aktywny",kluby:["Zbieranie funduszy"]},
+                {id:80,imie_nazwisko:"Imie i Nazwisko80",email:"adres.email@email.com80",telefon:"111222333",grupa:"A",podopieczny:"",status:"Aktywny",kluby:["Pomoc indywidualna","Księgowość"]},
+                {id:81,imie_nazwisko:"Imie i Nazwisko81",email:"adres.email@email.com81",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:82,imie_nazwisko:"Imie i Nazwisko82",email:"adres.email@email.com82",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:83,imie_nazwisko:"Imie i Nazwisko83",email:"adres.email@email.com83",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:84,imie_nazwisko:"Imie i Nazwisko84",email:"adres.email@email.com84",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:85,imie_nazwisko:"Imie i Nazwisko85",email:"adres.email@email.com85",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:86,imie_nazwisko:"Imie i Nazwisko86",email:"adres.email@email.com86",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:87,imie_nazwisko:"Imie i Nazwisko87",email:"adres.email@email.com87",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:88,imie_nazwisko:"Imie i Nazwisko88",email:"adres.email@email.com88",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:89,imie_nazwisko:"Imie i Nazwisko89",email:"adres.email@email.com89",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:90,imie_nazwisko:"Imie i Nazwisko90",email:"adres.email@email.com90",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:91,imie_nazwisko:"Imie i Nazwisko91",email:"adres.email@email.com91",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:92,imie_nazwisko:"Imie i Nazwisko92",email:"adres.email@email.com92",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:93,imie_nazwisko:"Imie i Nazwisko93",email:"adres.email@email.com93",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:94,imie_nazwisko:"Imie i Nazwisko94",email:"adres.email@email.com94",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:95,imie_nazwisko:"Imie i Nazwisko95",email:"adres.email@email.com95",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:96,imie_nazwisko:"Imie i Nazwisko96",email:"adres.email@email.com96",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:97,imie_nazwisko:"Imie i Nazwisko97",email:"adres.email@email.com97",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:98,imie_nazwisko:"Imie i Nazwisko98",email:"adres.email@email.com98",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:99,imie_nazwisko:"Imie i Nazwisko99",email:"adres.email@email.com99",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:100,imie_nazwisko:"Imie i Nazwisko100",email:"adres.email@email.com100",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:101,imie_nazwisko:"Imie i Nazwisko101",email:"adres.email@email.com101",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:102,imie_nazwisko:"Imie i Nazwisko102",email:"adres.email@email.com102",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:103,imie_nazwisko:"Imie i Nazwisko103",email:"adres.email@email.com103",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:104,imie_nazwisko:"Imie i Nazwisko104",email:"adres.email@email.com104",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:105,imie_nazwisko:"Imie i Nazwisko105",email:"adres.email@email.com105",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:106,imie_nazwisko:"Imie i Nazwisko106",email:"adres.email@email.com106",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:107,imie_nazwisko:"Imie i Nazwisko107",email:"adres.email@email.com107",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:108,imie_nazwisko:"Imie i Nazwisko108",email:"adres.email@email.com108",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:109,imie_nazwisko:"Imie i Nazwisko109",email:"adres.email@email.com109",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:110,imie_nazwisko:"Imie i Nazwisko110",email:"adres.email@email.com110",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:111,imie_nazwisko:"Imie i Nazwisko111",email:"adres.email@email.com111",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:112,imie_nazwisko:"Imie i Nazwisko112",email:"adres.email@email.com112",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:113,imie_nazwisko:"Imie i Nazwisko113",email:"adres.email@email.com113",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:114,imie_nazwisko:"Imie i Nazwisko114",email:"adres.email@email.com114",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:115,imie_nazwisko:"Imie i Nazwisko115",email:"adres.email@email.com115",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:116,imie_nazwisko:"Imie i Nazwisko116",email:"adres.email@email.com116",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:117,imie_nazwisko:"Imie i Nazwisko117",email:"adres.email@email.com117",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:118,imie_nazwisko:"Imie i Nazwisko118",email:"adres.email@email.com118",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:119,imie_nazwisko:"Imie i Nazwisko119",email:"adres.email@email.com119",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:120,imie_nazwisko:"Imie i Nazwisko120",email:"adres.email@email.com120",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:121,imie_nazwisko:"Imie i Nazwisko121",email:"adres.email@email.com121",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:122,imie_nazwisko:"Imie i Nazwisko122",email:"adres.email@email.com122",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:123,imie_nazwisko:"Imie i Nazwisko123",email:"adres.email@email.com123",telefon:"111222333",grupa:"B",podopieczny:"",status:"Aktywny",kluby:[]},
+                {id:124,imie_nazwisko:"Imie i Nazwisko124",email:"adres.email@email.com124",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:125,imie_nazwisko:"Imie i Nazwisko125",email:"adres.email@email.com125",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:126,imie_nazwisko:"Imie i Nazwisko126",email:"adres.email@email.com126",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:127,imie_nazwisko:"Imie i Nazwisko127",email:"adres.email@email.com127",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:128,imie_nazwisko:"Imie i Nazwisko128",email:"adres.email@email.com128",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:129,imie_nazwisko:"Imie i Nazwisko129",email:"adres.email@email.com129",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:130,imie_nazwisko:"Imie i Nazwisko130",email:"adres.email@email.com130",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:131,imie_nazwisko:"Imie i Nazwisko131",email:"adres.email@email.com131",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:132,imie_nazwisko:"Imie i Nazwisko132",email:"adres.email@email.com132",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:133,imie_nazwisko:"Imie i Nazwisko133",email:"adres.email@email.com133",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:134,imie_nazwisko:"Imie i Nazwisko134",email:"adres.email@email.com134",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]},
+                {id:135,imie_nazwisko:"Imie i Nazwisko135",email:"adres.email@email.com135",telefon:"111222333",grupa:"",podopieczny:"",status:"Były",kluby:[]}
+            ],
+            podopieczni: [
+                {id:1,imie_nazwisko:"Podopieczny Nazwisko1",adres:"742 Evergreen Terrace",telefon:"111111111",grupa:"A",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"18.10.2079"},
+                {id:2,imie_nazwisko:"Podopieczny Nazwisko2",adres:"Springfield",telefon:"111111112",grupa:"A",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"18.10.2080"},
+                {id:3,imie_nazwisko:"Podopieczny Nazwisko3",adres:"123 Main St",telefon:"111111113",grupa:"A",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"15.09.2079"},
+                {id:4,imie_nazwisko:"Podopieczny Nazwisko4",adres:"456 Oak Ave",telefon:"111111114",grupa:"A",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"22.08.2079"},
+                {id:5,imie_nazwisko:"Podopieczny Nazwisko5",adres:"789 Pine Rd",telefon:"111111115",grupa:"A",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"11.11.2079"},
+                {id:6,imie_nazwisko:"Podopieczny Nazwisko6",adres:"321 Elm St",telefon:"111111116",grupa:"A",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"05.07.2079"},
+                {id:7,imie_nazwisko:"Podopieczny Nazwisko7",adres:"654 Maple Dr",telefon:"111111117",grupa:"A",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"30.06.2079"},
+                {id:8,imie_nazwisko:"Podopieczny Nazwisko8",adres:"987 Cedar Ln",telefon:"111111118",grupa:"A",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"19.05.2079"},
+                {id:9,imie_nazwisko:"Podopieczny Nazwisko9",adres:"147 Birch Way",telefon:"111111119",grupa:"B",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"14.04.2079"},
+                {id:10,imie_nazwisko:"Podopieczny Nazwisko10",adres:"258 Spruce Ct",telefon:"111111120",grupa:"B",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"28.03.2079"},
+                {id:11,imie_nazwisko:"Podopieczny Nazwisko11",adres:"369 Willow St",telefon:"111111121",grupa:"B",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"12.02.2079"},
+                {id:12,imie_nazwisko:"Podopieczny Nazwisko12",adres:"741 Ash Blvd",telefon:"111111122",grupa:"B",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"07.01.2079"},
+                {id:13,imie_nazwisko:"Podopieczny Nazwisko13",adres:"852 Poplar Ave",telefon:"111111123",grupa:"B",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"25.12.2078"},
+                {id:14,imie_nazwisko:"Podopieczny Nazwisko14",adres:"963 Hickory Rd",telefon:"111111124",grupa:"B",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"18.11.2078"},
+                {id:15,imie_nazwisko:"Podopieczny Nazwisko15",adres:"135 Walnut Dr",telefon:"111111125",grupa:"C",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"09.10.2078"},
+                {id:16,imie_nazwisko:"Podopieczny Nazwisko16",adres:"246 Chestnut Ln",telefon:"111111126",grupa:"C",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"22.09.2078"},
+                {id:17,imie_nazwisko:"Podopieczny Nazwisko17",adres:"357 Sycamore Way",telefon:"111111127",grupa:"C",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"15.08.2078"},
+                {id:18,imie_nazwisko:"Podopieczny Nazwisko18",adres:"468 Magnolia Ct",telefon:"111111128",grupa:"C",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"08.07.2078"},
+                {id:19,imie_nazwisko:"Podopieczny Nazwisko19",adres:"579 Dogwood St",telefon:"111111129",grupa:"C",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"01.06.2078"},
+                {id:20,imie_nazwisko:"Podopieczny Nazwisko20",adres:"680 Redwood Blvd",telefon:"111111130",grupa:"C",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"24.05.2078"},
+                {id:21,imie_nazwisko:"Podopieczny Nazwisko21",adres:"791 Pinecone Ave",telefon:"111111131",grupa:"C",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"17.04.2078"},
+                {id:22,imie_nazwisko:"Podopieczny Nazwisko22",adres:"802 Oakwood Rd",telefon:"111111132",grupa:"C",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"10.03.2078"},
+                {id:23,imie_nazwisko:"Podopieczny Nazwisko23",adres:"913 Maplewood Dr",telefon:"111111133",grupa:"C",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"03.02.2078"},
+                {id:24,imie_nazwisko:"Podopieczny Nazwisko24",adres:"124 Cedarwood Ln",telefon:"111111134",grupa:"C",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"27.01.2078"},
+                {id:25,imie_nazwisko:"Podopieczny Nazwisko25",adres:"235 Birchwood Way",telefon:"111111135",grupa:"C",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"20.12.2077"},
+                {id:26,imie_nazwisko:"Podopieczny Nazwisko26",adres:"346 Sprucewood Ct",telefon:"111111136",grupa:"C",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"13.11.2077"},
+                {id:27,imie_nazwisko:"Podopieczny Nazwisko27",adres:"457 Willowwood St",telefon:"111111137",grupa:"D",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"06.10.2077"},
+                {id:28,imie_nazwisko:"Podopieczny Nazwisko28",adres:"568 Ashwood Blvd",telefon:"111111138",grupa:"D",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"29.09.2077"},
+                {id:29,imie_nazwisko:"Podopieczny Nazwisko29",adres:"679 Poplarwood Ave",telefon:"111111139",grupa:"D",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"22.08.2077"},
+                {id:30,imie_nazwisko:"Podopieczny Nazwisko30",adres:"780 Hickorywood Rd",telefon:"111111140",grupa:"D",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"15.07.2077"},
+                {id:31,imie_nazwisko:"Podopieczny Nazwisko31",adres:"891 Walnutwood Dr",telefon:"111111141",grupa:"D",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"08.06.2077"},
+                {id:32,imie_nazwisko:"Podopieczny Nazwisko32",adres:"902 Chestnutwood Ln",telefon:"111111142",grupa:"D",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"01.05.2077"},
+                {id:33,imie_nazwisko:"Podopieczny Nazwisko33",adres:"113 Sycamorewood Way",telefon:"111111143",grupa:"D",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"24.04.2077"},
+                {id:34,imie_nazwisko:"Podopieczny Nazwisko34",adres:"224 Magnoliawood Ct",telefon:"111111144",grupa:"D",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"17.03.2077"},
+                {id:35,imie_nazwisko:"Podopieczny Nazwisko35",adres:"335 Dogwoodwood St",telefon:"111111145",grupa:"D",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"10.02.2077"},
+                {id:36,imie_nazwisko:"Podopieczny Nazwisko36",adres:"446 Redwoodwood Blvd",telefon:"111111146",grupa:"D",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"03.01.2077"},
+                {id:37,imie_nazwisko:"Podopieczny Nazwisko37",adres:"557 Pineconewood Ave",telefon:"111111147",grupa:"E",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"27.12.2076"},
+                {id:38,imie_nazwisko:"Podopieczny Nazwisko38",adres:"668 Oakwoodwood Rd",telefon:"111111148",grupa:"E",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"20.11.2076"},
+                {id:39,imie_nazwisko:"Podopieczny Nazwisko39",adres:"779 Maplewoodwood Dr",telefon:"111111149",grupa:"E",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"13.10.2076"},
+                {id:40,imie_nazwisko:"Podopieczny Nazwisko40",adres:"880 Cedarwoodwood Ln",telefon:"111111150",grupa:"E",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"06.09.2076"},
+                {id:41,imie_nazwisko:"Podopieczny Nazwisko41",adres:"991 Birchwoodwood Way",telefon:"111111151",grupa:"E",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"30.08.2076"},
+                {id:42,imie_nazwisko:"Podopieczny Nazwisko42",adres:"102 Sprucewoodwood Ct",telefon:"111111152",grupa:"E",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"23.07.2076"},
+                {id:43,imie_nazwisko:"Podopieczny Nazwisko43",adres:"213 Willowwoodwood St",telefon:"111111153",grupa:"E",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"16.06.2076"},
+                {id:44,imie_nazwisko:"Podopieczny Nazwisko44",adres:"324 Ashwoodwood Blvd",telefon:"111111154",grupa:"E",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"09.05.2076"},
+                {id:45,imie_nazwisko:"Podopieczny Nazwisko45",adres:"435 Poplarwoodwood Ave",telefon:"111111155",grupa:"E",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"02.04.2076"},
+                {id:46,imie_nazwisko:"Podopieczny Nazwisko46",adres:"546 Hickorywoodwood Rd",telefon:"111111156",grupa:"E",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"26.03.2076"},
+                {id:47,imie_nazwisko:"Podopieczny Nazwisko47",adres:"657 Walnutwoodwood Dr",telefon:"111111157",grupa:"E",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"19.02.2076"},
+                {id:48,imie_nazwisko:"Podopieczny Nazwisko48",adres:"768 Chestnutwoodwood Ln",telefon:"111111158",grupa:"E",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"12.01.2076"},
+                {id:49,imie_nazwisko:"Podopieczny Nazwisko49",adres:"879 Sycamorewoodwood Way",telefon:"111111159",grupa:"E",status:"ZMARŁY",bo:"TAK",ostatnia_wizyta:"05.12.2075"},
+                {id:50,imie_nazwisko:"Podopieczny Nazwisko50",adres:"980 Magnoliawoodwood Ct",telefon:"111111160",grupa:"E",status:"ZMARŁY",bo:"NIE",ostatnia_wizyta:"28.11.2075"},
+                {id:51,imie_nazwisko:"Podopieczny Nazwisko51",adres:"111 Test St",telefon:"111111161",grupa:"A",status:"ZMARŁY",bo:"TAK",ostatnia_wizyta:"21.10.2075"},
+                {id:52,imie_nazwisko:"Podopieczny Nazwisko52",adres:"222 Test Ave",telefon:"111111162",grupa:"B",status:"ZMARŁY",bo:"NIE",ostatnia_wizyta:"14.09.2075"},
+                {id:53,imie_nazwisko:"Podopieczny Nazwisko53",adres:"333 Test Rd",telefon:"111111163",grupa:"C",status:"BYŁY",bo:"TAK",ostatnia_wizyta:"07.08.2075"},
+                {id:54,imie_nazwisko:"Podopieczny Nazwisko54",adres:"444 Test Dr",telefon:"111111164",grupa:"D",status:"BYŁY",bo:"NIE",ostatnia_wizyta:"31.07.2075"},
+                {id:55,imie_nazwisko:"Podopieczny Nazwisko55",adres:"555 Test Ln",telefon:"111111165",grupa:"E",status:"BYŁY",bo:"TAK",ostatnia_wizyta:"24.06.2075"},
+                {id:56,imie_nazwisko:"Podopieczny Nazwisko56",adres:"666 Test Way",telefon:"111111166",grupa:"A",status:"BYŁY",bo:"NIE",ostatnia_wizyta:"17.05.2075"},
+                {id:57,imie_nazwisko:"Podopieczny Nazwisko57",adres:"777 Test Ct",telefon:"111111167",grupa:"B",status:"DPS/ZOL",bo:"TAK",ostatnia_wizyta:"10.04.2075"},
+                {id:58,imie_nazwisko:"Podopieczny Nazwisko58",adres:"888 Test Blvd",telefon:"111111168",grupa:"C",status:"DPS/ZOL",bo:"NIE",ostatnia_wizyta:"03.03.2075"},
+                {id:59,imie_nazwisko:"Podopieczny Nazwisko59",adres:"999 Test St",telefon:"111111169",grupa:"D",status:"DPS/ZOL",bo:"TAK",ostatnia_wizyta:"24.02.2075"},
+                {id:60,imie_nazwisko:"Podopieczny Nazwisko60",adres:"101 Final Ave",telefon:"111111170",grupa:"E",status:"DPS/ZOL",bo:"NIE",ostatnia_wizyta:"17.01.2075"},
+                {id:61,imie_nazwisko:"Podopieczny Nazwisko61",adres:"202 Final Rd",telefon:"111111171",grupa:"A",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"10.12.2074"},
+                {id:62,imie_nazwisko:"Podopieczny Nazwisko62",adres:"303 Final Dr",telefon:"111111172",grupa:"B",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"03.11.2074"},
+                {id:63,imie_nazwisko:"Podopieczny Nazwisko63",adres:"404 Final Ln",telefon:"111111173",grupa:"C",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"27.10.2074"},
+                {id:64,imie_nazwisko:"Podopieczny Nazwisko64",adres:"505 Final Way",telefon:"111111174",grupa:"D",status:"OBECNY",bo:"NIE",ostatnia_wizyta:"20.09.2074"},
+                {id:65,imie_nazwisko:"Podopieczny Nazwisko65",adres:"606 Final Ct",telefon:"111111175",grupa:"E",status:"OBECNY",bo:"TAK",ostatnia_wizyta:"13.08.2074"}
+            ],
+            grupy: [
+                {grupa:"A",przewodnik:"Imie i Nazwisko80",zastepca:"Imie i Nazwisko53"},
+                {grupa:"B",przewodnik:"Imie i Nazwisko52",zastepca:"Imie i Nazwisko123"},
+                {grupa:"C",przewodnik:"Imie i Nazwisko64",zastepca:"Imie i Nazwisko65"},
+                {grupa:"D",przewodnik:"Imie i Nazwisko66",zastepca:"Imie i Nazwisko67"},
+                {grupa:"E",przewodnik:"Imie i Nazwisko1",zastepca:"Imie i Nazwisko39"}
+            ],
+            grupy_przewodnikow: [
+                {podopieczny:"Podopieczny Nazwisko1",wolontariusze:"Imie i Nazwisko126",grupa:"A"},
+                {podopieczny:"Podopieczny Nazwisko2",wolontariusze:"Imie i Nazwisko92",grupa:"A"},
+                {podopieczny:"Podopieczny Nazwisko3",wolontariusze:"Imie i Nazwisko54, Imie i Nazwisko43",grupa:"A"},
+                {podopieczny:"Podopieczny Nazwisko4",wolontariusze:"Imie i Nazwisko134, Imie i Nazwisko96",grupa:"A"},
+                {podopieczny:"Podopieczny Nazwisko5",wolontariusze:"Imie i Nazwisko7",grupa:"A"},
+                {podopieczny:"Podopieczny Nazwisko6",wolontariusze:"Imie i Nazwisko8",grupa:"A"},
+                {podopieczny:"Podopieczny Nazwisko7",wolontariusze:"Imie i Nazwisko9",grupa:"A"},
+                {podopieczny:"Podopieczny Nazwisko8",wolontariusze:"Imie i Nazwisko10",grupa:"A"}
+            ],
+            old_rekrutacja_wolontariusze_backup: [
+                {id:1,imie_nazwisko:"Kandydat Wolontariusz 1",email:"kandydat1@email.com",data_zgloszenia:"2024-01-15"},
+                {id:2,imie_nazwisko:"Kandydat Wolontariusz 2",email:"kandydat2@email.com",data_zgloszenia:"2024-01-20"},
+                {id:3,imie_nazwisko:"Kandydat Wolontariusz 3",email:"kandydat3@email.com",data_zgloszenia:"2024-02-05"},
+                {id:4,imie_nazwisko:"Kandydat Wolontariusz 4",email:"kandydat4@email.com",data_zgloszenia:"2024-02-12"},
+                {id:5,imie_nazwisko:"Kandydat Wolontariusz 5",email:"kandydat5@email.com",data_zgloszenia:"2024-02-28"},
+                {id:6,imie_nazwisko:"Kandydat Wolontariusz 6",email:"kandydat6@email.com",data_zgloszenia:"2024-03-10"},
+                {id:7,imie_nazwisko:"Kandydat Wolontariusz 7",email:"kandydat7@email.com",data_zgloszenia:"2024-03-18"},
+                {id:8,imie_nazwisko:"Kandydat Wolontariusz 8",email:"kandydat8@email.com",data_zgloszenia:"2024-03-25"},
+                {id:9,imie_nazwisko:"Kandydat Wolontariusz 9",email:"kandydat9@email.com",data_zgloszenia:"2024-04-05"},
+                {id:10,imie_nazwisko:"Kandydat Wolontariusz 10",email:"kandydat10@email.com",data_zgloszenia:"2024-04-12"},
+                {id:11,imie_nazwisko:"Kandydat Wolontariusz 11",email:"kandydat11@email.com",data_zgloszenia:"2024-04-20"},
+                {id:12,imie_nazwisko:"Kandydat Wolontariusz 12",email:"kandydat12@email.com",data_zgloszenia:"2024-04-28"},
+                {id:13,imie_nazwisko:"Kandydat Wolontariusz 13",email:"kandydat13@email.com",data_zgloszenia:"2024-05-05"},
+                {id:14,imie_nazwisko:"Kandydat Wolontariusz 14",email:"kandydat14@email.com",data_zgloszenia:"2024-05-15"},
+                {id:15,imie_nazwisko:"Kandydat Wolontariusz 15",email:"kandydat15@email.com",data_zgloszenia:"2024-05-22"},
+                {id:16,imie_nazwisko:"Kandydat Wolontariusz 16",email:"kandydat16@email.com",data_zgloszenia:"2024-06-01"},
+                {id:17,imie_nazwisko:"Kandydat Wolontariusz 17",email:"kandydat17@email.com",data_zgloszenia:"2024-06-10"},
+                {id:18,imie_nazwisko:"Kandydat Wolontariusz 18",email:"kandydat18@email.com",data_zgloszenia:"2024-06-18"},
+                {id:19,imie_nazwisko:"Kandydat Wolontariusz 19",email:"kandydat19@email.com",data_zgloszenia:"2024-06-25"},
+                {id:20,imie_nazwisko:"Kandydat Wolontariusz 20",email:"kandydat20@email.com",data_zgloszenia:"2024-07-05"},
+                {id:21,imie_nazwisko:"Kandydat Wolontariusz 21",email:"kandydat21@email.com",data_zgloszenia:"2024-07-12"},
+                {id:22,imie_nazwisko:"Kandydat Wolontariusz 22",email:"kandydat22@email.com",data_zgloszenia:"2024-07-20"},
+                {id:23,imie_nazwisko:"Kandydat Wolontariusz 23",email:"kandydat23@email.com",data_zgloszenia:"2024-07-28"},
+                {id:24,imie_nazwisko:"Kandydat Wolontariusz 24",email:"kandydat24@email.com",data_zgloszenia:"2024-08-05"},
+                {id:25,imie_nazwisko:"Kandydat Wolontariusz 25",email:"kandydat25@email.com",data_zgloszenia:"2024-08-15"}
+            ],
+            rekrutacja_wolontariusze: [
+                {id:1,imie_nazwisko:"Kandydat Wolontariusz 1",email:"kandydat1@email.com",telefon:"111222333",link_fb:"fb.com/kandydat1",data_dolaczenia:"2024-01-15",opis:"Zainteresowany pomocą seniorom",szkolenia:"TAK",media:"NIE",klub_seniora:"TAK",muzyczni:"NIE",gastronomia:"NIE",zbieranie_funduszy:"TAK",spotkanie_charyzmat:"2024-01-20",spotkanie_wspolnota:"2024-01-27",spotkanie_dzialanie:"2024-02-03",spotkanie_administracja:"2024-02-10"},
+                {id:2,imie_nazwisko:"Kandydat Wolontariusz 2",email:"kandydat2@email.com",telefon:"111222334",link_fb:"fb.com/kandydat2",data_dolaczenia:"2024-01-20",opis:"Student medycyny",szkolenia:"NIE",media:"TAK",klub_seniora:"NIE",muzyczni:"TAK",gastronomia:"NIE",zbieranie_funduszy:"NIE",spotkanie_charyzmat:"2024-01-25",spotkanie_wspolnota:"2024-02-01",spotkanie_dzialanie:"",spotkanie_administracja:""},
+                {id:3,imie_nazwisko:"Kandydat Wolontariusz 3",email:"kandydat3@email.com",telefon:"111222335",link_fb:"fb.com/kandydat3",data_dolaczenia:"2024-02-05",opis:"Emeryt, wolny czas",szkolenia:"TAK",media:"NIE",klub_seniora:"TAK",muzyczni:"NIE",gastronomia:"TAK",zbieranie_funduszy:"NIE",spotkanie_charyzmat:"2024-02-10",spotkanie_wspolnota:"",spotkanie_dzialanie:"",spotkanie_administracja:""},
+                {id:4,imie_nazwisko:"Kandydat Wolontariusz 4",email:"kandydat4@email.com",telefon:"111222336",link_fb:"fb.com/kandydat4",data_dolaczenia:"2024-02-12",opis:"Pracownik IT",szkolenia:"NIE",media:"TAK",klub_seniora:"NIE",muzyczni:"NIE",gastronomia:"NIE",zbieranie_funduszy:"TAK",spotkanie_charyzmat:"",spotkanie_wspolnota:"",spotkanie_dzialanie:"",spotkanie_administracja:""},
+                {id:5,imie_nazwisko:"Kandydat Wolontariusz 5",email:"kandydat5@email.com",telefon:"111222337",link_fb:"fb.com/kandydat5",data_dolaczenia:"2024-02-28",opis:"Nauczyciel",szkolenia:"TAK",media:"NIE",klub_seniora:"TAK",muzyczni:"TAK",gastronomia:"NIE",zbieranie_funduszy:"NIE",spotkanie_charyzmat:"2024-03-05",spotkanie_wspolnota:"2024-03-12",spotkanie_dzialanie:"2024-03-19",spotkanie_administracja:"2024-03-26"}
+            ],
+            rekrutacja_podopieczni: [
+                {id:1,imie_nazwisko:"Kandydat Podopieczny 1",adres:"Test Address 1",telefon:"222111001",status:"Oczekujący",bo:"TAK",opis:"Osoba samotna, potrzebuje wsparcia"},
+                {id:2,imie_nazwisko:"Kandydat Podopieczny 2",adres:"Test Address 2",telefon:"222111002",status:"Oczekujący",bo:"NIE",opis:"Senior z problemami zdrowotnymi"},
+                {id:3,imie_nazwisko:"Kandydat Podopieczny 3",adres:"Test Address 3",telefon:"222111003",status:"Oczekujący",bo:"TAK",opis:"Wymaga regularnych wizyt"},
+                {id:4,imie_nazwisko:"Kandydat Podopieczny 4",adres:"Test Address 4",status:"Oczekujący"},
+                {id:5,imie_nazwisko:"Kandydat Podopieczny 5",adres:"Test Address 5",status:"Oczekujący"},
+                {id:6,imie_nazwisko:"Kandydat Podopieczny 6",adres:"Test Address 6",status:"Oczekujący"},
+                {id:7,imie_nazwisko:"Kandydat Podopieczny 7",adres:"Test Address 7",status:"Oczekujący"},
+                {id:8,imie_nazwisko:"Kandydat Podopieczny 8",adres:"Test Address 8",status:"Oczekujący"},
+                {id:9,imie_nazwisko:"Kandydat Podopieczny 9",adres:"Test Address 9",status:"Oczekujący"},
+                {id:10,imie_nazwisko:"Kandydat Podopieczny 10",adres:"Test Address 10",status:"Oczekujący"},
+                {id:11,imie_nazwisko:"Kandydat Podopieczny 11",adres:"Test Address 11",status:"Oczekujący"},
+                {id:12,imie_nazwisko:"Kandydat Podopieczny 12",adres:"Test Address 12",status:"Oczekujący"},
+                {id:13,imie_nazwisko:"Kandydat Podopieczny 13",adres:"Test Address 13",status:"Oczekujący"},
+                {id:14,imie_nazwisko:"Kandydat Podopieczny 14",adres:"Test Address 14",status:"Oczekujący"},
+                {id:15,imie_nazwisko:"Kandydat Podopieczny 15",adres:"Test Address 15",status:"Oczekujący"},
+                {id:16,imie_nazwisko:"Kandydat Podopieczny 16",adres:"Test Address 16",status:"Oczekujący"},
+                {id:17,imie_nazwisko:"Kandydat Podopieczny 17",adres:"Test Address 17",status:"Oczekujący"},
+                {id:18,imie_nazwisko:"Kandydat Podopieczny 18",adres:"Test Address 18",status:"Oczekujący"},
+                {id:19,imie_nazwisko:"Kandydat Podopieczny 19",adres:"Test Address 19",status:"Oczekujący"},
+                {id:20,imie_nazwisko:"Kandydat Podopieczny 20",adres:"Test Address 20",status:"Oczekujący"},
+                {id:21,imie_nazwisko:"Kandydat Podopieczny 21",adres:"Test Address 21",status:"Oczekujący"},
+                {id:22,imie_nazwisko:"Kandydat Podopieczny 22",adres:"Test Address 22",status:"Oczekujący"},
+                {id:23,imie_nazwisko:"Kandydat Podopieczny 23",adres:"Test Address 23",status:"Oczekujący"},
+                {id:24,imie_nazwisko:"Kandydat Podopieczny 24",adres:"Test Address 24",status:"Oczekujący"},
+                {id:25,imie_nazwisko:"Kandydat Podopieczny 25",adres:"Test Address 25",status:"Oczekujący"},
+                {id:26,imie_nazwisko:"Kandydat Podopieczny 26",adres:"Test Address 26",status:"Oczekujący"},
+                {id:27,imie_nazwisko:"Kandydat Podopieczny 27",adres:"Test Address 27",status:"Oczekujący"},
+                {id:28,imie_nazwisko:"Kandydat Podopieczny 28",adres:"Test Address 28",status:"Oczekujący"},
+                {id:29,imie_nazwisko:"Kandydat Podopieczny 29",adres:"Test Address 29",status:"Oczekujący"},
+                {id:30,imie_nazwisko:"Kandydat Podopieczny 30",adres:"Test Address 30",status:"Oczekujący"},
+                {id:31,imie_nazwisko:"Kandydat Podopieczny 31",adres:"Test Address 31",status:"Oczekujący"},
+                {id:32,imie_nazwisko:"Kandydat Podopieczny 32",adres:"Test Address 32",status:"Oczekujący"},
+                {id:33,imie_nazwisko:"Kandydat Podopieczny 33",adres:"Test Address 33",status:"Oczekujący"},
+                {id:4,imie_nazwisko:"Kandydat Podopieczny 4",adres:"Test Address 4",telefon:"222111004",status:"Oczekujący",bo:"NIE",opis:""},
+                {id:5,imie_nazwisko:"Kandydat Podopieczny 5",adres:"Test Address 5",telefon:"222111005",status:"Oczekujący",bo:"TAK",opis:""},
+                {id:6,imie_nazwisko:"Kandydat Podopieczny 6",adres:"Test Address 6",telefon:"222111006",status:"Oczekujący",bo:"NIE",opis:""},
+                {id:7,imie_nazwisko:"Kandydat Podopieczny 7",adres:"Test Address 7",telefon:"222111007",status:"Oczekujący",bo:"TAK",opis:""},
+                {id:8,imie_nazwisko:"Kandydat Podopieczny 8",adres:"Test Address 8",telefon:"222111008",status:"Oczekujący",bo:"NIE",opis:""},
+                {id:9,imie_nazwisko:"Kandydat Podopieczny 9",adres:"Test Address 9",telefon:"222111009",status:"Oczekujący",bo:"TAK",opis:""},
+                {id:10,imie_nazwisko:"Kandydat Podopieczny 10",adres:"Test Address 10",telefon:"222111010",status:"Oczekujący",bo:"NIE",opis:""}
+            ]
+        };
+
+        // All departments for reference
+        const ALL_DZIALY = [
+            "Pomoc indywidualna",
+            "Remonty",
+            "Grupa porządkowa",
+            "Fizjoterapia",
+            "Księgowość",
+            "Festyn Seniora",
+            "Szkolenia",
+            "Media",
+            "Klub seniora",
+            "Muzyczni",
+            "Gastronomia",
+            "Zbieranie funduszy"
+        ];
+
+        // APP STATE
+        let currentPage = 'dashboard';
+        let currentTheme = 'light';
+        let currentFilters = {
+            volunteers: { search: '', status: 'all' },
+            beneficiaries: { search: '', status: 'all' }
+        };
+        let currentPagination = {
+            volunteers: { page: 1, perPage: 20 },
+            beneficiaries: { page: 1, perPage: 20 }
+        };
+
+        // UTILITY FUNCTIONS
+        function getStats() {
+            const activeVolunteers = DATABASE.wolontariusze.filter(v => v.status === 'Aktywny').length;
+            const presentBeneficiaries = DATABASE.podopieczni.filter(b => b.status === 'OBECNY').length;
+            
+            return {
+                totalVolunteers: DATABASE.wolontariusze.length,
+                activeVolunteers: activeVolunteers,
+                totalBeneficiaries: DATABASE.podopieczni.length,
+                presentBeneficiaries: presentBeneficiaries
+            };
+        }
+
+        function filterVolunteers(search, status) {
+            return DATABASE.wolontariusze.filter(v => {
+                const matchesSearch = !search || 
+                    v.imie_nazwisko.toLowerCase().includes(search.toLowerCase()) ||
+                    v.email.toLowerCase().includes(search.toLowerCase());
+                const matchesStatus = status === 'all' || v.status === status;
+                return matchesSearch && matchesStatus;
+            });
+        }
+
+        function filterBeneficiaries(search, status) {
+            return DATABASE.podopieczni.filter(b => {
+                const matchesSearch = !search ||
+                    b.imie_nazwisko.toLowerCase().includes(search.toLowerCase()) ||
+                    b.adres.toLowerCase().includes(search.toLowerCase());
+                const matchesStatus = status === 'all' || b.status === status;
+                return matchesSearch && matchesStatus;
+            });
+        }
+
+        function paginate(items, page, perPage) {
+            const start = (page - 1) * perPage;
+            const end = start + perPage;
+            return {
+                items: items.slice(start, end),
+                totalPages: Math.ceil(items.length / perPage),
+                totalItems: items.length
+            };
+        }
+
+        function exportToCSV(data, filename) {
+            if (data.length === 0) return;
+            
+            const headers = Object.keys(data[0]);
+            const csvContent = [
+                headers.join(','),
+                ...data.map(row => 
+                    headers.map(header => {
+                        const value = row[header];
+                        if (Array.isArray(value)) return `"${value.join('; ')}"`;
+                        return `"${value}"`;
+                    }).join(',')
+                )
+            ].join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        function renderDzialyBadges(dzialy) {
+            return ALL_DZIALY.map((dzial, idx) => {
+                const isActive = dzialy.includes(dzial);
+                const num = idx + 1;
+                return `<span class="dzial-badge ${isActive ? 'active' : 'inactive'}" title="${dzial}">${num}</span>`;
+            }).join('');
+        }
+
+        function getStatusBadgeClass(status) {
+            const statusMap = {
+                'Aktywny': 'badge-success',
+                'Były': 'badge-secondary',
+                'OBECNY': 'badge-info',
+                'ZMARŁY': 'badge-danger',
+                'BYŁY': 'badge-secondary',
+                'DPS/ZOL': 'badge-warning'
+            };
+            return statusMap[status] || 'badge-secondary';
+        }
+
+        // PAGE RENDERERS
+        function renderDashboard() {
+            const stats = getStats();
+            
+            return `
+                <h1 class="page-title">Dashboard</h1>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">Wszyscy Wolontariusze</div>
+                        <div class="stat-value">${stats.totalVolunteers}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Aktywni Wolontariusze</div>
+                        <div class="stat-value">${stats.activeVolunteers}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Wszyscy Podopieczni</div>
+                        <div class="stat-value">${stats.totalBeneficiaries}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Obecni Podopieczni</div>
+                        <div class="stat-value">${stats.presentBeneficiaries}</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Witaj w NGO Dashboard 💚</h2>
+                    </div>
+                    <div class="card-body">
+                        <p>System zarządzania wolontariatem NGO z pełną bazą danych zawierającą:</p>
+                        <ul style="margin-top: 16px; margin-left: 20px;">
+                            <li>135 wolontariuszy z przypisanymi klubami i grupami</li>
+                            <li>65 podopiecznych z podziałem na 5 grup (A-E)</li>
+                            <li>5 grup przewodników</li>
+                            <li>25 zgłoszeń rekrutacyjnych wolontariuszy</li>
+                            <li>34 zgłoszenia rekrutacyjne podopiecznych</li>
+                        </ul>
+                        <p style="margin-top: 16px;">Użyj menu po lewej stronie, aby przeglądać różne sekcje systemu.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderVolunteers() {
+            const filtered = filterVolunteers(currentFilters.volunteers.search, currentFilters.volunteers.status);
+            const paginated = paginate(filtered, currentPagination.volunteers.page, currentPagination.volunteers.perPage);
+            
+            return `
+                <h1 class="page-title">Wolontariusze</h1>
+                
+                <div class="toolbar">
+                    <div class="search-box">
+                        <input type="text" placeholder="Szukaj po imieniu lub email..." 
+                               value="${currentFilters.volunteers.search}"
+                               oninput="handleVolunteerSearch(this.value)">
+                    </div>
+                    <div class="filter-select">
+                        <select onchange="handleVolunteerStatusFilter(this.value)" value="${currentFilters.volunteers.status}">
+                            <option value="all">Wszystkie statusy</option>
+                            <option value="Aktywny" ${currentFilters.volunteers.status === 'Aktywny' ? 'selected' : ''}>Aktywny</option>
+                            <option value="Były" ${currentFilters.volunteers.status === 'Był' ? 'selected' : ''}>Były</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="exportVolunteers()">📥 Eksport CSV</button>
+                    <button class="btn btn-primary" onclick="openAddVolunteerModal()">➕ Dodaj Wolontariusza</button>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Imię i Nazwisko</th>
+                                        <th>Email</th>
+                                        <th>Telefon</th>
+                                        <th>Grupa</th>
+                                        <th>Podopieczny</th>
+                                        <th>Status</th>
+                                        <th>Działy (1-12)</th>
+                                        <th>Akcje</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${paginated.items.map(v => {
+                                        const beneficiaryMapping = DATABASE.grupy_przewodnikow.find(gp => {
+                                            const volunteers = gp.wolontariusze.split(',').map(name => name.trim());
+                                            return volunteers.includes(v.imie_nazwisko);
+                                        });
+                                        const assignedBeneficiary = beneficiaryMapping ? beneficiaryMapping.podopieczny : (v.podopieczny || '-');
+                                        
+                                        return `
+                                        <tr>
+                                            <td>${v.imie_nazwisko}</td>
+                                            <td>${v.email}</td>
+                                            <td>${v.telefon}</td>
+                                            <td><strong>${v.grupa || '-'}</strong></td>
+                                            <td>${assignedBeneficiary}</td>
+                                            <td><span class="badge ${getStatusBadgeClass(v.status)}">${v.status}</span></td>
+                                            <td><div class="dzialy-badges">${renderDzialyBadges(v.kluby)}</div></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-primary" onclick="openEditVolunteerModal(${v.id})">✏️ Edytuj</button>
+                                                <button class="btn btn-sm btn-danger" onclick="deleteVolunteer(${v.id})">🗑️ Usuń</button>
+                                            </td>
+                                        </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        ${renderPagination(paginated.totalPages, currentPagination.volunteers.page, 'volunteers')}
+                    </div>
+                </div>
+                
+                <p style="color: var(--color-text-secondary); margin-top: 16px;">
+                    Pokazano ${paginated.items.length} z ${paginated.totalItems} wolontariuszy
+                </p>
+            `;
+        }
+
+        function renderBeneficiaries() {
+            const filtered = filterBeneficiaries(currentFilters.beneficiaries.search, currentFilters.beneficiaries.status);
+            const paginated = paginate(filtered, currentPagination.beneficiaries.page, currentPagination.beneficiaries.perPage);
+            
+            return `
+                <h1 class="page-title">Podopieczni</h1>
+                
+                <div class="toolbar">
+                    <div class="search-box">
+                        <input type="text" placeholder="Szukaj po imieniu lub adresie..." 
+                               value="${currentFilters.beneficiaries.search}"
+                               oninput="handleBeneficiarySearch(this.value)">
+                    </div>
+                    <div class="filter-select">
+                        <select onchange="handleBeneficiaryStatusFilter(this.value)">
+                            <option value="all">Wszystkie statusy</option>
+                            <option value="OBECNY" ${currentFilters.beneficiaries.status === 'OBECNY' ? 'selected' : ''}>Obecny</option>
+                            <option value="ZMARŁY" ${currentFilters.beneficiaries.status === 'ZMARŁY' ? 'selected' : ''}>Zmarły</option>
+                            <option value="BYŁY" ${currentFilters.beneficiaries.status === 'BYŁY' ? 'selected' : ''}>Były</option>
+                            <option value="DPS/ZOL" ${currentFilters.beneficiaries.status === 'DPS/ZOL' ? 'selected' : ''}>DPS/ZOL</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="exportBeneficiaries()">📥 Eksport CSV</button>
+                    <button class="btn btn-primary" onclick="openAddBeneficiaryModal()">➕ Dodaj Podopiecznego</button>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Imię i Nazwisko</th>
+                                        <th>Adres</th>
+                                        <th>Telefon</th>
+                                        <th>Grupa</th>
+                                        <th>Status</th>
+                                        <th>BO</th>
+                                        <th>Ostatnia wizyta</th>
+                                        <th>Akcje</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${paginated.items.map(b => {
+                                        const mapping = DATABASE.grupy_przewodnikow.find(gp => gp.podopieczny === b.imie_nazwisko);
+                                        const volunteerNames = mapping && mapping.wolontariusze ? 
+                                            mapping.wolontariusze.split(',').map(v => v.trim()).filter(v => v) : [];
+                                        
+                                        return `
+                                        <tr>
+                                            <td>
+                                                <div>${b.imie_nazwisko}</div>
+                                                ${volunteerNames.length > 0 ? `
+                                                    <div style="margin-top: 4px;">
+                                                        <small style="color: var(--color-text-secondary);">Wolontariusze:</small>
+                                                        <div class="multiple-volunteers">
+                                                            ${volunteerNames.map(v => `<span class="volunteer-badge" style="font-size: 10px; padding: 2px 6px;">${v}</span>`).join('')}
+                                                        </div>
+                                                    </div>
+                                                ` : ''}
+                                            </td>
+                                            <td>${b.adres}</td>
+                                            <td>${b.telefon}</td>
+                                            <td><strong>${b.grupa}</strong></td>
+                                            <td><span class="badge ${getStatusBadgeClass(b.status)}">${b.status}</span></td>
+                                            <td><span class="badge ${b.bo === 'TAK' ? 'badge-success' : 'badge-secondary'}">${b.bo}</span></td>
+                                            <td>${b.ostatnia_wizyta}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-primary" onclick="openEditBeneficiaryModal(${b.id})">✏️ Edytuj</button>
+                                                <button class="btn btn-sm btn-danger" onclick="deleteBeneficiary(${b.id})">🗑️ Usuń</button>
+                                            </td>
+                                        </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        ${renderPagination(paginated.totalPages, currentPagination.beneficiaries.page, 'beneficiaries')}
+                    </div>
+                </div>
+                
+                <p style="color: var(--color-text-secondary); margin-top: 16px;">
+                    Pokazano ${paginated.items.length} z ${paginated.totalItems} podopiecznych
+                </p>
+            `;
+        }
+
+        function renderGroups() {
+            const groups = ['A', 'B', 'C', 'D', 'E'];
+            
+            return `
+                <h1 class="page-title">Grupy Przewodników</h1>
+                
+                <div class="toolbar">
+                    <button class="btn btn-primary" onclick="openAddGroupModal()">➡️ Utwórz nową grupę</button>
+                </div>
+                
+                ${DATABASE.grupy.map(groupInfo => {
+                    const grp = groupInfo.grupa;
+                    const beneficiaries = DATABASE.podopieczni.filter(p => p.grupa === grp);
+                    
+                    return `
+                        <div class="group-card">
+                            <div class="group-header" onclick="toggleGroup('${grp}')">
+                                <div>
+                                    <strong style="font-size: 20px;">Grupa ${grp}</strong>
+                                    <span style="margin-left: 16px; opacity: 0.8;">${beneficiaries.length} podopiecznych</span>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); openEditGroupModal('${grp}')" style="margin-right: 8px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);">✏️ Edytuj</button>
+                                    <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteGroup('${grp}')" style="margin-right: 8px; background: rgba(255,80,80,0.3); border: 1px solid rgba(255,80,80,0.5);">🗑️ Usuń</button>
+                                    <span id="group-${grp}-arrow">▼</span>
+                                </div>
+                            </div>
+                            <div class="group-content" id="group-${grp}-content">
+                                <div class="group-info">
+                                    <div>
+                                        <strong>Przewodnik:</strong><br>
+                                        ${groupInfo.przewodnik}
+                                    </div>
+                                    <div>
+                                        <strong>Zastępca:</strong><br>
+                                        ${groupInfo.zastepca}
+                                    </div>
+                                </div>
+                                
+                                <h4 style="margin-top: 24px; margin-bottom: 16px;">Podopieczni i wolontariusze:</h4>
+                                ${beneficiaries.map(ben => {
+                                    const mapping = DATABASE.grupy_przewodnikow.find(gp => gp.podopieczny === ben.imie_nazwisko);
+                                    const volunteerNames = mapping && mapping.wolontariusze ? 
+                                        mapping.wolontariusze.split(',').map(v => v.trim()).filter(v => v) : [];
+                                    
+                                    return `
+                                        <div class="beneficiary-item">
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                                <strong>${ben.imie_nazwisko}</strong>
+                                                <span class="badge ${getStatusBadgeClass(ben.status)}">${ben.status}</span>
+                                            </div>
+                                            <div style="color: var(--color-text-secondary); font-size: 13px;">
+                                                📍 ${ben.adres}<br>
+                                                📞 ${ben.telefon}<br>
+                                                ${ben.bo === 'TAK' ? '✅ BO' : '❌ Bez BO'} | Ostatnia wizyta: ${ben.ostatnia_wizyta}
+                                            </div>
+                                            ${volunteerNames.length > 0 ? `
+                                                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border);">
+                                                    <strong style="font-size: 12px;">Przypisani wolontariusze (${volunteerNames.length}):</strong><br>
+                                                    <div class="multiple-volunteers">
+                                                        ${volunteerNames.map(v => `<span class="volunteer-badge">${v}</span>`).join('')}
+                                                    </div>
+                                                </div>
+                                            ` : `
+                                                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border);">
+                                                    <span style="font-size: 12px; color: var(--color-text-secondary);">Brak przypisanych wolontariuszy</span>
+                                                </div>
+                                            `}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+        }
+
+        function oldRenderGroups() {
+            const groups = ['A', 'B', 'C', 'D', 'E'];
+            
+            return `
+                <h1 class="page-title">Grupy Przewodników</h1>
+                
+                ${groups.map(grp => {
+                    const groupInfo = DATABASE.grupy.find(g => g.grupa === grp);
+                    const beneficiaries = DATABASE.podopieczni.filter(p => p.grupa === grp);
+                    const volunteers = DATABASE.wolontariusze.filter(v => v.grupa === grp && v.podopieczny);
+                    
+                    return `
+                        <div class="group-card">
+                            <div class="group-header" onclick="toggleGroup('${grp}')">
+                                <div>
+                                    <strong style="font-size: 20px;">Grupa ${grp}</strong>
+                                    <span style="margin-left: 16px; opacity: 0.8;">${beneficiaries.length} podopiecznych</span>
+                                </div>
+                                <span id="group-${grp}-arrow">▼</span>
+                            </div>
+                            <div class="group-content" id="group-${grp}-content">
+                                <div class="group-info">
+                                    <div>
+                                        <strong>Przewodnik:</strong><br>
+                                        ${groupInfo ? groupInfo.przewodnik : 'Nie przypisano'}
+                                    </div>
+                                    <div>
+                                        <strong>Zastępca:</strong><br>
+                                        ${groupInfo ? groupInfo.zastepca : 'Nie przypisano'}
+                                    </div>
+                                </div>
+                                
+                                <h4 style="margin-top: 24px; margin-bottom: 16px;">Podopieczni i wolontariusze:</h4>
+                                ${beneficiaries.map(ben => {
+                                    const assignedVols = volunteers.filter(v => v.podopieczny === ben.imie_nazwisko);
+                                    return `
+                                        <div class="beneficiary-item">
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                                <strong>${ben.imie_nazwisko}</strong>
+                                                <span class="badge ${getStatusBadgeClass(ben.status)}">${ben.status}</span>
+                                            </div>
+                                            <div style="color: var(--color-text-secondary); font-size: 13px;">
+                                                📍 ${ben.adres}<br>
+                                                📞 ${ben.telefon}<br>
+                                                ${ben.bo === 'TAK' ? '✅ BO' : '❌ Bez BO'} | Ostatnia wizyta: ${ben.ostatnia_wizyta}
+                                            </div>
+                                            ${assignedVols.length > 0 ? `
+                                                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border);">
+                                                    <strong style="font-size: 12px;">Przypisani wolontariusze:</strong><br>
+                                                    ${assignedVols.map(v => `<span class="badge badge-info" style="margin-top: 4px;">${v.imie_nazwisko}</span>`).join(' ')}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+        }
+
+        function renderRecruitmentVolunteers() {
+            return `
+                <h1 class="page-title">Rekrutacja Wolontariuszy</h1>
+                
+                <div class="toolbar">
+                    <button class="btn btn-primary" onclick="openAddRecruitmentVolunteerModal()">➡️ Dodaj Kandydata</button>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Imię i Nazwisko</th>
+                                        <th>Email</th>
+                                        <th>Telefon</th>
+                                        <th>Data dołączenia</th>
+                                        <th>Progress (4 spotkań)</th>
+                                        <th>Spotkanie Charyzmat</th>
+                                        <th>Spotkanie Wspólnota</th>
+                                        <th>Spotkanie Działanie</th>
+                                        <th>Spotkanie Administracja</th>
+                                        <th>Akcje</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${DATABASE.rekrutacja_wolontariusze.map(r => {
+                                        const completed = [
+                                            r.spotkanie_charyzmat,
+                                            r.spotkanie_wspolnota,
+                                            r.spotkanie_dzialanie,
+                                            r.spotkanie_administracja
+                                        ].filter(s => s && s !== '').length;
+                                        const canPromote = completed === 4;
+                                        
+                                        return `
+                                            <tr>
+                                                <td><strong>${r.imie_nazwisko}</strong></td>
+                                                <td>${r.email}</td>
+                                                <td>${r.telefon}</td>
+                                                <td>${r.data_dolaczenia}</td>
+                                                <td>
+                                                    <div class="progress-bar">
+                                                        <strong>${completed}/4</strong>
+                                                        <div class="progress-indicator">
+                                                            <span class="progress-step ${r.spotkanie_charyzmat ? 'completed' : ''}">✓</span>
+                                                            <span class="progress-step ${r.spotkanie_wspolnota ? 'completed' : ''}">✓</span>
+                                                            <span class="progress-step ${r.spotkanie_dzialanie ? 'completed' : ''}">✓</span>
+                                                            <span class="progress-step ${r.spotkanie_administracja ? 'completed' : ''}">✓</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="meeting-checkbox-wrapper">
+                                                        <input type="checkbox" class="meeting-checkbox" 
+                                                               id="meeting-charyzmat-${r.id}" 
+                                                               ${r.spotkanie_charyzmat ? 'checked' : ''}
+                                                               onchange="toggleMeeting(${r.id}, 'charyzmat', this.checked)">
+                                                        <label for="meeting-charyzmat-${r.id}" style="cursor: pointer;">
+                                                            ${r.spotkanie_charyzmat ? `✓` : '☐'}
+                                                        </label>
+                                                        ${r.spotkanie_charyzmat ? `<input type="date" class="meeting-date-input" value="${r.spotkanie_charyzmat}" onchange="updateMeetingDate(${r.id}, 'charyzmat', this.value)">` : ''}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="meeting-checkbox-wrapper">
+                                                        <input type="checkbox" class="meeting-checkbox" 
+                                                               id="meeting-wspolnota-${r.id}" 
+                                                               ${r.spotkanie_wspolnota ? 'checked' : ''}
+                                                               onchange="toggleMeeting(${r.id}, 'wspolnota', this.checked)">
+                                                        <label for="meeting-wspolnota-${r.id}" style="cursor: pointer;">
+                                                            ${r.spotkanie_wspolnota ? `✓` : '☐'}
+                                                        </label>
+                                                        ${r.spotkanie_wspolnota ? `<input type="date" class="meeting-date-input" value="${r.spotkanie_wspolnota}" onchange="updateMeetingDate(${r.id}, 'wspolnota', this.value)">` : ''}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="meeting-checkbox-wrapper">
+                                                        <input type="checkbox" class="meeting-checkbox" 
+                                                               id="meeting-dzialanie-${r.id}" 
+                                                               ${r.spotkanie_dzialanie ? 'checked' : ''}
+                                                               onchange="toggleMeeting(${r.id}, 'dzialanie', this.checked)">
+                                                        <label for="meeting-dzialanie-${r.id}" style="cursor: pointer;">
+                                                            ${r.spotkanie_dzialanie ? `✓` : '☐'}
+                                                        </label>
+                                                        ${r.spotkanie_dzialanie ? `<input type="date" class="meeting-date-input" value="${r.spotkanie_dzialanie}" onchange="updateMeetingDate(${r.id}, 'dzialanie', this.value)">` : ''}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="meeting-checkbox-wrapper">
+                                                        <input type="checkbox" class="meeting-checkbox" 
+                                                               id="meeting-administracja-${r.id}" 
+                                                               ${r.spotkanie_administracja ? 'checked' : ''}
+                                                               onchange="toggleMeeting(${r.id}, 'administracja', this.checked)">
+                                                        <label for="meeting-administracja-${r.id}" style="cursor: pointer;">
+                                                            ${r.spotkanie_administracja ? `✓` : '☐'}
+                                                        </label>
+                                                        ${r.spotkanie_administracja ? `<input type="date" class="meeting-date-input" value="${r.spotkanie_administracja}" onchange="updateMeetingDate(${r.id}, 'administracja', this.value)">` : ''}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    ${canPromote ? `<button class="btn btn-sm btn-primary" onclick="promoteToVolunteer(${r.id})" style="background: var(--color-primary); font-weight: 600;">⬆️ Promuj</button>` : `<span class="badge badge-secondary">Oczekuje</span>`}
+                                                    <button class="btn btn-sm btn-danger" onclick="deleteRecruitmentVolunteer(${r.id})" style="margin-top: 4px;">🗑️ Usuń</button>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderRecruitmentBeneficiaries() {
+            return `
+                <h1 class="page-title">Rekrutacja Podopiecznych</h1>
+                
+                <div class="toolbar">
+                    <button class="btn btn-primary" onclick="openAddRecruitmentBeneficiaryModal()">➡️ Dodaj Zgłoszenie</button>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Imię i Nazwisko</th>
+                                        <th>Adres</th>
+                                        <th>Numer telefonu</th>
+                                        <th>Status</th>
+                                        <th>BO</th>
+                                        <th>Opis</th>
+                                        <th>Akcje</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${DATABASE.rekrutacja_podopieczni.map(r => `
+                                        <tr>
+                                            <td><strong>${r.imie_nazwisko}</strong></td>
+                                            <td>${r.adres}</td>
+                                            <td>${r.telefon}</td>
+                                            <td><span class="badge badge-warning">${r.status}</span></td>
+                                            <td><span class="badge ${r.bo === 'TAK' ? 'badge-success' : 'badge-secondary'}">${r.bo}</span></td>
+                                            <td>${r.opis || '-'}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-primary" onclick="openEditRecruitmentBeneficiaryModal(${r.id})">✏️ Edytuj</button>
+                                                <button class="btn btn-sm btn-danger" onclick="deleteRecruitmentBeneficiary(${r.id})">🗑️ Usuń</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderRecruitment() {
+            return `
+                <h1 class="page-title">Rekrutacja</h1>
+                
+                <div class="tabs">
+                    <div class="tab active" onclick="switchRecruitmentTab('volunteers')">Kandydaci Wolontariusze (${DATABASE.rekrutacja_wolontariusze.length})</div>
+                    <div class="tab" onclick="switchRecruitmentTab('beneficiaries')">Zgłoszenia Podopiecznych (${DATABASE.rekrutacja_podopieczni.length})</div>
+                </div>
+                
+                <div id="recruitment-volunteers-tab">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Imię i Nazwisko</th>
+                                            <th>Email</th>
+                                            <th>Data zgłoszenia</th>
+                                            <th>Akcje</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${DATABASE.rekrutacja_wolontariusze.map(r => `
+                                            <tr>
+                                                <td>${r.imie_nazwisko}</td>
+                                                <td>${r.email}</td>
+                                                <td>${r.data_zgloszenia}</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-primary" style="margin-right: 8px;">✓ Akceptuj</button>
+                                                    <button class="btn btn-sm btn-secondary">✕ Odrzuć</button>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="recruitment-beneficiaries-tab" class="hidden">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Imię i Nazwisko</th>
+                                            <th>Adres</th>
+                                            <th>Status</th>
+                                            <th>Akcje</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${DATABASE.rekrutacja_podopieczni.map(r => `
+                                            <tr>
+                                                <td>${r.imie_nazwisko}</td>
+                                                <td>${r.adres}</td>
+                                                <td><span class="badge badge-warning">${r.status}</span></td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-primary" style="margin-right: 8px;">✓ Akceptuj</button>
+                                                    <button class="btn btn-sm btn-secondary">✕ Odrzuć</button>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPagination(totalPages, currentPage, type) {
+            if (totalPages <= 1) return '';
+            
+            let pages = [];
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    pages.push(i);
+                } else if (pages[pages.length - 1] !== '...') {
+                    pages.push('...');
+                }
+            }
+            
+            return `
+                <div class="pagination">
+                    <button onclick="changePage('${type}', ${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>←</button>
+                    ${pages.map(p => {
+                        if (p === '...') return `<span style="padding: 8px;">...</span>`;
+                        return `<button onclick="changePage('${type}', ${p})" ${p === currentPage ? 'class="active"' : ''}>${p}</button>`;
+                    }).join('')}
+                    <button onclick="changePage('${type}', ${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>→</button>
+                </div>
+            `;
+        }
+
+        // EVENT HANDLERS
+        function navigateTo(page) {
+            currentPage = page;
+            
+            // Update sidebar
+            document.querySelectorAll('.sidebar-menu a').forEach(a => {
+                a.classList.remove('active');
+                if (a.dataset.page === page) a.classList.add('active');
+            });
+            
+            // Update breadcrumb
+            const pageNames = {
+                'dashboard': 'Dashboard',
+                'volunteers': 'Wolontariusze',
+                'beneficiaries': 'Podopieczni',
+                'groups': 'Grupy Przewodników',
+                'recruitment': 'Rekrutacja',
+                'recruitment-volunteers': 'Rekrutacja Wolontariuszy',
+                'recruitment-beneficiaries-rec': 'Rekrutacja Podopiecznych'
+            };
+            document.getElementById('breadcrumb').textContent = `Panel > ${pageNames[page]}`;
+            
+            // Render content
+            const contentRenderers = {
+                'dashboard': renderDashboard,
+                'volunteers': renderVolunteers,
+                'beneficiaries': renderBeneficiaries,
+                'groups': renderGroups,
+                'recruitment': renderRecruitment,
+                'recruitment-volunteers': renderRecruitmentVolunteers,
+                'recruitment-beneficiaries-rec': renderRecruitmentBeneficiaries
+            };
+            
+            document.getElementById('content').innerHTML = contentRenderers[page]();
+        }
+
+        function toggleTheme() {
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            document.getElementById('themeToggle').textContent = currentTheme === 'light' ? '🌙 Tryb ciemny' : '☀️ Tryb jasny';
+        }
+
+        function handleVolunteerSearch(value) {
+            currentFilters.volunteers.search = value;
+            currentPagination.volunteers.page = 1;
+            navigateTo('volunteers');
+        }
+
+        function handleVolunteerStatusFilter(value) {
+            currentFilters.volunteers.status = value;
+            currentPagination.volunteers.page = 1;
+            navigateTo('volunteers');
+        }
+
+        function handleBeneficiarySearch(value) {
+            currentFilters.beneficiaries.search = value;
+            currentPagination.beneficiaries.page = 1;
+            navigateTo('beneficiaries');
+        }
+
+        function handleBeneficiaryStatusFilter(value) {
+            currentFilters.beneficiaries.status = value;
+            currentPagination.beneficiaries.page = 1;
+            navigateTo('beneficiaries');
+        }
+
+        function changePage(type, page) {
+            if (page < 1) return;
+            currentPagination[type].page = page;
+            navigateTo(currentPage);
+        }
+
+        function exportVolunteers() {
+            const filtered = filterVolunteers(currentFilters.volunteers.search, currentFilters.volunteers.status);
+            exportToCSV(filtered, 'wolontariusze.csv');
+        }
+
+        function exportBeneficiaries() {
+            const filtered = filterBeneficiaries(currentFilters.beneficiaries.search, currentFilters.beneficiaries.status);
+            exportToCSV(filtered, 'podopieczni.csv');
+        }
+
+        function toggleGroup(group) {
+            const content = document.getElementById(`group-${group}-content`);
+            const arrow = document.getElementById(`group-${group}-arrow`);
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                arrow.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                arrow.textContent = '▶';
+            }
+        }
+
+        function switchRecruitmentTab(tab) {
+            document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (tab === 'volunteers') {
+                document.getElementById('recruitment-volunteers-tab').classList.remove('hidden');
+                document.getElementById('recruitment-beneficiaries-tab').classList.add('hidden');
+            } else {
+                document.getElementById('recruitment-volunteers-tab').classList.add('hidden');
+                document.getElementById('recruitment-beneficiaries-tab').classList.remove('hidden');
+            }
+        }
+
+        // INIT
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup navigation
+            document.querySelectorAll('.sidebar-menu a').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    navigateTo(link.dataset.page);
+                });
+            });
+            
+            // Setup theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Initial render
+            navigateTo('dashboard');
+        });
+
+        // CRUD OPERATIONS FOR VOLUNTEERS
+        function openAddVolunteerModal() {
+            showVolunteerModal(null);
+        }
+
+        function openEditVolunteerModal(id) {
+            const volunteer = DATABASE.wolontariusze.find(v => v.id === id);
+            if (volunteer) showVolunteerModal(volunteer);
+        }
+
+        function showVolunteerModal(volunteer) {
+            const isEdit = volunteer !== null;
+            const title = isEdit ? 'Edytuj Wolontariusza' : 'Dodaj Wolontariusza';
+            
+            const modalHTML = `
+                <div class="modal active" id="volunteerModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title">${title}</h2>
+                            <button class="modal-close" onclick="closeModal('volunteerModal')">✕</button>
+                        </div>
+                        <form id="volunteerForm" onsubmit="saveVolunteer(event, ${isEdit ? volunteer.id : 'null'})">
+                            <div class="form-group">
+                                <label class="form-label">Imię i Nazwisko *</label>
+                                <input type="text" class="form-input" name="imie_nazwisko" value="${isEdit ? volunteer.imie_nazwisko : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Email *</label>
+                                <input type="email" class="form-input" name="email" value="${isEdit ? volunteer.email : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Telefon *</label>
+                                <input type="tel" class="form-input" name="telefon" value="${isEdit ? volunteer.telefon : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Grupa</label>
+                                <select class="form-input" name="grupa">
+                                    <option value="">Brak</option>
+                                    ${['A', 'B', 'C', 'D', 'E'].map(g => `<option value="${g}" ${isEdit && volunteer.grupa === g ? 'selected' : ''}>${g}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Podopieczny</label>
+                                <input type="text" class="form-input" name="podopieczny" value="${isEdit ? volunteer.podopieczny : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Status *</label>
+                                <select class="form-input" name="status" required>
+                                    <option value="Aktywny" ${isEdit && volunteer.status === 'Aktywny' ? 'selected' : ''}>Aktywny</option>
+                                    <option value="Były" ${isEdit && volunteer.status === 'Były' ? 'selected' : ''}>Były</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Działy</label>
+                                <div class="checkbox-group">
+                                    ${ALL_DZIALY.map((dzial, idx) => `
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="dzialy" value="${dzial}" ${isEdit && volunteer.kluby.includes(dzial) ? 'checked' : ''}>
+                                            ${idx + 1}. ${dzial}
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeModal('volunteerModal')">Anuluj</button>
+                                <button type="submit" class="btn btn-primary">💾 Zapisz</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function saveVolunteer(event, id) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            const selectedDzialy = [];
+            formData.getAll('dzialy').forEach(dzial => selectedDzialy.push(dzial));
+            
+            const volunteerData = {
+                imie_nazwisko: formData.get('imie_nazwisko'),
+                email: formData.get('email'),
+                telefon: formData.get('telefon'),
+                grupa: formData.get('grupa'),
+                podopieczny: formData.get('podopieczny'),
+                status: formData.get('status'),
+                kluby: selectedDzialy
+            };
+            
+            if (id) {
+                // UPDATE - Edit existing volunteer
+                const index = DATABASE.wolontariusze.findIndex(v => v.id === id);
+                if (index !== -1) {
+                    DATABASE.wolontariusze[index] = { ...DATABASE.wolontariusze[index], ...volunteerData };
+                    console.log('PUT /api/volunteers/' + id, volunteerData);
+                }
+            } else {
+                // CREATE - Add new volunteer
+                const newId = Math.max(...DATABASE.wolontariusze.map(v => v.id)) + 1;
+                DATABASE.wolontariusze.push({ id: newId, ...volunteerData });
+                console.log('POST /api/volunteers', volunteerData);
+            }
+            
+            closeModal('volunteerModal');
+            navigateTo('volunteers');
+        }
+
+        function deleteVolunteer(id) {
+            if (confirm('Czy na pewno chcesz usunąć tego wolontariusza?')) {
+                const index = DATABASE.wolontariusze.findIndex(v => v.id === id);
+                if (index !== -1) {
+                    DATABASE.wolontariusze.splice(index, 1);
+                    console.log('DELETE /api/volunteers/' + id);
+                    navigateTo('volunteers');
+                }
+            }
+        }
+
+        // CRUD OPERATIONS FOR BENEFICIARIES
+        function openAddBeneficiaryModal() {
+            showBeneficiaryModal(null);
+        }
+
+        function openEditBeneficiaryModal(id) {
+            const beneficiary = DATABASE.podopieczni.find(b => b.id === id);
+            if (beneficiary) showBeneficiaryModal(beneficiary);
+        }
+
+        function showBeneficiaryModal(beneficiary) {
+            const isEdit = beneficiary !== null;
+            const title = isEdit ? 'Edytuj Podopiecznego' : 'Dodaj Podopiecznego';
+            
+            const modalHTML = `
+                <div class="modal active" id="beneficiaryModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title">${title}</h2>
+                            <button class="modal-close" onclick="closeModal('beneficiaryModal')">✕</button>
+                        </div>
+                        <form id="beneficiaryForm" onsubmit="saveBeneficiary(event, ${isEdit ? beneficiary.id : 'null'})">
+                            <div class="form-group">
+                                <label class="form-label">Imię i Nazwisko *</label>
+                                <input type="text" class="form-input" name="imie_nazwisko" value="${isEdit ? beneficiary.imie_nazwisko : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Adres *</label>
+                                <input type="text" class="form-input" name="adres" value="${isEdit ? beneficiary.adres : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Telefon *</label>
+                                <input type="tel" class="form-input" name="telefon" value="${isEdit ? beneficiary.telefon : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Grupa *</label>
+                                <select class="form-input" name="grupa" required>
+                                    ${['A', 'B', 'C', 'D', 'E'].map(g => `<option value="${g}" ${isEdit && beneficiary.grupa === g ? 'selected' : ''}>${g}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Status *</label>
+                                <select class="form-input" name="status" required>
+                                    <option value="OBECNY" ${isEdit && beneficiary.status === 'OBECNY' ? 'selected' : ''}>OBECNY</option>
+                                    <option value="ZMARŁY" ${isEdit && beneficiary.status === 'ZMARŁY' ? 'selected' : ''}>ZMARŁY</option>
+                                    <option value="BYŁY" ${isEdit && beneficiary.status === 'BYŁY' ? 'selected' : ''}>BYŁY</option>
+                                    <option value="DPS/ZOL" ${isEdit && beneficiary.status === 'DPS/ZOL' ? 'selected' : ''}>DPS/ZOL</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">BO *</label>
+                                <select class="form-input" name="bo" required>
+                                    <option value="TAK" ${isEdit && beneficiary.bo === 'TAK' ? 'selected' : ''}>TAK</option>
+                                    <option value="NIE" ${isEdit && beneficiary.bo === 'NIE' ? 'selected' : ''}>NIE</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Ostatnia wizyta</label>
+                                <input type="text" class="form-input" name="ostatnia_wizyta" value="${isEdit ? beneficiary.ostatnia_wizyta : ''}" placeholder="DD.MM.YYYY">
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeModal('beneficiaryModal')">Anuluj</button>
+                                <button type="submit" class="btn btn-primary">💾 Zapisz</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function saveBeneficiary(event, id) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            const beneficiaryData = {
+                imie_nazwisko: formData.get('imie_nazwisko'),
+                adres: formData.get('adres'),
+                telefon: formData.get('telefon'),
+                grupa: formData.get('grupa'),
+                status: formData.get('status'),
+                bo: formData.get('bo'),
+                ostatnia_wizyta: formData.get('ostatnia_wizyta')
+            };
+            
+            if (id) {
+                // UPDATE - Edit existing beneficiary
+                const index = DATABASE.podopieczni.findIndex(b => b.id === id);
+                if (index !== -1) {
+                    DATABASE.podopieczni[index] = { ...DATABASE.podopieczni[index], ...beneficiaryData };
+                    console.log('PUT /api/beneficiaries/' + id, beneficiaryData);
+                }
+            } else {
+                // CREATE - Add new beneficiary
+                const newId = Math.max(...DATABASE.podopieczni.map(b => b.id)) + 1;
+                DATABASE.podopieczni.push({ id: newId, ...beneficiaryData });
+                console.log('POST /api/beneficiaries', beneficiaryData);
+            }
+            
+            closeModal('beneficiaryModal');
+            navigateTo('beneficiaries');
+        }
+
+        function deleteBeneficiary(id) {
+            if (confirm('Czy na pewno chcesz usunąć tego podopiecznego?')) {
+                const index = DATABASE.podopieczni.findIndex(b => b.id === id);
+                if (index !== -1) {
+                    DATABASE.podopieczni.splice(index, 1);
+                    console.log('DELETE /api/beneficiaries/' + id);
+                    navigateTo('beneficiaries');
+                }
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // CRUD OPERATIONS FOR GROUPS
+        function openAddGroupModal() {
+            showGroupModal(null);
+        }
+
+        function openEditGroupModal(grupa) {
+            const groupData = DATABASE.grupy.find(g => g.grupa === grupa);
+            if (groupData) showGroupModal(groupData);
+        }
+
+        function showGroupModal(groupData) {
+            const isEdit = groupData !== null;
+            const title = isEdit ? `Edytuj Grupę ${groupData.grupa}` : 'Utwórz nową grupę';
+            
+            const modalHTML = `
+                <div class="modal active" id="groupModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title">${title}</h2>
+                            <button class="modal-close" onclick="closeModal('groupModal')">✕</button>
+                        </div>
+                        <form id="groupForm" onsubmit="saveGroup(event, ${isEdit ? `'${groupData.grupa}'` : 'null'})">
+                            ${!isEdit ? `
+                            <div class="form-group">
+                                <label class="form-label">Nazwa Grupy *</label>
+                                <input type="text" class="form-input" name="grupa" value="" required maxlength="10" placeholder="np. F, G, Team 1">
+                            </div>
+                            ` : ''}
+                            <div class="form-group">
+                                <label class="form-label">Przewodnik *</label>
+                                <input type="text" class="form-input" name="przewodnik" value="${isEdit ? groupData.przewodnik : ''}" required placeholder="Imię i Nazwisko">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Zastępca *</label>
+                                <input type="text" class="form-input" name="zastepca" value="${isEdit ? groupData.zastepca : ''}" required placeholder="Imię i Nazwisko">
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeModal('groupModal')">Anuluj</button>
+                                <button type="submit" class="btn btn-primary">💾 Zapisz</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function saveGroup(event, grupa) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            const groupData = {
+                przewodnik: formData.get('przewodnik'),
+                zastepca: formData.get('zastepca')
+            };
+            
+            if (grupa) {
+                // UPDATE
+                const index = DATABASE.grupy.findIndex(g => g.grupa === grupa);
+                if (index !== -1) {
+                    DATABASE.grupy[index] = { ...DATABASE.grupy[index], ...groupData };
+                    console.log('PUT /api/groups/' + grupa, groupData);
+                }
+            } else {
+                // CREATE
+                const newGrupa = formData.get('grupa');
+                DATABASE.grupy.push({ grupa: newGrupa, ...groupData });
+                console.log('POST /api/groups', { grupa: newGrupa, ...groupData });
+            }
+            
+            closeModal('groupModal');
+            navigateTo('groups');
+        }
+
+        function deleteGroup(grupa) {
+            if (confirm(`Czy na pewno chcesz usunąć grupę ${grupa}?`)) {
+                const index = DATABASE.grupy.findIndex(g => g.grupa === grupa);
+                if (index !== -1) {
+                    DATABASE.grupy.splice(index, 1);
+                    console.log('DELETE /api/groups/' + grupa);
+                    navigateTo('groups');
+                }
+            }
+        }
+
+        // RECRUITMENT VOLUNTEERS OPERATIONS
+        function toggleMeeting(id, meetingType, isChecked) {
+            const candidate = DATABASE.rekrutacja_wolontariusze.find(r => r.id === id);
+            if (!candidate) return;
+            
+            const fieldMap = {
+                'charyzmat': 'spotkanie_charyzmat',
+                'wspolnota': 'spotkanie_wspolnota',
+                'dzialanie': 'spotkanie_dzialanie',
+                'administracja': 'spotkanie_administracja'
+            };
+            
+            if (isChecked) {
+                const today = new Date();
+                const dateStr = today.toISOString().split('T')[0];
+                candidate[fieldMap[meetingType]] = dateStr;
+                console.log(`PATCH /api/recruitment-volunteers/${id}`, { [fieldMap[meetingType]]: dateStr });
+            } else {
+                candidate[fieldMap[meetingType]] = '';
+                console.log(`PATCH /api/recruitment-volunteers/${id}`, { [fieldMap[meetingType]]: '' });
+            }
+            
+            navigateTo('recruitment-volunteers');
+        }
+
+        function updateMeetingDate(id, meetingType, dateValue) {
+            const candidate = DATABASE.rekrutacja_wolontariusze.find(r => r.id === id);
+            if (!candidate) return;
+            
+            const fieldMap = {
+                'charyzmat': 'spotkanie_charyzmat',
+                'wspolnota': 'spotkanie_wspolnota',
+                'dzialanie': 'spotkanie_dzialanie',
+                'administracja': 'spotkanie_administracja'
+            };
+            
+            candidate[fieldMap[meetingType]] = dateValue;
+            console.log(`PATCH /api/recruitment-volunteers/${id}`, { [fieldMap[meetingType]]: dateValue });
+        }
+
+        function markMeetingComplete(id, meetingType) {
+            toggleMeeting(id, meetingType, true);
+        }
+
+        function promoteToVolunteer(id) {
+            const candidate = DATABASE.rekrutacja_wolontariusze.find(r => r.id === id);
+            if (!candidate) return;
+            
+            if (confirm(`Promować ${candidate.imie_nazwisko} do Wolontariuszy?`)) {
+                // Create new volunteer from candidate data (columns A-F, K-P)
+                const newVolunteer = {
+                    id: Math.max(...DATABASE.wolontariusze.map(v => v.id)) + 1,
+                    imie_nazwisko: candidate.imie_nazwisko,
+                    email: candidate.email,
+                    telefon: candidate.telefon,
+                    grupa: 'A', // Default
+                    podopieczny: '',
+                    status: 'Aktywny',
+                    kluby: []
+                };
+                
+                // Add clubs based on candidate preferences (K-P columns)
+                if (candidate.szkolenia === 'TAK') newVolunteer.kluby.push('Szkolenia');
+                if (candidate.media === 'TAK') newVolunteer.kluby.push('Media');
+                if (candidate.klub_seniora === 'TAK') newVolunteer.kluby.push('Klub seniora');
+                if (candidate.muzyczni === 'TAK') newVolunteer.kluby.push('Muzyczni');
+                if (candidate.gastronomia === 'TAK') newVolunteer.kluby.push('Gastronomia');
+                if (candidate.zbieranie_funduszy === 'TAK') newVolunteer.kluby.push('Zbieranie funduszy');
+                
+                // Add to volunteers
+                DATABASE.wolontariusze.push(newVolunteer);
+                console.log('POST /api/volunteers/promote', newVolunteer);
+                
+                // Remove from recruitment
+                const index = DATABASE.rekrutacja_wolontariusze.findIndex(r => r.id === id);
+                if (index !== -1) {
+                    DATABASE.rekrutacja_wolontariusze.splice(index, 1);
+                    console.log('DELETE /api/recruitment-volunteers/' + id);
+                }
+                
+                alert(`✅ ${candidate.imie_nazwisko} został dodany do Wolontariuszy!`);
+                navigateTo('recruitment-volunteers');
+            }
+        }
+
+        function openAddRecruitmentVolunteerModal() {
+            showRecruitmentVolunteerModal(null);
+        }
+
+        function showRecruitmentVolunteerModal(candidate) {
+            const isEdit = candidate !== null;
+            const title = isEdit ? 'Edytuj Kandydata' : 'Dodaj Kandydata Wolontariusza';
+            
+            const modalHTML = `
+                <div class="modal active" id="recruitmentVolunteerModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title">${title}</h2>
+                            <button class="modal-close" onclick="closeModal('recruitmentVolunteerModal')">✕</button>
+                        </div>
+                        <form id="recruitmentVolunteerForm" onsubmit="saveRecruitmentVolunteer(event, ${isEdit ? candidate.id : 'null'})">
+                            <div class="form-group">
+                                <label class="form-label">Imię i Nazwisko *</label>
+                                <input type="text" class="form-input" name="imie_nazwisko" value="${isEdit ? candidate.imie_nazwisko : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Email *</label>
+                                <input type="email" class="form-input" name="email" value="${isEdit ? candidate.email : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Telefon *</label>
+                                <input type="tel" class="form-input" name="telefon" value="${isEdit ? candidate.telefon : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Link do FB</label>
+                                <input type="text" class="form-input" name="link_fb" value="${isEdit ? candidate.link_fb : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Data dołączenia</label>
+                                <input type="date" class="form-input" name="data_dolaczenia" value="${isEdit ? candidate.data_dolaczenia : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Opis/Informacje</label>
+                                <textarea class="form-input" name="opis" rows="3">${isEdit ? candidate.opis : ''}</textarea>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeModal('recruitmentVolunteerModal')">Anuluj</button>
+                                <button type="submit" class="btn btn-primary">💾 Zapisz</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function saveRecruitmentVolunteer(event, id) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            const candidateData = {
+                imie_nazwisko: formData.get('imie_nazwisko'),
+                email: formData.get('email'),
+                telefon: formData.get('telefon'),
+                link_fb: formData.get('link_fb'),
+                data_dolaczenia: formData.get('data_dolaczenia'),
+                opis: formData.get('opis'),
+                szkolenia: 'NIE',
+                media: 'NIE',
+                klub_seniora: 'NIE',
+                muzyczni: 'NIE',
+                gastronomia: 'NIE',
+                zbieranie_funduszy: 'NIE',
+                spotkanie_charyzmat: '',
+                spotkanie_wspolnota: '',
+                spotkanie_dzialanie: '',
+                spotkanie_administracja: ''
+            };
+            
+            if (id) {
+                const index = DATABASE.rekrutacja_wolontariusze.findIndex(r => r.id === id);
+                if (index !== -1) {
+                    DATABASE.rekrutacja_wolontariusze[index] = { ...DATABASE.rekrutacja_wolontariusze[index], ...candidateData };
+                    console.log('PUT /api/recruitment-volunteers/' + id, candidateData);
+                }
+            } else {
+                const newId = DATABASE.rekrutacja_wolontariusze.length > 0 ? Math.max(...DATABASE.rekrutacja_wolontariusze.map(r => r.id)) + 1 : 1;
+                DATABASE.rekrutacja_wolontariusze.push({ id: newId, ...candidateData });
+                console.log('POST /api/recruitment-volunteers', candidateData);
+            }
+            
+            closeModal('recruitmentVolunteerModal');
+            navigateTo('recruitment-volunteers');
+        }
+
+        function deleteRecruitmentVolunteer(id) {
+            if (confirm('Czy na pewno chcesz usunąć tego kandydata?')) {
+                const index = DATABASE.rekrutacja_wolontariusze.findIndex(r => r.id === id);
+                if (index !== -1) {
+                    DATABASE.rekrutacja_wolontariusze.splice(index, 1);
+                    console.log('DELETE /api/recruitment-volunteers/' + id);
+                    navigateTo('recruitment-volunteers');
+                }
+            }
+        }
+
+        // RECRUITMENT BENEFICIARIES OPERATIONS
+        function openAddRecruitmentBeneficiaryModal() {
+            showRecruitmentBeneficiaryModal(null);
+        }
+
+        function openEditRecruitmentBeneficiaryModal(id) {
+            const candidate = DATABASE.rekrutacja_podopieczni.find(r => r.id === id);
+            if (candidate) showRecruitmentBeneficiaryModal(candidate);
+        }
+
+        function showRecruitmentBeneficiaryModal(candidate) {
+            const isEdit = candidate !== null;
+            const title = isEdit ? 'Edytuj Zgłoszenie' : 'Dodaj Zgłoszenie Podopiecznego';
+            
+            const modalHTML = `
+                <div class="modal active" id="recruitmentBeneficiaryModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title">${title}</h2>
+                            <button class="modal-close" onclick="closeModal('recruitmentBeneficiaryModal')">✕</button>
+                        </div>
+                        <form id="recruitmentBeneficiaryForm" onsubmit="saveRecruitmentBeneficiary(event, ${isEdit ? candidate.id : 'null'})">
+                            <div class="form-group">
+                                <label class="form-label">Imię i Nazwisko *</label>
+                                <input type="text" class="form-input" name="imie_nazwisko" value="${isEdit ? candidate.imie_nazwisko : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Adres *</label>
+                                <input type="text" class="form-input" name="adres" value="${isEdit ? candidate.adres : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Telefon *</label>
+                                <input type="tel" class="form-input" name="telefon" value="${isEdit ? candidate.telefon : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Status</label>
+                                <select class="form-input" name="status">
+                                    <option value="Oczekujący" ${isEdit && candidate.status === 'Oczekujący' ? 'selected' : ''}>Oczekujący</option>
+                                    <option value="W trakcie" ${isEdit && candidate.status === 'W trakcie' ? 'selected' : ''}>W trakcie</option>
+                                    <option value="Zaakceptowany" ${isEdit && candidate.status === 'Zaakceptowany' ? 'selected' : ''}>Zaakceptowany</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">BO *</label>
+                                <select class="form-input" name="bo" required>
+                                    <option value="TAK" ${isEdit && candidate.bo === 'TAK' ? 'selected' : ''}>TAK</option>
+                                    <option value="NIE" ${isEdit && candidate.bo === 'NIE' ? 'selected' : ''}>NIE</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Opis</label>
+                                <textarea class="form-input" name="opis" rows="3">${isEdit ? candidate.opis : ''}</textarea>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeModal('recruitmentBeneficiaryModal')">Anuluj</button>
+                                <button type="submit" class="btn btn-primary">💾 Zapisz</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function saveRecruitmentBeneficiary(event, id) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            const candidateData = {
+                imie_nazwisko: formData.get('imie_nazwisko'),
+                adres: formData.get('adres'),
+                telefon: formData.get('telefon'),
+                status: formData.get('status'),
+                bo: formData.get('bo'),
+                opis: formData.get('opis')
+            };
+            
+            if (id) {
+                const index = DATABASE.rekrutacja_podopieczni.findIndex(r => r.id === id);
+                if (index !== -1) {
+                    DATABASE.rekrutacja_podopieczni[index] = { ...DATABASE.rekrutacja_podopieczni[index], ...candidateData };
+                    console.log('PUT /api/recruitment-beneficiaries/' + id, candidateData);
+                }
+            } else {
+                const newId = DATABASE.rekrutacja_podopieczni.length > 0 ? Math.max(...DATABASE.rekrutacja_podopieczni.map(r => r.id)) + 1 : 1;
+                DATABASE.rekrutacja_podopieczni.push({ id: newId, ...candidateData });
+                console.log('POST /api/recruitment-beneficiaries', candidateData);
+            }
+            
+            closeModal('recruitmentBeneficiaryModal');
+            navigateTo('recruitment-beneficiaries-rec');
+        }
+
+        function deleteRecruitmentBeneficiary(id) {
+            if (confirm('Czy na pewno chcesz usunąć to zgłoszenie?')) {
+                const index = DATABASE.rekrutacja_podopieczni.findIndex(r => r.id === id);
+                if (index !== -1) {
+                    DATABASE.rekrutacja_podopieczni.splice(index, 1);
+                    console.log('DELETE /api/recruitment-beneficiaries/' + id);
+                    navigateTo('recruitment-beneficiaries-rec');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
