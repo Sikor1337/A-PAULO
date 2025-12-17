@@ -1109,8 +1109,10 @@
 
         // Run on page load - load all data from Supabase
         document.addEventListener('DOMContentLoaded', async () => {
-            await testSupabaseConnection();
+            // First load data - this is critical
             await loadAllData();
+            // Run connection test in background (non-blocking)
+            testSupabaseConnection().catch(err => console.error('Test connection error:', err));
         });
 
 
