@@ -7,15 +7,16 @@ React + TypeScript frontend for A-PAULO management system.
 - **React 19** + TypeScript
 - **Vite** - Build tool
 - **Tailwind CSS** - Styling
-- **React Router** - Routing
+- **React Router v7** - Routing
 - **Zustand** - State management
-- **Axios** - HTTP client with JWT support
+- **TanStack React Query** - Server state management
+- **Axios** - HTTP client
 - **React Hook Form** - Form handling
 
 ## Quick Start
 
 ### Prerequisites
-- Node.js (v16+)
+- Node.js 16+
 - npm
 
 ### Installation & Running
@@ -25,11 +26,11 @@ React + TypeScript frontend for A-PAULO management system.
 npm install
 ```
 
-2. **Set up environment variables:**
-   - Copy `.env.example` to `.env`
-   - Update `VITE_API_URL` if needed (default: `http://127.0.0.1:8000/api`)
+2. **Configure environment:**
+   - Copy `.env.example` to `.env` (or create new)
+   - Set `VITE_API_URL` (default: `http://127.0.0.1:8000/api`)
 
-3. **Start dev server:**
+3. **Start development server:**
 ```bash
 npm run dev
 ```
@@ -48,16 +49,28 @@ npm run preview  # Preview production build
 
 ```
 src/
-├── components/       # Reusable components
-├── lib/              # API client configuration
-├── pages/            # Page components (Login, Dashboard)
-├── services/         # API services
-├── stores/           # Zustand state management
-└── App.tsx           # Main app component
+├── components/
+│   └── ProtectedRoute.tsx    # Route protection wrapper
+├── lib/
+│   └── api.ts                # Axios API client with interceptors
+├── pages/
+│   ├── DashboardPage.tsx     # Main dashboard
+│   └── LoginPage.tsx         # Login page
+├── services/
+│   └── authService.ts        # Authentication API calls
+├── stores/
+│   └── authStore.ts          # Auth state (Zustand)
+├── App.tsx                   # Main app with routing
+├── App.css                   # Component styles
+├── main.tsx                  # React entry point
+└── index.css                 # Global styles + Tailwind
 ```
 
-## Authentication
+## Authentication & Security
 
-- Uses JWT tokens (stored in localStorage)
-- Protected routes require valid authentication token
-- Auto-logout on token expiration with redirect to login
+- JWT-based authentication (access + refresh tokens)
+- Tokens stored in localStorage
+- Protected routes using `ProtectedRoute` component
+- Automatic token refresh on expiration
+- Axios interceptors for attaching Bearer tokens
+- Auto-redirect to login when unauthorized

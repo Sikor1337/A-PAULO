@@ -39,6 +39,8 @@ System do zarządzania wolontariatem, pomocą indywidualną oraz obiegiem kart e
 └── README.md
 ```
 
+Szczegóły dotyczące frontend'u: [frontend/README.md](frontend/README.md)
+
 
 # Przydatne linki
 * [Jira](https://lukaszpiaseckidev.atlassian.net/jira/software/c/projects/PAP/boards/4/backlog)
