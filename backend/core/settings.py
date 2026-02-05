@@ -37,9 +37,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'drf_spectacular',
     # Own apps
     'api',
+    'authentication',
 ]
+
+AUTH_USER_MODEL = 'authentication.UserProfile'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -81,7 +85,7 @@ DATABASES = {
         'USER': 'postgres.mwrohorrsdjnujfkzwge',
         'PASSWORD': '$PaPka123pass$',
         'HOST': 'aws-1-eu-west-1.pooler.supabase.com',
-        'PORT': '5432',
+        'PORT': '6543',
 
         'OPTIONS': {
             'sslmode': 'require',
@@ -125,3 +129,25 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+# Django REST Framework configuration
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+}
+
+# drf-spectacular configuration
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'A-PAULO API',
+    'DESCRIPTION': 'API documentation for A-PAULO project',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SCHEMA_PATH_PREFIX': '/api/v1/',
+    'AUTHENTICATION_BASIC': True,
+    'AUTHENTICATION_TOKEN': True,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthData': True,
+        'displayOperationId': False,
+    },
+}
