@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     # Own apps
     'authentication',
     'beneficiaries',
+    'volunteers',
 ]
 
 AUTH_USER_MODEL = 'authentication.UserProfile'
