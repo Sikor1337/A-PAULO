@@ -1,46 +1,40 @@
-# Aplikacja PaPka
-System do zarządzania wolontariatem, pomocą indywidualną oraz obiegiem kart ewidencyjnych (BO). 
+# A-PAULO
 
-[Specyfikacja Wymagań Funkcjonalnych](docs/business-requirements.md)
+System do zarządzania wolontariatem, pomocą indywidualną oraz obiegiem kart ewidencyjnych (BO).
 
-## Tech Stack
+## 🚀 Quick Start
 
-### Backend
-*   **Język:** Python 3.12+
-*   **Framework:** Django + Django REST Framework (DRF)
-*   **Autoryzacja:** JWT / Session auth
+**Backend:** Zobacz [backend/README.md](backend/README.md)  
+**Frontend:** Zobacz [frontend/README.md](frontend/README.md)  
+**Dokumentacja:** Zobacz [docs/](docs/)
 
-### Frontend
-*   **Framework:** React 18+
-*   **Build Tool:** Vite?
-*   **Język:** TS or JS?
-*   **Mobile:** PWA (Progressive Web App) - `vite-plugin-pwa`
+## 📚 Dokumentacja
 
-### Baza danych
-*   **Baza:** PostgreSQL
+- **[Wymagania biznesowe](docs/business-requirements.md)** - pełna specyfikacja funkcjonalna (MVP, v1.0, v2.0)
+
+## 🛠️ Tech Stack
+
+| Warstwa | Technologia |
+|---------|------------|
+| **Backend** | Python 3.12+ • Django • Django REST Framework • JWT Auth |
+| **Frontend** | React 19 • TypeScript • Vite • Tailwind CSS • React Router 7 |
+| **Database** | PostgreSQL |
 
 
+## 📁 Struktura Projektu
 
-##  Project structure
-
-```text
+```
 /
-├── backend/                #Django
-│   ├── core/              
-│   ├── app1/     
-│   ├── app2/           
-│   └── manage.py
-├── frontend/               
-│   ├── src/
-│   ├── public/
-│   └── package.json
-├── docs/     
-│   └── business-requirements.md
+├── backend/           # Django REST API
+│   ├── core/         # Ustawienia projektu
+│   ├── authentication/
+│   ├── beneficiaries/
+│   └── volunteers/
+├── frontend/         # React + TypeScript
+│   └── src/
+├── docs/            # Dokumentacja techniczna
 └── README.md
 ```
-
-Szczegóły dotyczące frontend'u: [frontend/README.md](frontend/README.md)
-
 
 # Przydatne linki
 * [Jira](https://lukaszpiaseckidev.atlassian.net/jira/software/c/projects/PAP/boards/4/backlog)
