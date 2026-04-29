@@ -45,7 +45,7 @@ Bazy danych :
 * [Supabase z danymi](https://supabase.com/dashboard/project/bskdfwgejlgnwuwohjak/database/tables)
 
 Zaproponowaen UI:
-* [Propozycja 1](https://sikor1337.github.io/A-PAULO/APAULO.html)
+* [Propozycja 1](https://sikor1337.github.io/A-PAULO/APAULOdemo.html)
 * [Propozycja 2](https://sikor1337.github.io/A-PAULO/apaulo_recruitment_clubs_wdra%C5%BCanie.html)
 
 Nagrania:
