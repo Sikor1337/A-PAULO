@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../stores/authStore';
@@ -9,7 +9,7 @@ interface LoginFormData {
   password: string;
 }
 
-const LoginPage: React.FC = () => {
+const LoginPage = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuthStore();
   const [error, setError] = useState<string>('');
@@ -21,7 +21,7 @@ const LoginPage: React.FC = () => {
     formState: { errors },
   } = useForm<LoginFormData>();
 
-  // Redirect if already authenticated
+  // Przekieruj jeśli już zalogowany
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard');
@@ -33,10 +33,10 @@ const LoginPage: React.FC = () => {
     setError('');
 
     try {
-      // Get tokens from backend
+      // Pobierz tokeny z backendu
       const { access, refresh } = await authService.login(data);
 
-      // Temporarily store tokens to get user profile
+      // Zapisz tymczasowo tokeny aby pobrać profil
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
 
@@ -101,7 +101,7 @@ const LoginPage: React.FC = () => {
               {...register('email', {
                 required: 'Email jest wymagany',
                 pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  value: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/,
                   message: 'Nieprawidłowy adres email',
                 },
               })}

@@ -1,3 +1,26 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+:root {
+    --bg-dark: #1e2330;
+    --bg-card: #282d3e;
+    --bg-hover: #353b4f;
+    --text-primary: #ffffff;
+    --text-secondary: #a8b2d1;
+    --accent-blue: #5b9cff;
+    --accent-green: #4ade80;
+    --accent-red: #f87171;
+    --accent-purple: #a78bfa;
+    --accent-orange: #fb923c;
+    --border-color: #3d4458;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+}
+
+input,
+select,
+textarea {
+    color: #1a202c !important;
+}
