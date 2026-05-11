@@ -117,7 +117,7 @@ const VolunteersPage: React.FC = () => {
                                     <th className="p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('phone')}>Tel{sortIcon('phone')}</th>
                                     <th className="p-3 border-r border-gray-700">Grupa</th>
                                     <th className="p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('status')}>Status{sortIcon('status')}</th>
-                                    <th className="p-3 border-r border-gray-700">Kluby</th>
+                                    <th className="p-3 border-r border-gray-700">Działy</th>
                                     <th className="p-3 text-center">Akcje</th>
                                 </tr>
                             </thead>
