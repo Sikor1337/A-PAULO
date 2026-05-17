@@ -18,6 +18,16 @@ class Beneficiary(models.Model):
     family_phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Telefon rodziny/opiekuna")
     description = models.TextField(blank=True, verbose_name="Opis podopiecznego")
     
+    # Group Assignment
+    group = models.ForeignKey(
+        'groups.Group',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='beneficiaries',
+        verbose_name="Grupa"
+    )
+
     # Status Fields
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OBECNY', verbose_name="Status")
     bo_enrolled = models.BooleanField(default=False, verbose_name="Uczestnik BO")

@@ -1,6 +1,7 @@
 import { useState, useMemo, type FormEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { beneficiaryService } from '../services/beneficiaryService';
+import { groupService } from '../services/groupService';
 import Sidebar from '../components/Sidebar';
 
 type SortKey = 'full_name' | 'address' | 'phone' | 'status';
@@ -19,6 +20,8 @@ const BeneficiariesPage: React.FC = () => {
         queryKey: ['beneficiaries'],
         queryFn: beneficiaryService.getAll
     });
+
+    const { data: groups } = useQuery({ queryKey: ['groups'], queryFn: groupService.getAll });
 
     const filteredAndSorted = useMemo(() => {
         if (!beneficiaries) return [];
@@ -74,10 +77,10 @@ const BeneficiariesPage: React.FC = () => {
         if (!data.full_name) errors.full_name = 'Imię i nazwisko jest wymagane';
         if (!data.address) errors.address = 'Adres jest wymagany';
         if (!data.phone) errors.phone = 'Numer telefonu jest wymagany';
-        else if (!/[+]?[0-9\s\-()]{7,18}/.test(data.phone)) errors.phone = 'Niepoprawny format telefonu';
+        else if (!/^(?:\+48)?[ \-]?\d{3}[ \-]?\d{3}[ \-]?\d{3}$/.test(data.phone)) errors.phone = 'Podaj prawidłowy polski numer (np. +48 123 456 789)';
         
         if (!data.family_phone) errors.family_phone = 'Telefon rodziny jest wymagany';
-        else if (!/[+]?[0-9\s\-()]{7,18}/.test(data.family_phone)) errors.family_phone = 'Niepoprawny format telefonu';
+        else if (!/^(?:\+48)?[ \-]?\d{3}[ \-]?\d{3}[ \-]?\d{3}$/.test(data.family_phone)) errors.family_phone = 'Podaj prawidłowy polski numer (np. +48 123 456 789)';
 
         if (Object.keys(errors).length > 0) {
             setFormErrors(errors);
@@ -86,39 +89,44 @@ const BeneficiariesPage: React.FC = () => {
 
         setFormErrors({});
         data.bo_enrolled = fd.get('bo_enrolled') === 'on';
+        data.group = data.group ? Number(data.group) : null;
         mutationSave.mutate(data);
     };
 
     return (
         <div className="flex min-h-screen bg-[#1e2330]">
             <Sidebar />
-            <div className="ml-[260px] flex-1 p-8 text-gray-800">
-                <div className="bg-white rounded-xl shadow-lg min-h-[calc(100vh-64px)] p-8">
-                    <div className="flex items-center justify-between mb-8">
+            <div className="ml-[260px] flex-1 p-6 text-gray-800">
+                <div className="bg-white rounded-xl shadow-lg min-h-[calc(100vh-48px)] p-6">
+                    <div className="flex items-center justify-between mb-6 border-b pb-4">
                         <div className="flex items-center gap-3">
-                            <span className="text-3xl text-blue-500">📄</span>
-                            <h1 className="text-2xl font-semibold">Podopieczni</h1>
+                            <span className="text-2xl">📄</span>
+                            <h1 className="text-xl font-bold text-gray-900 uppercase">Podopieczni</h1>
                         </div>
-                        <div className="flex gap-2">
-                            <button onClick={() => { setIsAdding(true); setFormErrors({}); }} className="bg-[#10b981] text-white px-4 py-2 rounded-md font-bold hover:opacity-90 transition-all flex items-center gap-2">+ Dodaj</button>
-                            <button className="bg-[#3b82f6] text-white px-4 py-2 rounded-md font-bold hover:opacity-90 transition-all flex items-center gap-2">📥 CSV</button>
+                        <div className="flex gap-4">
+                            <button onClick={() => { setIsAdding(true); setFormErrors({}); }} className="bg-[#10b981] text-white px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2">
+                                + Dodaj
+                            </button>
+                            <button className="bg-[#3b82f6] text-white px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2">
+                                📥 CSV
+                            </button>
                         </div>
                     </div>
-                    <div className="mb-6">
+                    <div className="mb-4">
                         <input type="text" placeholder="Szukaj po nazwisku, adresie, telefonie..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full p-2 border border-gray-200 rounded-md bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            className="w-full px-4 h-10 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 outline-none text-sm font-medium" />
                     </div>
                     <div className="overflow-x-auto border rounded-lg">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-[#1e2330] text-white text-[10px] uppercase font-black">
-                                    <th className="p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('full_name')}>Imię{sortIcon('full_name')}</th>
-                                    <th className="p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('address')}>Adres{sortIcon('address')}</th>
-                                    <th className="p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('phone')}>Tel{sortIcon('phone')}</th>
-                                    <th className="p-3 border-r border-gray-700">Grupa</th>
-                                    <th className="p-3 border-r border-gray-700">BO</th>
-                                    <th className="p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('status')}>Status{sortIcon('status')}</th>
-                                    <th className="p-3 text-center">Akcje</th>
+                                <tr className="bg-[#1e2330] text-white text-xs uppercase font-bold tracking-wider">
+                                    <th className="w-[20%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('full_name')}>Imię{sortIcon('full_name')}</th>
+                                    <th className="w-[25%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('address')}>Adres{sortIcon('address')}</th>
+                                    <th className="w-[15%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('phone')}>Tel{sortIcon('phone')}</th>
+                                    <th className="w-[15%] p-3 border-r border-gray-700">Grupa</th>
+                                    <th className="w-[5%] p-3 border-r border-gray-700 text-center">BO</th>
+                                    <th className="w-[10%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('status')}>Status{sortIcon('status')}</th>
+                                    <th className="w-[10%] p-3 text-center min-w-[100px]">Akcje</th>
                                 </tr>
                             </thead>
                             <tbody className="text-sm">
@@ -131,7 +139,7 @@ const BeneficiariesPage: React.FC = () => {
                                         <td className="p-3 border-r font-medium text-gray-700">{b.full_name}</td>
                                         <td className="p-3 border-r text-gray-500">{b.address || '—'}</td>
                                         <td className="p-3 border-r text-gray-500">{b.phone || '—'}</td>
-                                        <td className="p-3 border-r text-gray-400 text-center">—</td>
+                                        <td className="p-3 border-r text-gray-400 text-center">{b.group_name || '—'}</td>
                                         <td className="p-3 border-r text-center text-xs font-bold">
                                             <span className={b.bo_enrolled ? 'text-green-600' : 'text-gray-400'}>{b.bo_enrolled ? 'TAK' : 'NIE'}</span>
                                         </td>
@@ -162,6 +170,7 @@ const BeneficiariesPage: React.FC = () => {
                         <dl className="space-y-3 text-sm">
                             {[
                                 ['Adres', detailsBeneficiary.address],
+                                ['Grupa', detailsBeneficiary.group_name],
                                 ['Telefon', detailsBeneficiary.phone],
                                 ['Telefon rodziny', detailsBeneficiary.family_phone],
                                 ['Status', detailsBeneficiary.status],
@@ -254,9 +263,15 @@ const BeneficiariesPage: React.FC = () => {
                                     </label>
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Opis / Notatki</label>
-                                <textarea name="description" defaultValue={editingBeneficiary?.description} rows={3} className="w-full border p-2 rounded-md outline-none focus:border-blue-500 resize-none" />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <dt className="text-[10px] font-black uppercase text-gray-400">Grupa</dt>
+                                    <dd className="text-gray-700">{editingBeneficiary?.group_name || '—'}</dd>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Opis / Notatki</label>
+                                    <textarea name="description" defaultValue={editingBeneficiary?.description} rows={3} className="w-full border p-2 rounded-md outline-none focus:border-blue-500 resize-none" />
+                                </div>
                             </div>
                             <div className="flex justify-end gap-3 pt-6">
                                 <button type="button" onClick={() => { setEditingBeneficiary(null); setIsAdding(false); setFormErrors({}); }} className="px-4 py-2 text-gray-400 font-bold hover:text-gray-600">Anuluj</button>
