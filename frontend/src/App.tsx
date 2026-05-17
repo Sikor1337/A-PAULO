@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import BeneficiariesPage from './pages/BeneficiariesPage';
 import VolunteersPage from './pages/VolunteersPage';
+import GroupsPage from './pages/GroupsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +28,7 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/beneficiaries" element={<BeneficiariesPage />} />
             <Route path="/volunteers" element={<VolunteersPage />} />
+            <Route path="/groups" element={<GroupsPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

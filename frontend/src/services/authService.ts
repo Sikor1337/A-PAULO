@@ -1,5 +1,4 @@
 import axios from 'axios';
-import apiClient from '../lib/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 const API_ROOT = API_URL.replace(/\/api\/?$/, '');

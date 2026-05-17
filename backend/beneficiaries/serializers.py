@@ -4,7 +4,8 @@ from .models import Beneficiary
 
 class BeneficiarySerializer(serializers.ModelSerializer):
     """Serializer for Beneficiary model"""
-    
+    group_name = serializers.CharField(source='group.name', read_only=True, default=None)
+
     class Meta:
         model = Beneficiary
         fields = [
@@ -14,6 +15,8 @@ class BeneficiarySerializer(serializers.ModelSerializer):
             'phone',
             'family_phone',
             'description',
+            'group',
+            'group_name',
             'status',
             'bo_enrolled',
             'last_priest_visit',
@@ -26,12 +29,14 @@ class BeneficiarySerializer(serializers.ModelSerializer):
     
     def validate_phone(self, value):
         """Validate phone number format"""
-        if value and not value.replace(' ', '').replace('+', '').replace('-', '').isdigit():
-            raise serializers.ValidationError("Phone number can only contain digits, spaces, + and -")
+        import re
+        if value and not re.match(r'^(?:\+48)?[ \-]?\d{3}[ \-]?\d{3}[ \-]?\d{3}$', value):
+            raise serializers.ValidationError("Podaj prawidłowy polski numer telefonu (np. +48 123 456 789)")
         return value
     
     def validate_family_phone(self, value):
         """Validate family phone number format"""
-        if value and not value.replace(' ', '').replace('+', '').replace('-', '').isdigit():
-            raise serializers.ValidationError("Phone number can only contain digits, spaces, + and -")
+        import re
+        if value and not re.match(r'^(?:\+48)?[ \-]?\d{3}[ \-]?\d{3}[ \-]?\d{3}$', value):
+            raise serializers.ValidationError("Podaj prawidłowy polski numer telefonu (np. +48 123 456 789)")
         return value

@@ -11,7 +11,7 @@ const Sidebar = () => {
                 { name: 'Dashboard', icon: '📊', path: '/' },
                 { name: 'Podopieczni', icon: '📄', path: '/beneficiaries' },
                 { name: 'Wolontariusze', icon: '🙋', path: '/volunteers' },
-                { name: 'Rekrutacja', icon: '👥', path: '/recruitment' },
+                { name: 'Grupy Przewodników', icon: '👥', path: '/groups' },
                 { name: 'Wdrażanie', icon: '🚀', path: '/onboarding' },
             ]
         },
