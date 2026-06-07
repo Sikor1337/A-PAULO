@@ -1,4 +1,4 @@
-import { useState, useMemo, type FormEvent } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { volunteerService } from '../services/volunteerService';
 import { groupService } from '../services/groupService';
@@ -15,7 +15,7 @@ const VolunteersPage: React.FC = () => {
     const [isAdding, setIsAdding] = useState(false);
     const [sortKey, setSortKey] = useState<SortKey>('full_name');
     const [sortDir, setSortDir] = useState<SortDir>('asc');
-    const [filterGroup, setFilterGroup] = useState<string>('');
+    const [filterGroup] = useState<string>('');
 
     const { data: volunteers, isLoading } = useQuery({
         queryKey: ['volunteers'],
@@ -164,8 +164,13 @@ const VolunteersPage: React.FC = () => {
                                         <td className="p-3 border-r text-center">
                                             <div className="flex flex-col items-center gap-1">
                                                 {v.led_group && <span className="bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase" title="Lider Grupy">👑 {v.led_group}</span>}
+                                                {v.main_for_beneficiaries && v.main_for_beneficiaries.map((bName: string) => (
+                                                    <span key={bName} className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded font-bold uppercase flex items-center gap-0.5" title={`Główny wolontariusz dla: ${bName}`}>
+                                                        ⭐ {bName}
+                                                    </span>
+                                                ))}
                                                 {v.assigned_groups && <span className="text-gray-500 text-xs">{v.assigned_groups}</span>}
-                                                {!v.led_group && !v.assigned_groups && <span className="text-gray-400">—</span>}
+                                                {!v.led_group && (!v.main_for_beneficiaries || v.main_for_beneficiaries.length === 0) && !v.assigned_groups && <span className="text-gray-400">—</span>}
                                             </div>
                                         </td>
                                         <td className="p-3 border-r">
@@ -198,6 +203,7 @@ const VolunteersPage: React.FC = () => {
                                 ['Email', detailsVolunteer.email],
                                 ['Lider Grupy', detailsVolunteer.led_group],
                                 ['Członek Grup', detailsVolunteer.assigned_groups],
+                                ['Główny wolontariusz dla', detailsVolunteer.main_for_beneficiaries?.join(', ')],
                                 ['Telefon', detailsVolunteer.phone],
                                 ['Profil społecznościowy', detailsVolunteer.social_link],
                                 ['Status', detailsVolunteer.status],

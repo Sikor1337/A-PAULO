@@ -11,6 +11,7 @@ type SortDir = 'asc' | 'desc';
 interface AssignmentRow {
     beneficiaryId: number | '';
     volunteerIds: number[];
+    mainVolunteerId?: number | '';
 }
 
 const GroupsPage: React.FC = () => {
@@ -26,7 +27,7 @@ const GroupsPage: React.FC = () => {
     const [formName, setFormName] = useState('');
     const [formLeader, setFormLeader] = useState<number | ''>('');
 
-    const { data: groups, isLoading } = useQuery({ queryKey: ['groups'], queryFn: groupService.getAll });
+    const { data: groups } = useQuery({ queryKey: ['groups'], queryFn: groupService.getAll });
     const { data: volunteers } = useQuery({ queryKey: ['volunteers'], queryFn: volunteerService.getAll });
     const { data: beneficiaries } = useQuery({ queryKey: ['beneficiaries'], queryFn: beneficiaryService.getAll });
 
@@ -42,13 +43,14 @@ const GroupsPage: React.FC = () => {
             setFormLeader(editingGroup.leader || '');
             const rows = (editingGroup.beneficiaries || []).map((b: any) => ({
                 beneficiaryId: b.id,
-                volunteerIds: b.volunteers?.map((v: any) => v.id) || []
+                volunteerIds: b.volunteers?.map((v: any) => v.id) || [],
+                mainVolunteerId: b.volunteers?.find((v: any) => v.is_main)?.id || ''
             }));
-            setFormAssignments(rows.length > 0 ? rows : [{ beneficiaryId: '', volunteerIds: [] }]);
+            setFormAssignments(rows.length > 0 ? rows : [{ beneficiaryId: '', volunteerIds: [], mainVolunteerId: '' }]);
         } else if (isAdding) {
             setFormName('');
             setFormLeader('');
-            setFormAssignments([{ beneficiaryId: '', volunteerIds: [] }]);
+            setFormAssignments([{ beneficiaryId: '', volunteerIds: [], mainVolunteerId: '' }]);
         }
     }, [editingGroup, isAdding]);
 
@@ -80,7 +82,8 @@ const GroupsPage: React.FC = () => {
             .filter(row => row.beneficiaryId !== '')
             .map(row => ({
                 beneficiary: row.beneficiaryId,
-                volunteers: row.volunteerIds
+                volunteers: row.volunteerIds,
+                main_volunteer: row.mainVolunteerId || null
             }));
 
         const data = {
@@ -92,7 +95,7 @@ const GroupsPage: React.FC = () => {
     };
 
     const addAssignmentRow = () => {
-        setFormAssignments([...formAssignments, { beneficiaryId: '', volunteerIds: [] }]);
+        setFormAssignments([...formAssignments, { beneficiaryId: '', volunteerIds: [], mainVolunteerId: '' }]);
     };
 
     const removeAssignmentRow = (index: number) => {
@@ -110,6 +113,9 @@ const GroupsPage: React.FC = () => {
         const currentIds = newRows[index].volunteerIds;
         if (currentIds.includes(vId)) {
             newRows[index].volunteerIds = currentIds.filter(id => id !== vId);
+            if (newRows[index].mainVolunteerId === vId) {
+                newRows[index].mainVolunteerId = '';
+            }
         } else {
             newRows[index].volunteerIds = [...currentIds, vId];
         }
@@ -235,8 +241,8 @@ const GroupsPage: React.FC = () => {
                                                 <div className="flex flex-wrap gap-2 mt-2">
                                                     {b.volunteers?.length > 0 ? (
                                                         b.volunteers.map((v: any) => (
-                                                            <span key={v.id} className="bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 rounded-md font-bold flex items-center gap-1 shadow-sm">
-                                                                🙋 {v.full_name}
+                                                            <span key={v.id} className={`text-xs px-2.5 py-1 rounded-md font-bold flex items-center gap-1 shadow-sm ${v.is_main ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                                {v.is_main ? '⭐' : '🙋'} {v.full_name}
                                                             </span>
                                                         ))
                                                     ) : (
@@ -330,10 +336,23 @@ const GroupsPage: React.FC = () => {
                                                         {row.volunteerIds.length === 0 && <span className="text-xs text-gray-300 font-medium italic">Brak przypisań</span>}
                                                         {row.volunteerIds.map(vId => {
                                                             const vol = volunteers?.find((v: any) => v.id === vId);
+                                                            const isMain = row.mainVolunteerId === vId;
                                                             return (
-                                                                <span key={vId} className="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-md font-bold whitespace-nowrap flex items-center gap-1">
+                                                                <span key={vId} className={`text-xs px-2 py-1 rounded-md font-bold whitespace-nowrap flex items-center gap-1 transition-all ${isMain ? 'bg-amber-100 text-amber-800 border border-amber-300 shadow-sm' : 'bg-indigo-100 text-indigo-700'}`}>
+                                                                    <button 
+                                                                        type="button" 
+                                                                        onClick={() => {
+                                                                            const newRows = [...formAssignments];
+                                                                            newRows[index].mainVolunteerId = isMain ? '' : vId;
+                                                                            setFormAssignments(newRows);
+                                                                        }} 
+                                                                        className="hover:scale-120 transition-transform cursor-pointer mr-0.5 text-xs select-none"
+                                                                        title={isMain ? "Usuń oznaczenie głównego wolontariusza" : "Oznacz jako głównego wolontariusza"}
+                                                                    >
+                                                                        {isMain ? '⭐' : '☆'}
+                                                                    </button>
                                                                     {vol?.full_name}
-                                                                    <button type="button" onClick={() => updateRowVolunteers(index, vId)} className="hover:text-indigo-900">×</button>
+                                                                    <button type="button" onClick={() => updateRowVolunteers(index, vId)} className="hover:text-indigo-950 font-bold ml-1">×</button>
                                                                 </span>
                                                             );
                                                         })}

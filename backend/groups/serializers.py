@@ -11,7 +11,7 @@ class BeneficiaryAssignmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BeneficiaryAssignment
-        fields = ['id', 'beneficiary', 'volunteer', 'volunteer_name', 'beneficiary_name', 'created_at']
+        fields = ['id', 'beneficiary', 'volunteer', 'volunteer_name', 'beneficiary_name', 'is_main', 'created_at']
         read_only_fields = ['created_at']
 
 
@@ -31,6 +31,7 @@ class BeneficiaryInGroupSerializer(serializers.Serializer):
                 'id': a.volunteer.id,
                 'full_name': a.volunteer.full_name,
                 'assignment_id': a.id,
+                'is_main': a.is_main,
             }
             for a in assignments
         ]
@@ -100,6 +101,7 @@ class GroupSerializer(serializers.ModelSerializer):
             for item in assignments_data:
                 beneficiary_id = item['beneficiary']
                 volunteer_ids = item.get('volunteers', [])
+                main_volunteer_id = item.get('main_volunteer', None)
                 
                 beneficiary = Beneficiary.objects.get(id=beneficiary_id)
                 
@@ -109,7 +111,12 @@ class GroupSerializer(serializers.ModelSerializer):
                 # Create new assignments
                 for v_id in volunteer_ids:
                     volunteer = Volunteer.objects.get(id=v_id)
-                    BeneficiaryAssignment.objects.create(beneficiary=beneficiary, volunteer=volunteer)
+                    is_main = (v_id == main_volunteer_id)
+                    BeneficiaryAssignment.objects.create(
+                        beneficiary=beneficiary, 
+                        volunteer=volunteer,
+                        is_main=is_main
+                    )
                     all_assigned_volunteers.add(v_id)
             
             # 5. Sync the group's volunteer pool with all assigned volunteers
