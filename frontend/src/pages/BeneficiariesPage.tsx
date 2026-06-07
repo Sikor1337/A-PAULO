@@ -1,7 +1,6 @@
-import { useState, useMemo, type FormEvent } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { beneficiaryService } from '../services/beneficiaryService';
-import { groupService } from '../services/groupService';
 import Sidebar from '../components/Sidebar';
 
 type SortKey = 'full_name' | 'address' | 'phone' | 'status';
@@ -20,8 +19,6 @@ const BeneficiariesPage: React.FC = () => {
         queryKey: ['beneficiaries'],
         queryFn: beneficiaryService.getAll
     });
-
-    const { data: groups } = useQuery({ queryKey: ['groups'], queryFn: groupService.getAll });
 
     const filteredAndSorted = useMemo(() => {
         if (!beneficiaries) return [];
