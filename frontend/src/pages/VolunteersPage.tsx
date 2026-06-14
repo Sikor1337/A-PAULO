@@ -10,20 +10,22 @@ type SortDir = 'asc' | 'desc';
 const VolunteersPage: React.FC = () => {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterGroup, setFilterGroup] = useState('');
+    const [filterStatus, setFilterStatus] = useState<'' | 'Aktywny' | 'Były'>('');
     const [editingVolunteer, setEditingVolunteer] = useState<any>(null);
     const [detailsVolunteer, setDetailsVolunteer] = useState<any>(null);
     const [isAdding, setIsAdding] = useState(false);
     const [sortKey, setSortKey] = useState<SortKey>('full_name');
     const [sortDir, setSortDir] = useState<SortDir>('asc');
-    const [filterGroup] = useState<string>('');
-
     const { data: volunteers, isLoading } = useQuery({
         queryKey: ['volunteers'],
         queryFn: volunteerService.getAll
     });
 
-    const { data: groups } = useQuery({ queryKey: ['groups'], queryFn: groupService.getAll });
-    const { data: assignments } = useQuery({ queryKey: ['assignments'], queryFn: groupService.getAssignments });
+    const { data: groups } = useQuery({
+        queryKey: ['groups'],
+        queryFn: groupService.getAll
+    });
 
     const filteredAndSorted = useMemo(() => {
         if (!volunteers) return [];
@@ -34,26 +36,19 @@ const VolunteersPage: React.FC = () => {
             (v.phone || '').toLowerCase().includes(term) ||
             (v.status || '').toLowerCase().includes(term)
         );
-        if (filterGroup && assignments) {
-            const groupId = Number(filterGroup);
-            const group = groups?.find((g: any) => g.id === groupId);
-            const volunteerIdsInGroup = new Set(
-                assignments
-                    .filter((a: any) => {
-                        const ben = a.beneficiary;
-                        return typeof ben === 'object' ? ben?.group === groupId : true;
-                    })
-                    .map((a: any) => typeof a.volunteer === 'object' ? a.volunteer.id : a.volunteer)
+        if (filterGroup !== '') {
+            filtered = filtered.filter((v: any) =>
+                v.led_group === filterGroup ||
+                (v.assigned_groups || '').split(', ').includes(filterGroup)
             );
-            if (group?.leader) volunteerIdsInGroup.add(group.leader);
-            filtered = filtered.filter((v: any) => volunteerIdsInGroup.has(v.id));
         }
+        if (filterStatus !== '') filtered = filtered.filter((v: any) => v.status === filterStatus);
         return filtered.sort((a: any, b: any) => {
             const valA = (a[sortKey] || '').toString().toLowerCase();
             const valB = (b[sortKey] || '').toString().toLowerCase();
             return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
-    }, [volunteers, searchTerm, sortKey, sortDir, filterGroup, assignments, groups]);
+    }, [volunteers, searchTerm, sortKey, sortDir, filterGroup, filterStatus]);
 
     const toggleSort = (key: SortKey) => {
         if (sortKey === key) setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -129,33 +124,40 @@ const VolunteersPage: React.FC = () => {
                             <button onClick={() => { setIsAdding(true); setFormErrors({}); }} className="bg-[#10b981] text-white px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2">
                                 + Dodaj
                             </button>
-                            <button className="bg-[#3b82f6] text-white px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2">
-                                📥 CSV
-                            </button>
                         </div>
                     </div>
-                    <div className="mb-4">
+                    <div className="mb-4 flex gap-2 items-center">
                         <input type="text" placeholder="Szukaj po nazwisku, emailu, telefonie..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full px-4 h-10 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 outline-none text-sm font-medium" />
+                            className="flex-1 px-4 h-10 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 outline-none text-sm font-medium" />
+                        <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)}
+                            className="h-10 px-3 border border-gray-200 rounded-lg bg-gray-50 focus:border-indigo-500 outline-none text-sm font-medium text-gray-600 min-w-[150px]">
+                            <option value="">Wszystkie grupy</option>
+                            {groups?.map((g: any) => <option key={g.id} value={g.name}>{g.name}</option>)}
+                        </select>
+                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as '' | 'Aktywny' | 'Były')}
+                            className="h-10 px-3 border border-gray-200 rounded-lg bg-gray-50 focus:border-indigo-500 outline-none text-sm font-medium text-gray-600 min-w-[130px]">
+                            <option value="">Wszystkie statusy</option>
+                            <option value="Aktywny">Aktywny</option>
+                            <option value="Były">Były</option>
+                        </select>
                     </div>
                     <div className="overflow-x-auto border rounded-lg">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-[#1e2330] text-white text-xs uppercase font-bold tracking-wider">
-                                    <th className="w-[20%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('full_name')}>Imię{sortIcon('full_name')}</th>
+                                    <th className="w-[20%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('full_name')}>Imię i nazwisko{sortIcon('full_name')}</th>
                                     <th className="w-[20%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('email')}>Email{sortIcon('email')}</th>
                                     <th className="w-[15%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('phone')}>Tel{sortIcon('phone')}</th>
                                     <th className="w-[15%] p-3 border-r border-gray-700">Grupa</th>
                                     <th className="w-[10%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('status')}>Status{sortIcon('status')}</th>
-                                    <th className="w-[10%] p-3 border-r border-gray-700">Działy</th>
                                     <th className="w-[10%] p-3 text-center min-w-[100px]">Akcje</th>
                                 </tr>
                             </thead>
                             <tbody className="text-sm">
                                 {isLoading ? (
-                                    <tr><td colSpan={7} className="p-10 text-center text-gray-400">Ładowanie...</td></tr>
+                                    <tr><td colSpan={6} className="p-10 text-center text-gray-400">Ładowanie...</td></tr>
                                 ) : filteredAndSorted.length === 0 ? (
-                                    <tr><td colSpan={7} className="p-10 text-center text-gray-400">Brak wyników</td></tr>
+                                    <tr><td colSpan={6} className="p-10 text-center text-gray-400">Brak wyników</td></tr>
                                 ) : filteredAndSorted.map((v: any) => (
                                     <tr key={v.id} className="hover:bg-blue-50 border-b last:border-0 cursor-pointer transition-colors" onClick={() => setDetailsVolunteer(v)}>
                                         <td className="p-3 border-r font-medium text-gray-700">{v.full_name}</td>
@@ -176,7 +178,6 @@ const VolunteersPage: React.FC = () => {
                                         <td className="p-3 border-r">
                                             <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${v.status === 'Aktywny' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{v.status}</span>
                                         </td>
-                                        <td className="p-3 border-r text-gray-400">—</td>
                                         <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex justify-center gap-2">
                                                 <button onClick={() => { setEditingVolunteer(v); setFormErrors({}); }} className="bg-[#6366f1] text-white p-1.5 rounded hover:opacity-80">✏️</button>
@@ -195,7 +196,7 @@ const VolunteersPage: React.FC = () => {
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setDetailsVolunteer(null)}>
                     <div className="bg-white rounded-xl p-8 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-between items-start mb-6">
-                            <h2 className="text-xl font-bold">{detailsVolunteer.full_name}</h2>
+                            <h2 className="text-xl font-bold text-gray-900">{detailsVolunteer.full_name}</h2>
                             <button onClick={() => setDetailsVolunteer(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
                         </div>
                         <dl className="space-y-3 text-sm">
@@ -209,6 +210,7 @@ const VolunteersPage: React.FC = () => {
                                 ['Status', detailsVolunteer.status],
                                 ['Data przystąpienia', detailsVolunteer.join_date],
                                 ['Notatki', detailsVolunteer.notes],
+                                ['Historia', detailsVolunteer.history],
                             ].map(([label, val]) => (
                                 <div key={label as string}>
                                     <dt className="text-[10px] font-black uppercase text-gray-400">{label}</dt>
@@ -291,6 +293,10 @@ const VolunteersPage: React.FC = () => {
                             <div>
                                 <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Notatki</label>
                                 <textarea name="notes" defaultValue={editingVolunteer?.notes} rows={3} className="w-full border p-2 rounded-md outline-none focus:border-blue-500 resize-none" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Historia</label>
+                                <textarea name="history" defaultValue={editingVolunteer?.history} rows={3} className="w-full border p-2 rounded-md outline-none focus:border-blue-500 resize-none" />
                             </div>
                             <div className="flex justify-end gap-3 pt-6">
                                 <button type="button" onClick={() => { setEditingVolunteer(null); setIsAdding(false); setFormErrors({}); }} className="px-4 py-2 text-gray-400 font-bold hover:text-gray-600">Anuluj</button>

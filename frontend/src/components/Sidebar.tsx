@@ -1,6 +1,10 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const Sidebar = () => {
+interface SidebarProps {
+    groupsSlot?: React.ReactNode;
+}
+
+const Sidebar = ({ groupsSlot }: SidebarProps) => {
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -11,7 +15,7 @@ const Sidebar = () => {
                 { name: 'Dashboard', icon: '📊', path: '/' },
                 { name: 'Podopieczni', icon: '📄', path: '/beneficiaries' },
                 { name: 'Wolontariusze', icon: '🙋', path: '/volunteers' },
-                { name: 'Grupy Przewodników', icon: '👥', path: '/groups' },
+                { name: 'Grupy', icon: '👥', path: '/groups' },
                 { name: 'Wdrażanie', icon: '🚀', path: '/onboarding' },
             ]
         },
@@ -20,7 +24,6 @@ const Sidebar = () => {
             items: [
                 { name: 'Wydarzenia', icon: '📅', path: '/events' },
                 { name: 'Zadania', icon: '📋', path: '/tasks' },
-                { name: 'Karty BO', icon: '💳', path: '/cards' },
             ]
         },
         {
@@ -40,7 +43,7 @@ const Sidebar = () => {
 
     return (
         <div className="w-[260px] h-screen fixed left-0 top-0 flex flex-col" style={{ backgroundColor: '#1e2330' }}>
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto flex-1">
                 <div className="flex items-center gap-2 text-white opacity-80 text-sm mb-8">
                     <span>💙</span>
                     <span className="font-bold tracking-tight">A PAULO - Wolontariat v1.0</span>
@@ -51,7 +54,7 @@ const Sidebar = () => {
                         <h3 className="text-[10px] font-bold text-gray-500 tracking-[0.2em] mb-4 px-2">
                             {section.title}
                         </h3>
-                        <nav className="space-y-1">
+                        <nav className="space-y-0.5">
                             {section.items.map((item) => (
                                 <div
                                     key={item.name}
@@ -64,6 +67,11 @@ const Sidebar = () => {
                                 >
                                     <span className="text-lg opacity-70">{item.icon}</span>
                                     <span className="text-sm font-medium">{item.name}</span>
+                                    {item.path === '/groups' && groupsSlot && (
+                                        <div className="ml-auto" onClick={e => e.stopPropagation()}>
+                                            {groupsSlot}
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </nav>
