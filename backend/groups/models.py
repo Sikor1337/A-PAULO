@@ -48,6 +48,7 @@ class BeneficiaryAssignment(models.Model):
         verbose_name="Wolontariusz"
     )
     is_main = models.BooleanField(default=False, verbose_name="Główny wolontariusz")
+    additional_info = models.TextField(blank=True, verbose_name="Bieżące informacje")
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data przypisania")
 

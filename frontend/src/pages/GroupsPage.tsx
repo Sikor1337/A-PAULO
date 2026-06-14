@@ -5,64 +5,122 @@ import { volunteerService } from '../services/volunteerService';
 import { beneficiaryService } from '../services/beneficiaryService';
 import Sidebar from '../components/Sidebar';
 
-type SortKey = 'name' | 'leader_name' | 'beneficiary_count' | 'volunteer_count';
-type SortDir = 'asc' | 'desc';
-
-interface AssignmentRow {
-    beneficiaryId: number | '';
-    volunteerIds: number[];
-    mainVolunteerId?: number | '';
+interface VolunteerEntry {
+    localId: string;
+    volunteerId: number | '';
+    isMain: boolean;
+    additionalInfo: string;
 }
+
+interface BeneficiaryRow {
+    localId: string;
+    beneficiaryId: number | '';
+    volunteers: VolunteerEntry[];
+}
+
+const MONTHS_PL = ['Sty', 'Lut', 'Mar', 'Kwi', 'Maj', 'Cze', 'Lip', 'Sie', 'Wrz', 'Paź', 'Lis', 'Gru'];
+let _rowCounter = 0;
+const newRowId = () => `r${++_rowCounter}`;
+const emptyVolunteer = (): VolunteerEntry => ({ localId: newRowId(), volunteerId: '', isMain: false, additionalInfo: '' });
+const emptyBenRow = (): BeneficiaryRow => ({ localId: newRowId(), beneficiaryId: '', volunteers: [emptyVolunteer()] });
 
 const GroupsPage: React.FC = () => {
     const queryClient = useQueryClient();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [sortKey, setSortKey] = useState<SortKey>('name');
-    const [sortDir, setSortDir] = useState<SortDir>('asc');
-    const [selectedGroup, setSelectedGroup] = useState<any>(null);
-    const [isAdding, setIsAdding] = useState(false);
-    const [editingGroup, setEditingGroup] = useState<any>(null);
-    
-    const [formAssignments, setFormAssignments] = useState<AssignmentRow[]>([]);
+    const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+    const [previousGroupId, setPreviousGroupId] = useState<number | null>(null);
+    const [showKartyBO, setShowKartyBO] = useState(false);
+
+    const [detailBeneficiary, setDetailBeneficiary] = useState<any>(null);
+    const [detailVolunteer, setDetailVolunteer] = useState<any>(null);
+    const [kartyBOStatus, setKartyBOStatus] = useState<Record<string, boolean>>({});
+
+    const [benRows, setBenRows] = useState<BeneficiaryRow[]>([emptyBenRow()]);
     const [formName, setFormName] = useState('');
     const [formLeader, setFormLeader] = useState<number | ''>('');
+
+    const [showBeneficiaryPicker, setShowBeneficiaryPicker] = useState(false);
+    const [beneficiaryPickerSearch, setBeneficiaryPickerSearch] = useState('');
 
     const { data: groups } = useQuery({ queryKey: ['groups'], queryFn: groupService.getAll });
     const { data: volunteers } = useQuery({ queryKey: ['volunteers'], queryFn: volunteerService.getAll });
     const { data: beneficiaries } = useQuery({ queryKey: ['beneficiaries'], queryFn: beneficiaryService.getAll });
 
     const { data: groupDetail } = useQuery({
-        queryKey: ['group-detail', selectedGroup?.id],
-        queryFn: () => groupService.getById(selectedGroup.id),
-        enabled: !!selectedGroup,
+        queryKey: ['group-detail', selectedGroupId],
+        queryFn: () => groupService.getById(selectedGroupId!),
+        enabled: !!selectedGroupId,
     });
 
+    const isNewGroup = selectedGroupId === null;
+
+    const months = useMemo(() => {
+        const now = new Date();
+        return Array.from({ length: 6 }, (_, i) => {
+            const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+            return { key: `${d.getFullYear()}-${d.getMonth() + 1}`, label: `${MONTHS_PL[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` };
+        });
+    }, []);
+
+    const boEligibleRows = useMemo(() => {
+        if (!groupDetail?.beneficiaries || !beneficiaries) return [];
+        return groupDetail.beneficiaries
+            .filter((b: any) => beneficiaries.find((fb: any) => fb.id === b.id)?.bo_enrolled === true)
+            .flatMap((b: any) => (b.volunteers || []).map((v: any) => ({ beneficiary: b, volunteer: v })));
+    }, [groupDetail, beneficiaries]);
+
+    // Auto-select first group on initial load
     useEffect(() => {
-        if (editingGroup) {
-            setFormName(editingGroup.name);
-            setFormLeader(editingGroup.leader || '');
-            const rows = (editingGroup.beneficiaries || []).map((b: any) => ({
-                beneficiaryId: b.id,
-                volunteerIds: b.volunteers?.map((v: any) => v.id) || [],
-                mainVolunteerId: b.volunteers?.find((v: any) => v.is_main)?.id || ''
-            }));
-            setFormAssignments(rows.length > 0 ? rows : [{ beneficiaryId: '', volunteerIds: [], mainVolunteerId: '' }]);
-        } else if (isAdding) {
+        if (groups?.length && selectedGroupId === null && previousGroupId === null) {
+            setSelectedGroupId(groups[0].id);
+        }
+    }, [groups, selectedGroupId, previousGroupId]);
+
+    // Populate form from groupDetail
+    useEffect(() => {
+        if (!groupDetail) return;
+        setFormName(groupDetail.name);
+        setFormLeader(groupDetail.leader || '');
+        const rows: BeneficiaryRow[] = (groupDetail.beneficiaries || []).map((b: any) => ({
+            localId: newRowId(),
+            beneficiaryId: b.id,
+            volunteers: b.volunteers?.length
+                ? b.volunteers.map((v: any) => ({ localId: newRowId(), volunteerId: v.id, isMain: v.is_main || false, additionalInfo: v.additional_info || '' }))
+                : [emptyVolunteer()]
+        }));
+        setBenRows(rows.length ? rows : [emptyBenRow()]);
+    }, [groupDetail]);
+
+    // Clear form for new group
+    useEffect(() => {
+        if (isNewGroup) {
             setFormName('');
             setFormLeader('');
-            setFormAssignments([{ beneficiaryId: '', volunteerIds: [], mainVolunteerId: '' }]);
+            setBenRows([emptyBenRow()]);
+            setShowKartyBO(false);
         }
-    }, [editingGroup, isAdding]);
+    }, [isNewGroup]);
+
+    const startNewGroup = () => {
+        setPreviousGroupId(selectedGroupId);
+        setSelectedGroupId(null);
+    };
+
+    const cancelNewGroup = () => {
+        const fallback = previousGroupId ?? groups?.[0]?.id ?? null;
+        setSelectedGroupId(fallback);
+        setPreviousGroupId(null);
+    };
 
     const mutationSaveGroup = useMutation({
-        mutationFn: (data: any) => editingGroup
-            ? groupService.update(editingGroup.id, data)
+        mutationFn: (data: any) => selectedGroupId
+            ? groupService.update(selectedGroupId, data)
             : groupService.create(data),
-        onSuccess: () => {
+        onSuccess: (saved: any) => {
             queryClient.invalidateQueries({ queryKey: ['groups'] });
             queryClient.invalidateQueries({ queryKey: ['beneficiaries'] });
-            setEditingGroup(null);
-            setIsAdding(false);
+            queryClient.invalidateQueries({ queryKey: ['group-detail'] });
+            setPreviousGroupId(null);
+            if (saved?.id) setSelectedGroupId(saved.id);
         },
         onError: (err: any) => alert(err?.response?.data ? JSON.stringify(err.response.data) : 'Błąd zapisu.')
     });
@@ -71,223 +129,206 @@ const GroupsPage: React.FC = () => {
         mutationFn: (id: number) => groupService.delete(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['groups'] });
-            setSelectedGroup(null);
+            queryClient.invalidateQueries({ queryKey: ['beneficiaries'] });
+            queryClient.invalidateQueries({ queryKey: ['group-detail'] });
+            setPreviousGroupId(null);
+            setSelectedGroupId(groups?.find((g: any) => g.id !== selectedGroupId)?.id ?? null);
         },
-        onError: () => alert('Nie udało się usunąć.')
+        onError: () => alert('Nie udało się usunąć grupy.')
     });
 
-    const handleFormSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const validAssignments = formAssignments
-            .filter(row => row.beneficiaryId !== '')
-            .map(row => ({
-                beneficiary: row.beneficiaryId,
-                volunteers: row.volunteerIds,
-                main_volunteer: row.mainVolunteerId || null
-            }));
-
-        const data = {
-            name: formName,
-            leader: formLeader || null,
-            assignments: validAssignments
-        };
-        mutationSaveGroup.mutate(data);
-    };
-
-    const addAssignmentRow = () => {
-        setFormAssignments([...formAssignments, { beneficiaryId: '', volunteerIds: [], mainVolunteerId: '' }]);
-    };
-
-    const removeAssignmentRow = (index: number) => {
-        setFormAssignments(formAssignments.filter((_, i) => i !== index));
-    };
-
-    const updateRowBeneficiary = (index: number, val: number) => {
-        const newRows = [...formAssignments];
-        newRows[index].beneficiaryId = val;
-        setFormAssignments(newRows);
-    };
-
-    const updateRowVolunteers = (index: number, vId: number) => {
-        const newRows = [...formAssignments];
-        const currentIds = newRows[index].volunteerIds;
-        if (currentIds.includes(vId)) {
-            newRows[index].volunteerIds = currentIds.filter(id => id !== vId);
-            if (newRows[index].mainVolunteerId === vId) {
-                newRows[index].mainVolunteerId = '';
-            }
-        } else {
-            newRows[index].volunteerIds = [...currentIds, vId];
+    const handleDeleteGroup = () => {
+        if (selectedGroupId === null) return;
+        const name = groups?.find((g: any) => g.id === selectedGroupId)?.name ?? '';
+        if (confirm(`Usunąć grupę „${name}"? Podopieczni zostaną odłączeni, a ich przypisania wolontariuszy usunięte.`)) {
+            mutationDeleteGroup.mutate(selectedGroupId);
         }
-        setFormAssignments(newRows);
     };
 
-    const filteredAndSorted = useMemo(() => {
-        if (!groups) return [];
-        const term = searchTerm.toLowerCase();
-        const filtered = groups.filter((g: any) =>
-            (g.name || '').toLowerCase().includes(term) ||
-            (g.leader_name || '').toLowerCase().includes(term)
-        );
-        return filtered.sort((a: any, b: any) => {
-            const valA = (a[sortKey] ?? '').toString().toLowerCase();
-            const valB = (b[sortKey] ?? '').toString().toLowerCase();
-            if (sortKey === 'beneficiary_count' || sortKey === 'volunteer_count') {
-                return sortDir === 'asc' ? (a[sortKey] || 0) - (b[sortKey] || 0) : (b[sortKey] || 0) - (a[sortKey] || 0);
-            }
-            return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        });
-    }, [groups, searchTerm, sortKey, sortDir]);
-
-    const toggleSort = (key: SortKey) => {
-        if (sortKey === key) setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
-        else { setSortKey(key); setSortDir('asc'); }
+    const handleFormSubmit = (e: React.BaseSyntheticEvent) => {
+        e.preventDefault();
+        const assignments = benRows
+            .filter(row => row.beneficiaryId !== '')
+            .map(row => {
+                const vols = row.volunteers.filter(v => v.volunteerId !== '').map(v => ({ id: v.volunteerId as number, additional_info: v.additionalInfo }));
+                const mainVol = row.volunteers.find(v => v.isMain && v.volunteerId !== '');
+                return { beneficiary: row.beneficiaryId as number, volunteers: vols, main_volunteer: mainVol?.volunteerId ?? null };
+            });
+        mutationSaveGroup.mutate({ name: formName, leader: formLeader || null, assignments });
     };
-    const sortIcon = (key: SortKey) => sortKey !== key ? ' ↕' : sortDir === 'asc' ? ' ↑' : ' ↓';
+
+    const addVolunteer = (benId: string) =>
+        setBenRows(prev => prev.map(r => r.localId === benId ? { ...r, volunteers: [...r.volunteers, emptyVolunteer()] } : r));
+
+    const removeVolunteer = (benId: string, volId: string) =>
+        setBenRows(prev => prev.map(r => r.localId === benId
+            ? { ...r, volunteers: r.volunteers.length > 1 ? r.volunteers.filter(v => v.localId !== volId) : r.volunteers }
+            : r));
+
+    const removeBenRow = (benId: string) =>
+        setBenRows(prev => prev.filter(r => r.localId !== benId));
+
+    const updateVolunteer = (benId: string, volId: string, patch: Partial<VolunteerEntry>) =>
+        setBenRows(prev => prev.map(r => r.localId === benId
+            ? { ...r, volunteers: r.volunteers.map(v => v.localId === volId ? { ...v, ...patch } : v) }
+            : r));
+
+    const toggleMain = (benId: string, volId: string) =>
+        setBenRows(prev => prev.map(r => {
+            if (r.localId !== benId) return r;
+            const nowMain = !r.volunteers.find(v => v.localId === volId)?.isMain;
+            return { ...r, volunteers: r.volunteers.map(v => ({ ...v, isMain: v.localId === volId ? nowMain : false })) };
+        }));
+
+    const [sidebarDropdownOpen, setSidebarDropdownOpen] = useState(false);
+
+    const kartyKey = (bId: number, vId: number, month: string) => `${bId}-${vId}-${month}`;
 
     return (
         <div className="flex min-h-screen bg-[#1e2330]">
-            <Sidebar />
+            <Sidebar groupsSlot={
+                <div className="relative">
+                    <button
+                        type="button"
+                        onClick={() => setSidebarDropdownOpen(prev => !prev)}
+                        className="flex items-center gap-1 bg-[#3d4558] hover:bg-[#4a5268] text-white text-xs font-bold px-2 py-1 rounded-md transition-colors max-w-[90px]"
+                    >
+                        <span className="truncate">
+                            {isNewGroup ? '—' : (groups?.find((g: any) => g.id === selectedGroupId)?.name ?? '—')}
+                        </span>
+                        <span className="shrink-0 opacity-60">▾</span>
+                    </button>
+                    {sidebarDropdownOpen && (
+                        <div
+                            className="absolute right-0 top-full mt-1 bg-[#2d3345] rounded-xl shadow-2xl z-50 py-1.5 min-w-[140px] border border-white/10"
+                            onMouseLeave={() => setSidebarDropdownOpen(false)}
+                        >
+                            {groups?.map((g: any) => (
+                                <button
+                                    key={g.id}
+                                    type="button"
+                                    onClick={() => { setSelectedGroupId(g.id); setShowKartyBO(false); setSidebarDropdownOpen(false); }}
+                                    className={`w-full text-left px-3 py-1.5 text-xs font-bold transition-colors hover:bg-[#3d4558] ${g.id === selectedGroupId ? 'text-indigo-300' : 'text-white'}`}
+                                >
+                                    {g.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            } />
+
             <div className="ml-[260px] flex-1 p-6 text-gray-800">
-                <div className="bg-white rounded-xl shadow-lg p-6 min-h-[calc(100vh-48px)]">
-                    {/* Consistent Header */}
-                    <div className="flex items-center justify-between mb-6 border-b pb-4">
+                <div className="bg-white rounded-xl shadow-lg min-h-[calc(100vh-48px)] flex flex-col">
+
+                    {/* ── HEADER ── */}
+                    <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
+                        {/* LEFT: title + new/cancel */}
                         <div className="flex items-center gap-3">
                             <span className="text-2xl">👥</span>
-                            <h1 className="text-xl font-bold text-gray-900 uppercase">Grupy Przewodników</h1>
+                            <h1 className="text-xl font-bold text-gray-900 uppercase">Grupy</h1>
+                            {isNewGroup ? (
+                                <button type="button" onClick={cancelNewGroup}
+                                    className="px-3 py-1.5 rounded-lg font-bold text-xs border border-gray-200 text-gray-400 hover:bg-gray-50 transition-all">
+                                    Anuluj
+                                </button>
+                            ) : (
+                                <button type="button" onClick={startNewGroup}
+                                    className="bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-emerald-600 transition-all">
+                                    + Nowa
+                                </button>
+                            )}
                         </div>
-                        <button onClick={() => { setIsAdding(true); setEditingGroup(null); }} className="bg-[#10b981] text-white px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90">
-                            + Nowa Grupa
-                        </button>
-                    </div>
 
-                    {/* Uniform Search */}
-                    <div className="mb-4">
-                        <input type="text" placeholder="Szukaj..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full px-4 h-10 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 outline-none text-sm font-medium" />
-                    </div>
-
-                    <div className="overflow-x-auto border rounded-lg">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-[#1e2330] text-white text-xs uppercase font-bold tracking-wider">
-                                    <th className="w-[30%] p-3 border-r border-gray-700 cursor-pointer" onClick={() => toggleSort('name')}>Grupa{sortIcon('name')}</th>
-                                    <th className="w-[30%] p-3 border-r border-gray-700 cursor-pointer" onClick={() => toggleSort('leader_name')}>Przewodnik{sortIcon('leader_name')}</th>
-                                    <th className="w-[15%] p-3 border-r border-gray-700 text-center cursor-pointer select-none" onClick={() => toggleSort('beneficiary_count')}>Podopieczni{sortIcon('beneficiary_count')}</th>
-                                    <th className="w-[15%] p-3 border-r border-gray-700 text-center cursor-pointer select-none" onClick={() => toggleSort('volunteer_count')}>Wolontariusze{sortIcon('volunteer_count')}</th>
-                                    <th className="w-[10%] p-3 text-center min-w-[100px]">Akcje</th>
-                                </tr>
-                            </thead>
-                            <tbody className="text-sm">
-                                {filteredAndSorted.map((g: any) => (
-                                    <tr key={g.id} className="hover:bg-blue-50 border-b last:border-0 cursor-pointer transition-colors" onClick={() => setSelectedGroup(g)}>
-                                        <td className="p-3 border-r font-bold text-gray-800">{g.name}</td>
-                                        <td className="p-3 border-r text-gray-500 font-medium">{g.leader_name || '—'}</td>
-                                        <td className="p-3 border-r text-center font-bold text-indigo-600">{g.beneficiary_count}</td>
-                                        <td className="p-3 border-r text-center font-bold text-emerald-600">{g.volunteer_count}</td>
-                                        <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                                            <div className="flex justify-center gap-2">
-                                                <button onClick={() => { setEditingGroup(g); setIsAdding(false); }} className="bg-[#6366f1] text-white p-1.5 rounded hover:opacity-80">✏️</button>
-                                                <button onClick={() => { if (confirm('Usunąć grupę?')) mutationDeleteGroup.mutate(g.id) }} className="bg-[#ef4444] text-white p-1.5 rounded hover:opacity-80">🗑️</button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            {/* DETAILS MODAL */}
-            {selectedGroup && !editingGroup && !isAdding && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setSelectedGroup(null)}>
-                    <div className="bg-white rounded-xl p-8 w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-between items-start mb-6 shrink-0 border-b pb-4">
-                            <div>
-                                <h2 className="text-2xl font-bold uppercase text-gray-900">{selectedGroup.name}</h2>
-                                <p className="text-sm font-bold text-indigo-600 mt-1">
-                                    Przewodnik: {selectedGroup.leader_name || 'Brak'}
-                                </p>
-                            </div>
-                            <button onClick={() => setSelectedGroup(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+                        {/* RIGHT: Karty BO */}
+                        <div>
+                            {!isNewGroup && (
+                                <button
+                                    onClick={() => setShowKartyBO(!showKartyBO)}
+                                    className={`px-3 py-2 rounded-lg font-bold text-xs uppercase transition-all ${showKartyBO ? 'bg-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                >💳 Karty BO</button>
+                            )}
                         </div>
-                        
-                        <div className="flex-1 overflow-y-auto pr-2 space-y-6">
-                            <div className="flex gap-8 mb-4">
-                                <div className="bg-indigo-50 p-4 rounded-xl flex-1 text-center border border-indigo-100">
-                                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">Podopieczni</p>
-                                    <p className="text-3xl font-black text-indigo-700">{selectedGroup.beneficiary_count}</p>
+                    </div>
+
+                    {/* ── KARTY BO — Excel monthly grid ── */}
+                    {showKartyBO && !isNewGroup && (
+                        <div className="flex-1 overflow-auto p-6">
+                            {boEligibleRows.length === 0 ? (
+                                <div className="text-center py-16 text-gray-300">
+                                    <div className="text-5xl mb-4">💳</div>
+                                    <p className="font-bold text-lg">Brak podopiecznych z BO = TAK</p>
+                                    <p className="text-sm mt-2">Przypisz podopiecznych z aktywnym BO do tej grupy.</p>
                                 </div>
-                                <div className="bg-emerald-50 p-4 rounded-xl flex-1 text-center border border-emerald-100">
-                                    <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">Wolontariusze</p>
-                                    <p className="text-3xl font-black text-emerald-700">{selectedGroup.volunteer_count}</p>
+                            ) : (
+                                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                                    <table className="text-sm border-collapse w-full">
+                                        <thead>
+                                            <tr className="bg-[#1e2330] text-white text-[10px] uppercase tracking-widest">
+                                                <th className="px-4 py-3 text-left font-bold border-r border-white/10 w-44">Podopieczny</th>
+                                                <th className="px-4 py-3 text-left font-bold border-r border-white/10 w-44">Wolontariusz</th>
+                                                {months.map(m => (
+                                                    <th key={m.key} className="px-3 py-3 text-center font-bold border-r border-white/10 last:border-0 w-20">{m.label}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {boEligibleRows.map(({ beneficiary: b, volunteer: v }: any, i: number) => {
+                                                const isFirst = boEligibleRows.findIndex((r: any) => r.beneficiary.id === b.id) === i;
+                                                const span = boEligibleRows.filter((r: any) => r.beneficiary.id === b.id).length;
+                                                return (
+                                                    <tr key={`${b.id}-${v.id}`} className={`border-b border-gray-100 last:border-0 hover:bg-amber-50/40 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                                                        {isFirst && (
+                                                            <td className="px-4 py-2.5 border-r border-gray-200 font-bold text-indigo-700 align-middle" rowSpan={span}>
+                                                                <button
+                                                                    onClick={() => setDetailBeneficiary(beneficiaries?.find((fb: any) => fb.id === b.id) || { id: b.id, full_name: b.full_name })}
+                                                                    className="hover:underline text-left leading-tight"
+                                                                >{b.full_name}</button>
+                                                            </td>
+                                                        )}
+                                                        <td className="px-4 py-2.5 border-r border-gray-200">
+                                                            <button
+                                                                onClick={() => setDetailVolunteer(volunteers?.find((fv: any) => fv.id === v.id) || { id: v.id, full_name: v.full_name })}
+                                                                className={`flex items-center gap-1.5 font-bold hover:underline text-left ${v.is_main ? 'text-amber-700' : 'text-gray-700'}`}
+                                                            ><span>{v.is_main ? '⭐' : '🙋'}</span><span>{v.full_name}</span></button>
+                                                        </td>
+                                                        {months.map(m => {
+                                                            const key = kartyKey(b.id, v.id, m.key);
+                                                            return (
+                                                                <td key={m.key} className="px-3 py-2.5 text-center border-r border-gray-100 last:border-0">
+                                                                    <input type="checkbox"
+                                                                        checked={kartyBOStatus[key] || false}
+                                                                        onChange={() => setKartyBOStatus(prev => ({ ...prev, [key]: !prev[key] }))}
+                                                                        className="w-4 h-4 rounded border-gray-300 cursor-pointer accent-amber-500"
+                                                                    />
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
-                            </div>
-
-                            <div>
-                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Struktura przypisań</h3>
-                                {(!groupDetail?.beneficiaries || groupDetail.beneficiaries.length === 0) ? (
-                                    <div className="text-center p-6 bg-gray-50 rounded-xl text-gray-400 font-medium italic border border-gray-100">
-                                        Grupa nie ma jeszcze przypisanych podopiecznych.
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {groupDetail.beneficiaries.map((b: any) => (
-                                            <div key={b.id} className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm flex flex-col gap-2">
-                                                <div className="flex justify-between items-center">
-                                                    <div className="font-bold text-gray-800 text-lg">👤 {b.full_name}</div>
-                                                </div>
-                                                <div className="flex flex-wrap gap-2 mt-2">
-                                                    {b.volunteers?.length > 0 ? (
-                                                        b.volunteers.map((v: any) => (
-                                                            <span key={v.id} className={`text-xs px-2.5 py-1 rounded-md font-bold flex items-center gap-1 shadow-sm ${v.is_main ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-100 text-emerald-700'}`}>
-                                                                {v.is_main ? '⭐' : '🙋'} {v.full_name}
-                                                            </span>
-                                                        ))
-                                                    ) : (
-                                                        <span className="text-xs text-gray-400 italic">Brak wolontariuszy</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            )}
                         </div>
+                    )}
 
-                        <div className="flex justify-end gap-3 pt-6 border-t mt-6 shrink-0">
-                            <button onClick={() => { setEditingGroup(selectedGroup); setSelectedGroup(null); setIsAdding(false); }} className="bg-[#6366f1] text-white px-6 py-2.5 rounded-xl font-bold uppercase text-sm hover:opacity-90 shadow-md">
-                                ✏️ Edytuj Grupę
-                            </button>
-                            <button onClick={() => setSelectedGroup(null)} className="px-6 py-2.5 text-gray-400 font-bold uppercase text-sm hover:text-gray-600">Zamknij</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                    {/* ── CONFIG FORM — Excel-like table ── */}
+                    {!showKartyBO && (
+                        <form onSubmit={handleFormSubmit} className="flex flex-col flex-1">
+                            <div className="flex-1 overflow-y-auto p-6">
 
-            {/* COMMAND CENTER MODAL - UNIFIED & SCALED UP */}
-            {(editingGroup || isAdding) && (
-                <div className="fixed inset-0 bg-[#1e2330]/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl p-8 w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col border border-gray-200">
-                        {/* Header */}
-                        <div className="flex items-center justify-between mb-8 shrink-0">
-                            <h2 className="text-2xl font-bold text-gray-900 uppercase">Konfiguracja Grupy</h2>
-                            <button onClick={() => { setEditingGroup(null); setIsAdding(false); }} className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 text-gray-400 hover:text-gray-900 transition-all text-2xl">&times;</button>
-                        </div>
-
-                        <form onSubmit={handleFormSubmit} className="space-y-8 flex-1 flex flex-col overflow-hidden">
-                            <div className="flex-1 overflow-y-auto pr-2">
-                                {/* Main Fields - Unified h-10 */}
-                                <div className="grid grid-cols-2 gap-8 mb-8">
-                                    <div className="space-y-2">
-                                        <label className="block text-xs font-bold uppercase text-gray-400 ml-1">Nazwa Grupy</label>
+                                {/* Name + Leader */}
+                                <div className="grid grid-cols-2 gap-6 mb-8">
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-1.5 ml-1">Nazwa Grupy</label>
                                         <input value={formName} onChange={e => setFormName(e.target.value)} required placeholder="np. GRUPA A"
                                             className="w-full h-10 border border-gray-200 focus:border-indigo-500 px-4 rounded-lg outline-none font-bold text-sm" />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="block text-xs font-bold uppercase text-gray-400 ml-1">Przewodnik</label>
-                                        <select value={formLeader} onChange={e => setFormLeader(Number(e.target.value))} 
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-1.5 ml-1">Przewodnik</label>
+                                        <select value={formLeader} onChange={e => setFormLeader(Number(e.target.value))}
                                             className="w-full h-10 border border-gray-200 focus:border-indigo-500 px-4 rounded-lg outline-none font-bold text-sm bg-white">
                                             <option value="">— Wybierz —</option>
                                             {volunteers?.map((v: any) => <option key={v.id} value={v.id}>{v.full_name}</option>)}
@@ -295,108 +336,242 @@ const GroupsPage: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Assignments Section - Unified Layout */}
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="text-base font-bold text-gray-700 uppercase">Struktura Zespołów</h3>
-                                        <button type="button" onClick={addAssignmentRow} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase hover:opacity-90">
-                                            + Dodaj Podopiecznego
-                                        </button>
-                                    </div>
-
-                                    {/* Table Header for Row */}
-                                    <div className="grid grid-cols-[1fr_2fr_48px] gap-6 px-4 text-xs font-bold text-gray-400 uppercase tracking-widest">
-                                        <div>Podopieczny</div>
-                                        <div>Wolontariusze</div>
-                                        <div></div>
-                                    </div>
-                                    
-                                    <div className="space-y-3">
-                                        {formAssignments.map((row, index) => (
-                                            <div key={index} className="grid grid-cols-[1fr_2fr_48px] gap-6 items-center bg-gray-50 p-3 rounded-xl border border-gray-100 hover:bg-white transition-all">
-                                                {/* Col 1: Beneficiary */}
-                                                <select 
-                                                    value={row.beneficiaryId} 
-                                                    onChange={e => updateRowBeneficiary(index, Number(e.target.value))}
-                                                    className="w-full h-10 bg-white border border-gray-200 focus:border-indigo-500 px-3 rounded-lg outline-none text-sm font-bold"
-                                                >
-                                                    <option value="">Wybierz...</option>
-                                                    {beneficiaries
-                                                        ?.filter((b: any) => {
-                                                            const isAvailable = !b.group || b.group === editingGroup?.id || b.id === row.beneficiaryId;
-                                                            const isAlreadySelectedInForm = formAssignments.some((r, i) => i !== index && r.beneficiaryId === b.id);
-                                                            return isAvailable && !isAlreadySelectedInForm;
-                                                        })
-                                                        .map((b: any) => <option key={b.id} value={b.id}>{b.full_name}</option>)}
-                                                </select>
-
-                                                {/* Col 2: Volunteers */}
-                                                <div className="h-10 bg-white border border-gray-200 px-3 rounded-lg flex items-center gap-2 overflow-hidden">
-                                                    <div className="flex-1 flex gap-2 items-center overflow-x-auto no-scrollbar py-1">
-                                                        {row.volunteerIds.length === 0 && <span className="text-xs text-gray-300 font-medium italic">Brak przypisań</span>}
-                                                        {row.volunteerIds.map(vId => {
-                                                            const vol = volunteers?.find((v: any) => v.id === vId);
-                                                            const isMain = row.mainVolunteerId === vId;
-                                                            return (
-                                                                <span key={vId} className={`text-xs px-2 py-1 rounded-md font-bold whitespace-nowrap flex items-center gap-1 transition-all ${isMain ? 'bg-amber-100 text-amber-800 border border-amber-300 shadow-sm' : 'bg-indigo-100 text-indigo-700'}`}>
-                                                                    <button 
-                                                                        type="button" 
-                                                                        onClick={() => {
-                                                                            const newRows = [...formAssignments];
-                                                                            newRows[index].mainVolunteerId = isMain ? '' : vId;
-                                                                            setFormAssignments(newRows);
-                                                                        }} 
-                                                                        className="hover:scale-120 transition-transform cursor-pointer mr-0.5 text-xs select-none"
-                                                                        title={isMain ? "Usuń oznaczenie głównego wolontariusza" : "Oznacz jako głównego wolontariusza"}
-                                                                    >
-                                                                        {isMain ? '⭐' : '☆'}
+                                {/* Excel table */}
+                                <div className="overflow-hidden rounded-xl border border-gray-200">
+                                    <table className="w-full text-sm border-collapse">
+                                        <thead>
+                                            <tr className="bg-[#1e2330] text-white text-[10px] uppercase tracking-widest">
+                                                <th className="px-4 py-3 text-left font-bold border-r border-white/10 w-[28%]">Podopieczny</th>
+                                                <th className="px-4 py-3 text-left font-bold border-r border-white/10 w-[28%]">Wolontariusz</th>
+                                                <th className="px-4 py-3 text-left font-bold border-r border-white/10">Bieżące informacje</th>
+                                                <th className="w-10"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {benRows.flatMap(benRow => {
+                                                const vols = benRow.volunteers;
+                                                const rows: React.ReactNode[] = vols.map((vol, vi) => (
+                                                    <tr key={vol.localId} className="border-b border-gray-100 hover:bg-indigo-50/20 group transition-colors">
+                                                        {vi === 0 && (
+                                                            <td rowSpan={vols.length + 1} className="px-2 py-1.5 border-r border-gray-200 align-top">
+                                                                <div className="flex items-start gap-1 pt-0.5">
+                                                                    {(() => {
+                                                                        const ben = beneficiaries?.find((b: any) => b.id === benRow.beneficiaryId);
+                                                                        return ben ? (
+                                                                            <button type="button" onClick={() => setDetailBeneficiary(ben)}
+                                                                                className="flex-1 text-sm font-bold text-indigo-700 hover:underline px-2 py-1 leading-tight text-left">
+                                                                                {ben.full_name}
+                                                                            </button>
+                                                                        ) : (
+                                                                            <span className="flex-1 text-sm text-gray-300 italic px-2 py-1">— wybierz —</span>
+                                                                        );
+                                                                    })()}
+                                                                    <button type="button" onClick={() => removeBenRow(benRow.localId)}
+                                                                        className="shrink-0 text-gray-300 hover:text-rose-500 text-lg font-bold transition-colors leading-none mt-0.5" title="Usuń podopiecznego">
+                                                                        &times;
                                                                     </button>
-                                                                    {vol?.full_name}
-                                                                    <button type="button" onClick={() => updateRowVolunteers(index, vId)} className="hover:text-indigo-950 font-bold ml-1">×</button>
-                                                                </span>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                    <select 
-                                                        className="w-[100px] h-7 bg-indigo-50 border-none text-xs font-bold text-indigo-600 px-2 rounded-md outline-none cursor-pointer"
-                                                        onChange={(e) => {
-                                                            const val = Number(e.target.value);
-                                                            if (val) {
-                                                                updateRowVolunteers(index, val);
-                                                                e.target.value = '';
-                                                            }
-                                                        }}
-                                                    >
-                                                        <option value="">+ Dodaj</option>
-                                                        {volunteers?.filter((v: any) => !row.volunteerIds.includes(v.id)).map((v: any) => (
-                                                            <option key={v.id} value={v.id}>{v.full_name}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
+                                                                </div>
+                                                            </td>
+                                                        )}
+                                                        <td className="px-2 py-1.5 border-r border-gray-100">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <button type="button" onClick={() => toggleMain(benRow.localId, vol.localId)}
+                                                                    className={`shrink-0 w-6 h-6 flex items-center justify-center rounded text-xs transition-all ${vol.isMain ? 'text-amber-500' : 'text-gray-300 hover:text-gray-400'}`}>
+                                                                    {vol.isMain ? '⭐' : '☆'}
+                                                                </button>
+                                                                <select
+                                                                    value={vol.volunteerId}
+                                                                    onChange={e => updateVolunteer(benRow.localId, vol.localId, { volunteerId: Number(e.target.value) || '' })}
+                                                                    className={`flex-1 h-8 bg-transparent border-0 outline-none text-sm font-bold cursor-pointer hover:bg-white focus:bg-white rounded px-1 focus:border focus:border-indigo-300 ${vol.isMain ? 'text-amber-700' : 'text-gray-700'}`}
+                                                                >
+                                                                    <option value="">— wybierz —</option>
+                                                                    {volunteers
+                                                                        ?.filter((v: any) =>
+                                                                            v.id === vol.volunteerId ||
+                                                                            !vols.some(ve => ve.localId !== vol.localId && ve.volunteerId === v.id)
+                                                                        )
+                                                                        .map((v: any) => <option key={v.id} value={v.id}>{v.full_name}</option>)}
+                                                                </select>
+                                                                {vol.volunteerId !== '' && (
+                                                                    <button type="button" title="Szczegóły wolontariusza"
+                                                                        onClick={() => setDetailVolunteer(volunteers?.find((fv: any) => fv.id === vol.volunteerId) ?? null)}
+                                                                        className="shrink-0 text-gray-300 hover:text-indigo-400 text-base leading-none transition-colors">
+                                                                        ℹ
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-2 py-1.5 border-r border-gray-100">
+                                                            <input type="text" placeholder="Bieżące informacje..."
+                                                                value={vol.additionalInfo}
+                                                                onChange={e => updateVolunteer(benRow.localId, vol.localId, { additionalInfo: e.target.value })}
+                                                                className="w-full h-8 bg-transparent border-0 outline-none text-sm text-gray-600 placeholder-gray-300 hover:bg-white focus:bg-white rounded px-2 focus:border focus:border-indigo-300"
+                                                            />
+                                                        </td>
+                                                        <td className="px-2 py-1.5 text-center">
+                                                            <button type="button" onClick={() => removeVolunteer(benRow.localId, vol.localId)}
+                                                                className="text-gray-300 hover:text-rose-500 text-lg font-bold transition-colors" title="Usuń wolontariusza">
+                                                                &times;
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ));
+                                                rows.push(
+                                                    <tr key={`addvol-${benRow.localId}`} className="border-b-2 border-gray-200">
+                                                        <td colSpan={3} className="px-3 py-1">
+                                                            <button type="button" onClick={() => addVolunteer(benRow.localId)}
+                                                                className="text-xs font-bold text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 px-1.5 py-0.5 rounded transition-all">
+                                                                + wolontariusz
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                                return rows;
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
 
-                                                {/* Col 3: Remove */}
-                                                <button type="button" onClick={() => removeAssignmentRow(index)} 
-                                                    className="w-10 h-10 flex items-center justify-center rounded-lg bg-white text-rose-300 hover:text-rose-600 border border-gray-100 transition-all text-2xl">
-                                                    &times;
-                                                </button>
+                                <div
+                                    className="relative mt-3"
+                                    tabIndex={-1}
+                                    onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setShowBeneficiaryPicker(false); }}
+                                >
+                                    <button type="button"
+                                        onClick={() => { setShowBeneficiaryPicker(prev => !prev); setBeneficiaryPickerSearch(''); }}
+                                        className="text-xs font-bold text-indigo-500 hover:text-indigo-700 px-2 py-1 hover:bg-indigo-50 rounded-lg transition-all">
+                                        + Dodaj podopiecznego
+                                    </button>
+
+                                    {showBeneficiaryPicker && (() => {
+                                        const alreadyInForm = new Set(benRows.map(r => r.beneficiaryId));
+                                        const available = (beneficiaries ?? []).filter((b: any) =>
+                                            (!b.group || b.group === selectedGroupId) &&
+                                            !alreadyInForm.has(b.id) &&
+                                            b.full_name.toLowerCase().includes(beneficiaryPickerSearch.toLowerCase())
+                                        );
+                                        return (
+                                            <div className="absolute left-0 bottom-full mb-1 w-64 bg-white rounded-xl shadow-xl border border-gray-200 z-30 overflow-hidden">
+                                                <div className="p-2 border-b border-gray-100">
+                                                    <input
+                                                        autoFocus
+                                                        placeholder="Szukaj..."
+                                                        value={beneficiaryPickerSearch}
+                                                        onChange={e => setBeneficiaryPickerSearch(e.target.value)}
+                                                        className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg outline-none focus:border-indigo-400"
+                                                    />
+                                                </div>
+                                                <div className="max-h-52 overflow-y-auto">
+                                                    {available.length === 0 ? (
+                                                        <p className="text-center text-gray-400 text-xs py-4">Brak nieprzypisanych podopiecznych</p>
+                                                    ) : available.map((b: any) => (
+                                                        <button key={b.id} type="button"
+                                                            onClick={() => { setBenRows(prev => [...prev, { localId: newRowId(), beneficiaryId: b.id, volunteers: [emptyVolunteer()] }]); setShowBeneficiaryPicker(false); }}
+                                                            className="w-full text-left px-3 py-2 hover:bg-indigo-50 transition-colors">
+                                                            <p className="font-bold text-xs text-gray-800">{b.full_name}</p>
+                                                            {b.address && <p className="text-[10px] text-gray-400 truncate">{b.address}</p>}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
 
                             {/* Footer */}
-                            <div className="mt-8 pt-6 flex justify-end gap-6 border-t">
-                                <button type="button" onClick={() => { setEditingGroup(null); setIsAdding(false); }} 
-                                    className="px-6 py-2 text-gray-400 font-bold text-sm uppercase hover:text-gray-600 transition-colors">
-                                    Anuluj
-                                </button>
-                                <button type="submit" disabled={mutationSaveGroup.isPending} 
-                                    className="bg-indigo-600 text-white px-10 py-3 rounded-xl font-bold text-sm uppercase hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
-                                    {mutationSaveGroup.isPending ? 'Zapisywanie...' : 'Zapisz Konfigurację'}
+                            <div className="px-6 py-4 border-t flex items-center justify-between shrink-0">
+                                {isNewGroup ? (
+                                    <button type="button" onClick={cancelNewGroup}
+                                        className="text-gray-400 font-bold text-sm hover:text-gray-600 transition-colors">
+                                        Anuluj
+                                    </button>
+                                ) : (
+                                    <button type="button" onClick={handleDeleteGroup} disabled={mutationDeleteGroup.isPending}
+                                        className="px-4 py-2 rounded-lg font-bold text-sm text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                                        🗑️ Usuń Grupę
+                                    </button>
+                                )}
+                                <button type="submit" disabled={mutationSaveGroup.isPending}
+                                    className="bg-indigo-600 text-white px-10 py-3 rounded-xl font-bold text-sm uppercase hover:bg-indigo-700 shadow-lg shadow-indigo-100 disabled:opacity-60">
+                                    {mutationSaveGroup.isPending ? 'Zapisywanie...' : (isNewGroup ? 'Utwórz Grupę' : 'Zapisz Konfigurację')}
                                 </button>
                             </div>
                         </form>
+                    )}
+                </div>
+            </div>
+
+            {/* ── BENEFICIARY DETAIL MODAL ── */}
+            {detailBeneficiary && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setDetailBeneficiary(null)}>
+                    <div className="bg-white rounded-xl p-8 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-start mb-6">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase text-indigo-500 tracking-wider mb-1">Podopieczny</p>
+                                <h2 className="text-xl font-bold text-gray-900">{detailBeneficiary.full_name}</h2>
+                            </div>
+                            <button onClick={() => setDetailBeneficiary(null)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                        </div>
+                        <dl className="space-y-3 text-sm">
+                            {([
+                                ['Adres', detailBeneficiary.address],
+                                ['Grupa', detailBeneficiary.group_name],
+                                ['Telefon', detailBeneficiary.phone],
+                                ['Telefon rodziny', detailBeneficiary.family_phone],
+                                ['Status', detailBeneficiary.status],
+                                ['BO', detailBeneficiary.bo_enrolled ? 'Tak' : 'Nie'],
+                                ['Opis / Notatki', detailBeneficiary.description],
+                                ['Ostatnia wizyta księdza', detailBeneficiary.last_priest_visit],
+                                ['Ostatnie spotkanie z wol.', detailBeneficiary.last_volunteer_meeting],
+                                ['Historia', detailBeneficiary.history],
+                            ] as [string, any][]).map(([label, val]) => (
+                                <div key={label}>
+                                    <dt className="text-[10px] font-black uppercase text-gray-400">{label}</dt>
+                                    <dd className="text-gray-700">{val || '—'}</dd>
+                                </div>
+                            ))}
+                        </dl>
+                        <div className="flex justify-end pt-6 border-t mt-6">
+                            <button onClick={() => setDetailBeneficiary(null)} className="px-4 py-2 text-gray-400 font-bold">Zamknij</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── VOLUNTEER DETAIL MODAL ── */}
+            {detailVolunteer && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setDetailVolunteer(null)}>
+                    <div className="bg-white rounded-xl p-8 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-start mb-6">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase text-emerald-500 tracking-wider mb-1">Wolontariusz</p>
+                                <h2 className="text-xl font-bold text-gray-900">{detailVolunteer.full_name}</h2>
+                            </div>
+                            <button onClick={() => setDetailVolunteer(null)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                        </div>
+                        <dl className="space-y-3 text-sm">
+                            {([
+                                ['Email', detailVolunteer.email],
+                                ['Lider Grupy', detailVolunteer.led_group],
+                                ['Członek Grup', detailVolunteer.assigned_groups],
+                                ['Główny wolontariusz dla', Array.isArray(detailVolunteer.main_for_beneficiaries) ? detailVolunteer.main_for_beneficiaries.join(', ') : detailVolunteer.main_for_beneficiaries],
+                                ['Telefon', detailVolunteer.phone],
+                                ['Profil społecznościowy', detailVolunteer.social_link],
+                                ['Status', detailVolunteer.status],
+                                ['Data przystąpienia', detailVolunteer.join_date],
+                                ['Notatki', detailVolunteer.notes],
+                                ['Historia', detailVolunteer.history],
+                            ] as [string, any][]).map(([label, val]) => (
+                                <div key={label}>
+                                    <dt className="text-[10px] font-black uppercase text-gray-400">{label}</dt>
+                                    <dd className="text-gray-800 font-bold">{val || '—'}</dd>
+                                </div>
+                            ))}
+                        </dl>
+                        <div className="flex justify-end pt-6 border-t mt-6">
+                            <button onClick={() => setDetailVolunteer(null)} className="px-4 py-2 text-gray-400 font-bold">Zamknij</button>
+                        </div>
                     </div>
                 </div>
             )}

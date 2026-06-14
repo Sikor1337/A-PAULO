@@ -11,7 +11,7 @@ class BeneficiaryAssignmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BeneficiaryAssignment
-        fields = ['id', 'beneficiary', 'volunteer', 'volunteer_name', 'beneficiary_name', 'is_main', 'created_at']
+        fields = ['id', 'beneficiary', 'volunteer', 'volunteer_name', 'beneficiary_name', 'is_main', 'additional_info', 'created_at']
         read_only_fields = ['created_at']
 
 
@@ -32,6 +32,7 @@ class BeneficiaryInGroupSerializer(serializers.Serializer):
                 'full_name': a.volunteer.full_name,
                 'assignment_id': a.id,
                 'is_main': a.is_main,
+                'additional_info': a.additional_info,
             }
             for a in assignments
         ]
@@ -109,13 +110,21 @@ class GroupSerializer(serializers.ModelSerializer):
                 BeneficiaryAssignment.objects.filter(beneficiary=beneficiary).delete()
                 
                 # Create new assignments
-                for v_id in volunteer_ids:
+                # volunteers may be plain IDs or {id, additional_info} objects
+                for v_entry in volunteer_ids:
+                    if isinstance(v_entry, dict):
+                        v_id = v_entry['id']
+                        additional_info = v_entry.get('additional_info', '')
+                    else:
+                        v_id = v_entry
+                        additional_info = ''
                     volunteer = Volunteer.objects.get(id=v_id)
                     is_main = (v_id == main_volunteer_id)
                     BeneficiaryAssignment.objects.create(
-                        beneficiary=beneficiary, 
+                        beneficiary=beneficiary,
                         volunteer=volunteer,
-                        is_main=is_main
+                        is_main=is_main,
+                        additional_info=additional_info,
                     )
                     all_assigned_volunteers.add(v_id)
             
@@ -123,7 +132,3 @@ class GroupSerializer(serializers.ModelSerializer):
             instance.volunteers.set(list(all_assigned_volunteers))
                     
         return instance
-
-# Compatibility aliases
-GroupListSerializer = GroupSerializer
-GroupDetailSerializer = GroupSerializer

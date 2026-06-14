@@ -1,14 +1,17 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { beneficiaryService } from '../services/beneficiaryService';
+import { groupService } from '../services/groupService';
 import Sidebar from '../components/Sidebar';
 
-type SortKey = 'full_name' | 'address' | 'phone' | 'status';
+type SortKey = 'full_name' | 'address' | 'phone' | 'status' | 'group_name';
 type SortDir = 'asc' | 'desc';
 
 const BeneficiariesPage: React.FC = () => {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterGroup, setFilterGroup] = useState<number | ''>('');
+    const [filterBO, setFilterBO] = useState<'' | 'yes' | 'no'>('');
     const [editingBeneficiary, setEditingBeneficiary] = useState<any>(null);
     const [detailsBeneficiary, setDetailsBeneficiary] = useState<any>(null);
     const [isAdding, setIsAdding] = useState(false);
@@ -20,21 +23,29 @@ const BeneficiariesPage: React.FC = () => {
         queryFn: beneficiaryService.getAll
     });
 
+    const { data: groups } = useQuery({
+        queryKey: ['groups'],
+        queryFn: groupService.getAll
+    });
+
     const filteredAndSorted = useMemo(() => {
         if (!beneficiaries) return [];
         const term = searchTerm.toLowerCase();
-        const filtered = beneficiaries.filter((b: any) =>
+        let filtered = beneficiaries.filter((b: any) =>
             (b.full_name || '').toLowerCase().includes(term) ||
             (b.address || '').toLowerCase().includes(term) ||
             (b.phone || '').toLowerCase().includes(term) ||
             (b.status || '').toLowerCase().includes(term)
         );
+        if (filterGroup !== '') filtered = filtered.filter((b: any) => b.group === filterGroup);
+        if (filterBO === 'yes') filtered = filtered.filter((b: any) => b.bo_enrolled === true);
+        if (filterBO === 'no') filtered = filtered.filter((b: any) => !b.bo_enrolled);
         return filtered.sort((a: any, b: any) => {
             const valA = (a[sortKey] || '').toString().toLowerCase();
             const valB = (b[sortKey] || '').toString().toLowerCase();
             return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
-    }, [beneficiaries, searchTerm, sortKey, sortDir]);
+    }, [beneficiaries, searchTerm, sortKey, sortDir, filterGroup, filterBO]);
 
     const toggleSort = (key: SortKey) => {
         if (sortKey === key) setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -87,6 +98,8 @@ const BeneficiariesPage: React.FC = () => {
         setFormErrors({});
         data.bo_enrolled = fd.get('bo_enrolled') === 'on';
         data.group = data.group ? Number(data.group) : null;
+        data.last_priest_visit = data.last_priest_visit || null;
+        data.last_volunteer_meeting = data.last_volunteer_meeting || null;
         mutationSave.mutate(data);
     };
 
@@ -104,23 +117,31 @@ const BeneficiariesPage: React.FC = () => {
                             <button onClick={() => { setIsAdding(true); setFormErrors({}); }} className="bg-[#10b981] text-white px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2">
                                 + Dodaj
                             </button>
-                            <button className="bg-[#3b82f6] text-white px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2">
-                                📥 CSV
-                            </button>
                         </div>
                     </div>
-                    <div className="mb-4">
+                    <div className="mb-4 flex gap-2 items-center">
                         <input type="text" placeholder="Szukaj po nazwisku, adresie, telefonie..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full px-4 h-10 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 outline-none text-sm font-medium" />
+                            className="flex-1 px-4 h-10 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 outline-none text-sm font-medium" />
+                        <select value={filterGroup} onChange={e => setFilterGroup(e.target.value === '' ? '' : Number(e.target.value))}
+                            className="h-10 px-3 border border-gray-200 rounded-lg bg-gray-50 focus:border-indigo-500 outline-none text-sm font-medium text-gray-600 min-w-[150px]">
+                            <option value="">Wszystkie grupy</option>
+                            {groups?.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                        </select>
+                        <select value={filterBO} onChange={e => setFilterBO(e.target.value as '' | 'yes' | 'no')}
+                            className="h-10 px-3 border border-gray-200 rounded-lg bg-gray-50 focus:border-indigo-500 outline-none text-sm font-medium text-gray-600 min-w-[120px]">
+                            <option value="">BO: Wszystkie</option>
+                            <option value="yes">BO: TAK</option>
+                            <option value="no">BO: NIE</option>
+                        </select>
                     </div>
                     <div className="overflow-x-auto border rounded-lg">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-[#1e2330] text-white text-xs uppercase font-bold tracking-wider">
-                                    <th className="w-[20%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('full_name')}>Imię{sortIcon('full_name')}</th>
+                                    <th className="w-[20%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('full_name')}>Imię i nazwisko{sortIcon('full_name')}</th>
                                     <th className="w-[25%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('address')}>Adres{sortIcon('address')}</th>
                                     <th className="w-[15%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('phone')}>Tel{sortIcon('phone')}</th>
-                                    <th className="w-[15%] p-3 border-r border-gray-700">Grupa</th>
+                                    <th className="w-[15%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('group_name')}>Grupa{sortIcon('group_name')}</th>
                                     <th className="w-[5%] p-3 border-r border-gray-700 text-center">BO</th>
                                     <th className="w-[10%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('status')}>Status{sortIcon('status')}</th>
                                     <th className="w-[10%] p-3 text-center min-w-[100px]">Akcje</th>
@@ -161,7 +182,7 @@ const BeneficiariesPage: React.FC = () => {
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setDetailsBeneficiary(null)}>
                     <div className="bg-white rounded-xl p-8 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-between items-start mb-6">
-                            <h2 className="text-xl font-bold">{detailsBeneficiary.full_name}</h2>
+                            <h2 className="text-xl font-bold text-gray-900">{detailsBeneficiary.full_name}</h2>
                             <button onClick={() => setDetailsBeneficiary(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
                         </div>
                         <dl className="space-y-3 text-sm">
@@ -173,6 +194,9 @@ const BeneficiariesPage: React.FC = () => {
                                 ['Status', detailsBeneficiary.status],
                                 ['BO', detailsBeneficiary.bo_enrolled ? 'Tak' : 'Nie'],
                                 ['Opis / Notatki', detailsBeneficiary.description],
+                                ['Ostatnia wizyta księdza', detailsBeneficiary.last_priest_visit],
+                                ['Ostatnie spotkanie z wol.', detailsBeneficiary.last_volunteer_meeting],
+                                ['Historia', detailsBeneficiary.history],
                             ].map(([label, val]) => (
                                 <div key={label as string}>
                                     <dt className="text-[10px] font-black uppercase text-gray-400">{label}</dt>
@@ -269,6 +293,20 @@ const BeneficiariesPage: React.FC = () => {
                                     <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Opis / Notatki</label>
                                     <textarea name="description" defaultValue={editingBeneficiary?.description} rows={3} className="w-full border p-2 rounded-md outline-none focus:border-blue-500 resize-none" />
                                 </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Ostatnia wizyta księdza</label>
+                                    <input name="last_priest_visit" type="date" max="9999-12-31" defaultValue={editingBeneficiary?.last_priest_visit ?? ''} className="w-full border p-2 rounded-md outline-none focus:border-blue-500" />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Ostatnie spotkanie z wol.</label>
+                                    <input name="last_volunteer_meeting" type="date" max="9999-12-31" defaultValue={editingBeneficiary?.last_volunteer_meeting ?? ''} className="w-full border p-2 rounded-md outline-none focus:border-blue-500" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Historia</label>
+                                <textarea name="history" defaultValue={editingBeneficiary?.history} rows={3} className="w-full border p-2 rounded-md outline-none focus:border-blue-500 resize-none" />
                             </div>
                             <div className="flex justify-end gap-3 pt-6">
                                 <button type="button" onClick={() => { setEditingBeneficiary(null); setIsAdding(false); setFormErrors({}); }} className="px-4 py-2 text-gray-400 font-bold hover:text-gray-600">Anuluj</button>
