@@ -22,19 +22,19 @@ const MONTHS_PL = ['Sty', 'Lut', 'Mar', 'Kwi', 'Maj', 'Cze', 'Lip', 'Sie', 'Wrz'
 let _rowCounter = 0;
 const newRowId = () => `r${++_rowCounter}`;
 const emptyVolunteer = (): VolunteerEntry => ({ localId: newRowId(), volunteerId: '', isMain: false, additionalInfo: '' });
-const emptyBenRow = (): BeneficiaryRow => ({ localId: newRowId(), beneficiaryId: '', volunteers: [emptyVolunteer()] });
 
 const GroupsPage: React.FC = () => {
     const queryClient = useQueryClient();
     const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
     const [previousGroupId, setPreviousGroupId] = useState<number | null>(null);
     const [showKartyBO, setShowKartyBO] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
 
     const [detailBeneficiary, setDetailBeneficiary] = useState<any>(null);
     const [detailVolunteer, setDetailVolunteer] = useState<any>(null);
     const [kartyBOStatus, setKartyBOStatus] = useState<Record<string, boolean>>({});
 
-    const [benRows, setBenRows] = useState<BeneficiaryRow[]>([emptyBenRow()]);
+    const [benRows, setBenRows] = useState<BeneficiaryRow[]>([]);
     const [formName, setFormName] = useState('');
     const [formLeader, setFormLeader] = useState<number | ''>('');
 
@@ -75,6 +75,12 @@ const GroupsPage: React.FC = () => {
         }
     }, [groups, selectedGroupId, previousGroupId]);
 
+    // Exit edit mode when switching groups
+    useEffect(() => {
+        setIsEditing(false);
+        setShowKartyBO(false);
+    }, [selectedGroupId]);
+
     // Populate form from groupDetail
     useEffect(() => {
         if (!groupDetail) return;
@@ -87,7 +93,7 @@ const GroupsPage: React.FC = () => {
                 ? b.volunteers.map((v: any) => ({ localId: newRowId(), volunteerId: v.id, isMain: v.is_main || false, additionalInfo: v.additional_info || '' }))
                 : [emptyVolunteer()]
         }));
-        setBenRows(rows.length ? rows : [emptyBenRow()]);
+        setBenRows(rows);
     }, [groupDetail]);
 
     // Clear form for new group
@@ -95,8 +101,7 @@ const GroupsPage: React.FC = () => {
         if (isNewGroup) {
             setFormName('');
             setFormLeader('');
-            setBenRows([emptyBenRow()]);
-            setShowKartyBO(false);
+            setBenRows([]);
         }
     }, [isNewGroup]);
 
@@ -111,6 +116,27 @@ const GroupsPage: React.FC = () => {
         setPreviousGroupId(null);
     };
 
+    const enterEditMode = () => {
+        // Re-populate form from current groupDetail before editing
+        if (groupDetail) {
+            setFormName(groupDetail.name);
+            setFormLeader(groupDetail.leader || '');
+            const rows: BeneficiaryRow[] = (groupDetail.beneficiaries || []).map((b: any) => ({
+                localId: newRowId(),
+                beneficiaryId: b.id,
+                volunteers: b.volunteers?.length
+                    ? b.volunteers.map((v: any) => ({ localId: newRowId(), volunteerId: v.id, isMain: v.is_main || false, additionalInfo: v.additional_info || '' }))
+                    : [emptyVolunteer()]
+            }));
+            setBenRows(rows);
+        }
+        setIsEditing(true);
+    };
+
+    const cancelEdit = () => {
+        setIsEditing(false);
+    };
+
     const mutationSaveGroup = useMutation({
         mutationFn: (data: any) => selectedGroupId
             ? groupService.update(selectedGroupId, data)
@@ -120,6 +146,7 @@ const GroupsPage: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['beneficiaries'] });
             queryClient.invalidateQueries({ queryKey: ['group-detail'] });
             setPreviousGroupId(null);
+            setIsEditing(false);
             if (saved?.id) setSelectedGroupId(saved.id);
         },
         onError: (err: any) => alert(err?.response?.data ? JSON.stringify(err.response.data) : 'Błąd zapisu.')
@@ -132,6 +159,7 @@ const GroupsPage: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['beneficiaries'] });
             queryClient.invalidateQueries({ queryKey: ['group-detail'] });
             setPreviousGroupId(null);
+            setIsEditing(false);
             setSelectedGroupId(groups?.find((g: any) => g.id !== selectedGroupId)?.id ?? null);
         },
         onError: () => alert('Nie udało się usunąć grupy.')
@@ -184,6 +212,8 @@ const GroupsPage: React.FC = () => {
 
     const kartyKey = (bId: number, vId: number, month: string) => `${bId}-${vId}-${month}`;
 
+    const showForm = isNewGroup || isEditing;
+
     return (
         <div className="flex min-h-screen bg-[#1e2330]">
             <Sidebar groupsSlot={
@@ -207,7 +237,7 @@ const GroupsPage: React.FC = () => {
                                 <button
                                     key={g.id}
                                     type="button"
-                                    onClick={() => { setSelectedGroupId(g.id); setShowKartyBO(false); setSidebarDropdownOpen(false); }}
+                                    onClick={() => { setSelectedGroupId(g.id); setSidebarDropdownOpen(false); }}
                                     className={`w-full text-left px-3 py-1.5 text-xs font-bold transition-colors hover:bg-[#3d4558] ${g.id === selectedGroupId ? 'text-indigo-300' : 'text-white'}`}
                                 >
                                     {g.name}
@@ -223,7 +253,6 @@ const GroupsPage: React.FC = () => {
 
                     {/* ── HEADER ── */}
                     <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
-                        {/* LEFT: title + new/cancel */}
                         <div className="flex items-center gap-3">
                             <span className="text-2xl">👥</span>
                             <h1 className="text-xl font-bold text-gray-900 uppercase">Grupy</h1>
@@ -240,9 +269,14 @@ const GroupsPage: React.FC = () => {
                             )}
                         </div>
 
-                        {/* RIGHT: Karty BO */}
-                        <div>
-                            {!isNewGroup && (
+                        <div className="flex items-center gap-2">
+                            {!isNewGroup && !isEditing && (
+                                <button type="button" onClick={enterEditMode}
+                                    className="px-3 py-2 rounded-lg font-bold text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all">
+                                    ✏️ Edytuj
+                                </button>
+                            )}
+                            {!isNewGroup && !isEditing && (
                                 <button
                                     onClick={() => setShowKartyBO(!showKartyBO)}
                                     className={`px-3 py-2 rounded-lg font-bold text-xs uppercase transition-all ${showKartyBO ? 'bg-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
@@ -250,6 +284,70 @@ const GroupsPage: React.FC = () => {
                             )}
                         </div>
                     </div>
+
+                    {/* ── VIEW MODE — read-only ── */}
+                    {!showForm && !showKartyBO && groupDetail && (
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="grid grid-cols-2 gap-6 mb-8">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-gray-400 mb-1.5 ml-1">Nazwa Grupy</p>
+                                    <p className="h-10 flex items-center px-4 border border-gray-100 rounded-lg bg-gray-50 font-bold text-sm text-gray-800">{groupDetail.name}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-gray-400 mb-1.5 ml-1">Przewodnik</p>
+                                    <p className="h-10 flex items-center px-4 border border-gray-100 rounded-lg bg-gray-50 font-bold text-sm text-gray-800">{groupDetail.leader_name || '—'}</p>
+                                </div>
+                            </div>
+
+                            <div className="overflow-hidden rounded-xl border border-gray-200">
+                                <table className="w-full text-sm border-collapse">
+                                    <thead>
+                                        <tr className="bg-[#1e2330] text-white text-[10px] uppercase tracking-widest">
+                                            <th className="px-4 py-3 text-left font-bold border-r border-white/10 w-[30%]">Podopieczny</th>
+                                            <th className="px-4 py-3 text-left font-bold border-r border-white/10 w-[30%]">Wolontariusz</th>
+                                            <th className="px-4 py-3 text-left font-bold">Bieżące informacje</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(groupDetail.beneficiaries || []).length === 0 && (
+                                            <tr><td colSpan={3} className="p-8 text-center text-gray-300 italic">Brak podopiecznych w tej grupie</td></tr>
+                                        )}
+                                        {(groupDetail.beneficiaries || []).flatMap((b: any) => {
+                                            const vols: any[] = b.volunteers || [];
+                                            if (vols.length === 0) return [(
+                                                <tr key={`${b.id}-empty`} className="border-b border-gray-100">
+                                                    <td className="px-4 py-2.5 border-r border-gray-200 font-bold text-indigo-700">
+                                                        <button type="button" onClick={() => setDetailBeneficiary(beneficiaries?.find((fb: any) => fb.id === b.id) || b)}
+                                                            className="hover:underline text-left">{b.full_name}</button>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 border-r border-gray-100 text-gray-400 italic">—</td>
+                                                    <td className="px-4 py-2.5 text-gray-400">—</td>
+                                                </tr>
+                                            )];
+                                            return vols.map((v: any, vi: number) => (
+                                                <tr key={`${b.id}-${v.id}`} className="border-b border-gray-100 hover:bg-indigo-50/20 transition-colors">
+                                                    {vi === 0 && (
+                                                        <td rowSpan={vols.length} className="px-4 py-2.5 border-r border-gray-200 font-bold text-indigo-700 align-middle">
+                                                            <button type="button" onClick={() => setDetailBeneficiary(beneficiaries?.find((fb: any) => fb.id === b.id) || b)}
+                                                                className="hover:underline text-left">{b.full_name}</button>
+                                                        </td>
+                                                    )}
+                                                    <td className="px-4 py-2.5 border-r border-gray-100">
+                                                        <button type="button" onClick={() => setDetailVolunteer(volunteers?.find((fv: any) => fv.id === v.id) || v)}
+                                                            className={`flex items-center gap-1.5 font-bold hover:underline text-left ${v.is_main ? 'text-amber-700' : 'text-gray-700'}`}>
+                                                            <span>{v.is_main ? '⭐' : '🙋'}</span>
+                                                            <span>{v.full_name}</span>
+                                                        </button>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-gray-600">{v.additional_info || '—'}</td>
+                                                </tr>
+                                            ));
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
 
                     {/* ── KARTY BO — Excel monthly grid ── */}
                     {showKartyBO && !isNewGroup && (
@@ -314,8 +412,8 @@ const GroupsPage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ── CONFIG FORM — Excel-like table ── */}
-                    {!showKartyBO && (
+                    {/* ── EDIT / CREATE FORM ── */}
+                    {showForm && (
                         <form onSubmit={handleFormSubmit} className="flex flex-col flex-1">
                             <div className="flex-1 overflow-y-auto p-6">
 
@@ -348,6 +446,13 @@ const GroupsPage: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
+                                            {benRows.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={4} className="p-6 text-center text-gray-300 italic text-sm">
+                                                        Kliknij „+ Dodaj podopiecznego" aby dodać podopiecznych do grupy
+                                                    </td>
+                                                </tr>
+                                            )}
                                             {benRows.flatMap(benRow => {
                                                 const vols = benRow.volunteers;
                                                 const rows: React.ReactNode[] = vols.map((vol, vi) => (
@@ -381,7 +486,7 @@ const GroupsPage: React.FC = () => {
                                                                 </button>
                                                                 <select
                                                                     value={vol.volunteerId}
-                                                                    onChange={e => updateVolunteer(benRow.localId, vol.localId, { volunteerId: Number(e.target.value) || '' })}
+                                                                    onChange={e => updateVolunteer(benRow.localId, vol.localId, { volunteerId: Number(e.target.value) || '', additionalInfo: '' })}
                                                                     className={`flex-1 h-8 bg-transparent border-0 outline-none text-sm font-bold cursor-pointer hover:bg-white focus:bg-white rounded px-1 focus:border focus:border-indigo-300 ${vol.isMain ? 'text-amber-700' : 'text-gray-700'}`}
                                                                 >
                                                                     <option value="">— wybierz —</option>
@@ -481,21 +586,31 @@ const GroupsPage: React.FC = () => {
 
                             {/* Footer */}
                             <div className="px-6 py-4 border-t flex items-center justify-between shrink-0">
-                                {isNewGroup ? (
-                                    <button type="button" onClick={cancelNewGroup}
-                                        className="text-gray-400 font-bold text-sm hover:text-gray-600 transition-colors">
-                                        Anuluj
+                                <div>
+                                    {!isNewGroup && (
+                                        <button type="button" onClick={handleDeleteGroup} disabled={mutationDeleteGroup.isPending}
+                                            className="px-4 py-2 rounded-lg font-bold text-sm text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                                            🗑️ Usuń Grupę
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    {isNewGroup ? (
+                                        <button type="button" onClick={cancelNewGroup}
+                                            className="text-gray-400 font-bold text-sm hover:text-gray-600 transition-colors">
+                                            Anuluj
+                                        </button>
+                                    ) : (
+                                        <button type="button" onClick={cancelEdit}
+                                            className="text-gray-400 font-bold text-sm hover:text-gray-600 transition-colors">
+                                            Anuluj
+                                        </button>
+                                    )}
+                                    <button type="submit" disabled={mutationSaveGroup.isPending}
+                                        className="bg-indigo-600 text-white px-10 py-3 rounded-xl font-bold text-sm uppercase hover:bg-indigo-700 shadow-lg shadow-indigo-100 disabled:opacity-60">
+                                        {mutationSaveGroup.isPending ? 'Zapisywanie...' : (isNewGroup ? 'Utwórz Grupę' : 'Zapisz Konfigurację')}
                                     </button>
-                                ) : (
-                                    <button type="button" onClick={handleDeleteGroup} disabled={mutationDeleteGroup.isPending}
-                                        className="px-4 py-2 rounded-lg font-bold text-sm text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
-                                        🗑️ Usuń Grupę
-                                    </button>
-                                )}
-                                <button type="submit" disabled={mutationSaveGroup.isPending}
-                                    className="bg-indigo-600 text-white px-10 py-3 rounded-xl font-bold text-sm uppercase hover:bg-indigo-700 shadow-lg shadow-indigo-100 disabled:opacity-60">
-                                    {mutationSaveGroup.isPending ? 'Zapisywanie...' : (isNewGroup ? 'Utwórz Grupę' : 'Zapisz Konfigurację')}
-                                </button>
+                                </div>
                             </div>
                         </form>
                     )}
