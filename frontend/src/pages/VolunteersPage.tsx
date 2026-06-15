@@ -4,7 +4,7 @@ import { volunteerService } from '../services/volunteerService';
 import { groupService } from '../services/groupService';
 import Sidebar from '../components/Sidebar';
 
-type SortKey = 'full_name' | 'email' | 'phone' | 'status';
+type SortKey = 'full_name' | 'email' | 'phone' | 'status' | 'assigned_groups';
 type SortDir = 'asc' | 'desc';
 
 const VolunteersPage: React.FC = () => {
@@ -148,7 +148,7 @@ const VolunteersPage: React.FC = () => {
                                     <th className="w-[20%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('full_name')}>Imię i nazwisko{sortIcon('full_name')}</th>
                                     <th className="w-[20%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('email')}>Email{sortIcon('email')}</th>
                                     <th className="w-[15%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('phone')}>Tel{sortIcon('phone')}</th>
-                                    <th className="w-[15%] p-3 border-r border-gray-700">Grupa</th>
+                                    <th className="w-[15%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('assigned_groups')}>Grupa{sortIcon('assigned_groups')}</th>
                                     <th className="w-[10%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('status')}>Status{sortIcon('status')}</th>
                                     <th className="w-[10%] p-3 text-center min-w-[100px]">Akcje</th>
                                 </tr>
@@ -159,8 +159,8 @@ const VolunteersPage: React.FC = () => {
                                 ) : filteredAndSorted.length === 0 ? (
                                     <tr><td colSpan={6} className="p-10 text-center text-gray-400">Brak wyników</td></tr>
                                 ) : filteredAndSorted.map((v: any) => (
-                                    <tr key={v.id} className="hover:bg-blue-50 border-b last:border-0 cursor-pointer transition-colors" onClick={() => setDetailsVolunteer(v)}>
-                                        <td className="p-3 border-r font-medium text-gray-700">{v.full_name}</td>
+                                    <tr key={v.id} className="hover:bg-blue-50 border-b last:border-0 transition-colors">
+                                        <td className="p-3 border-r font-medium text-indigo-700 cursor-pointer hover:underline" onClick={() => setDetailsVolunteer(v)}>{v.full_name}</td>
                                         <td className="p-3 border-r text-gray-500">{v.email || '—'}</td>
                                         <td className="p-3 border-r text-gray-500">{v.phone || '—'}</td>
                                         <td className="p-3 border-r text-center">
@@ -178,7 +178,7 @@ const VolunteersPage: React.FC = () => {
                                         <td className="p-3 border-r">
                                             <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${v.status === 'Aktywny' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{v.status}</span>
                                         </td>
-                                        <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                        <td className="p-3 text-center">
                                             <div className="flex justify-center gap-2">
                                                 <button onClick={() => { setEditingVolunteer(v); setFormErrors({}); }} className="bg-[#6366f1] text-white p-1.5 rounded hover:opacity-80">✏️</button>
                                                 <button onClick={() => { if (confirm('Usunąć?')) mutationDelete.mutate(v.id) }} className="bg-[#ef4444] text-white p-1.5 rounded hover:opacity-80">🗑️</button>

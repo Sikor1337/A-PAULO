@@ -4,7 +4,7 @@ import { beneficiaryService } from '../services/beneficiaryService';
 import { groupService } from '../services/groupService';
 import Sidebar from '../components/Sidebar';
 
-type SortKey = 'full_name' | 'address' | 'phone' | 'status' | 'group_name';
+type SortKey = 'full_name' | 'address' | 'phone' | 'status' | 'group_name' | 'bo_enrolled';
 type SortDir = 'asc' | 'desc';
 
 const BeneficiariesPage: React.FC = () => {
@@ -41,9 +41,15 @@ const BeneficiariesPage: React.FC = () => {
         if (filterBO === 'yes') filtered = filtered.filter((b: any) => b.bo_enrolled === true);
         if (filterBO === 'no') filtered = filtered.filter((b: any) => !b.bo_enrolled);
         return filtered.sort((a: any, b: any) => {
-            const valA = (a[sortKey] || '').toString().toLowerCase();
-            const valB = (b[sortKey] || '').toString().toLowerCase();
-            return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            let cmp: number;
+            if (sortKey === 'bo_enrolled') {
+                cmp = (a.bo_enrolled ? 1 : 0) - (b.bo_enrolled ? 1 : 0);
+            } else {
+                const valA = (a[sortKey] || '').toString().toLowerCase();
+                const valB = (b[sortKey] || '').toString().toLowerCase();
+                cmp = valA.localeCompare(valB);
+            }
+            return sortDir === 'asc' ? cmp : -cmp;
         });
     }, [beneficiaries, searchTerm, sortKey, sortDir, filterGroup, filterBO]);
 
@@ -142,7 +148,7 @@ const BeneficiariesPage: React.FC = () => {
                                     <th className="w-[25%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('address')}>Adres{sortIcon('address')}</th>
                                     <th className="w-[15%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('phone')}>Tel{sortIcon('phone')}</th>
                                     <th className="w-[15%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('group_name')}>Grupa{sortIcon('group_name')}</th>
-                                    <th className="w-[5%] p-3 border-r border-gray-700 text-center">BO</th>
+                                    <th className="w-[5%] p-3 border-r border-gray-700 text-center cursor-pointer select-none" onClick={() => toggleSort('bo_enrolled')}>BO{sortIcon('bo_enrolled')}</th>
                                     <th className="w-[10%] p-3 border-r border-gray-700 cursor-pointer select-none" onClick={() => toggleSort('status')}>Status{sortIcon('status')}</th>
                                     <th className="w-[10%] p-3 text-center min-w-[100px]">Akcje</th>
                                 </tr>
@@ -153,8 +159,8 @@ const BeneficiariesPage: React.FC = () => {
                                 ) : filteredAndSorted.length === 0 ? (
                                     <tr><td colSpan={7} className="p-10 text-center text-gray-400">Brak wyników</td></tr>
                                 ) : filteredAndSorted.map((b: any) => (
-                                    <tr key={b.id} className="hover:bg-blue-50 border-b last:border-0 cursor-pointer transition-colors" onClick={() => setDetailsBeneficiary(b)}>
-                                        <td className="p-3 border-r font-medium text-gray-700">{b.full_name}</td>
+                                    <tr key={b.id} className="hover:bg-blue-50 border-b last:border-0 transition-colors">
+                                        <td className="p-3 border-r font-medium text-indigo-700 cursor-pointer hover:underline" onClick={() => setDetailsBeneficiary(b)}>{b.full_name}</td>
                                         <td className="p-3 border-r text-gray-500">{b.address || '—'}</td>
                                         <td className="p-3 border-r text-gray-500">{b.phone || '—'}</td>
                                         <td className="p-3 border-r text-gray-400 text-center">{b.group_name || '—'}</td>
@@ -164,7 +170,7 @@ const BeneficiariesPage: React.FC = () => {
                                         <td className="p-3 border-r">
                                             <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${b.status === 'OBECNY' ? 'bg-green-100 text-green-700' : b.status === 'ZMARŁY' ? 'bg-gray-200 text-gray-600' : b.status === 'DPS_ZOL' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{b.status}</span>
                                         </td>
-                                        <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                        <td className="p-3 text-center">
                                             <div className="flex justify-center gap-2">
                                                 <button onClick={() => { setEditingBeneficiary(b); setFormErrors({}); }} className="bg-[#6366f1] text-white p-1.5 rounded hover:opacity-80">✏️</button>
                                                 <button onClick={() => { if (confirm('Usunąć?')) mutationDelete.mutate(b.id) }} className="bg-[#ef4444] text-white p-1.5 rounded hover:opacity-80">🗑️</button>
