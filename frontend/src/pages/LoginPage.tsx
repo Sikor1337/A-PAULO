@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../stores/authStore';
 import { authService } from '../services/authService';
@@ -145,6 +145,13 @@ const LoginPage = () => {
             {isLoading ? 'Logowanie...' : 'Zaloguj się'}
           </button>
         </form>
+
+        <p className="mt-4 text-center text-sm text-gray-600">
+          Nie masz konta?{' '}
+          <Link to="/register" className="text-blue-600 hover:text-blue-700">
+            Zarejestruj się
+          </Link>
+        </p>
       </div>
     </div>
   );

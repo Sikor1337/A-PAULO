@@ -27,6 +27,14 @@ export interface LoginCredentials {
   password: string;
 }
 
+export interface RegisterCredentials {
+  username: string;
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
+}
+
 export interface LoginResponse {
   access: string;
   refresh: string;
@@ -42,6 +50,18 @@ export interface UserProfile {
 }
 
 export const authService = {
+  // Register new user
+  async register(credentials: RegisterCredentials): Promise<UserProfile> {
+    const response = await authClient.post<UserProfile>('/auth/register/', {
+      username: credentials.username,
+      email: credentials.email,
+      password: credentials.password,
+      first_name: credentials.first_name || '',
+      last_name: credentials.last_name || '',
+    });
+    return response.data;
+  },
+
   // Login user and get JWT tokens
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     const response = await authClient.post<LoginResponse>('/auth/token/', {

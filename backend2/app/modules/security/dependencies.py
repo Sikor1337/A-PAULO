@@ -1,0 +1,91 @@
+from typing import Optional
+
+from fastapi import Depends, Header, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.core.config import get_settings
+from app.core.dependencies import get_db
+from app.modules.core_data.models import User
+from app.modules.core_data.repositories.users import UserRepository
+from app.modules.security.services.auth import AuthService
+from app.modules.security.services.password import hash_password, verify_password
+from app.modules.security.services.token import TokenService
+
+
+def get_token_service() -> TokenService:
+    settings = get_settings()
+    return TokenService(
+        secret_key=settings.secret_key,
+        algorithm=settings.algorithm,
+        access_token_expire_minutes=settings.access_token_expire_minutes,
+    )
+
+
+def get_user_repo(session: Session = Depends(get_db)) -> UserRepository:
+    """Get user repository dependency."""
+    return UserRepository(session)
+
+
+def get_auth_service(
+    session: Session = Depends(get_db),
+    token_service: TokenService = Depends(get_token_service),
+) -> AuthService:
+    repo = UserRepository(session)
+    return AuthService(repo, token_service, session)
+
+
+def get_current_user(
+    authorization: str = Header(None),
+    session: Session = Depends(get_db),
+) -> User:
+    """Get current authenticated user from Authorization header."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authorization header",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = authorization.split(" ", 1)[1]
+    repo = UserRepository(session)
+    token_service = TokenService(
+        secret_key=get_settings().secret_key,
+        algorithm=get_settings().algorithm,
+        access_token_expire_minutes=get_settings().access_token_expire_minutes,
+    )
+
+    payload = token_service.decode_token(token)
+    if not payload or payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        user_id = int(user_id)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = repo.get_by_id(user_id)
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user
+
