@@ -1,0 +1,95 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "apaulo-backend"
+version = "0.1.0"
+description = "A-PAULO Backend - FastAPI with PostgreSQL"
+requires-python = ">=3.12"
+
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.12.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "email-validator>=2.0.0",
+    "psycopg2-binary>=2.9.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "httpx>=0.24.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+exclude = ["alembic*", "seed*"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+indent-width = 4
+exclude = [
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".ruff_cache",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".git",
+    "/alembic",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # Pyflakes (includes unused imports)
+    "W",    # pycodestyle warnings
+    "I",    # isort (import sorting)
+    "N",    # pep8-naming (naming conventions)
+    "UP",   # pyupgrade (f-strings and modern Python syntax)
+    "SIM",  # flake8-simplify (code simplification)
+    "RET",  # flake8-return (return statement improvements)
+    "RSE",  # flake8-raise (exception raising)
+    "RUF",  # Ruff-specific rules
+    "B",    # flake8-bugbear (common mistakes)
+    "ISC",  # flake8-implicit-str-concat (warns about implicit string concatenation)
+    "Q",    # flake8-quotes (quote consistency)
+]
+ignore = [
+    "B008",
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+cache_dir = ".mypy_cache"
+incremental = true
+explicit_package_bases = true
+strict = false
+
+[[tool.mypy.overrides]]
+module = [
+    "*.tests.*",
+    "*.conftest",
+    "app.infrastructure.*",
+    "sqlalchemy.*",
+]
+ignore_errors = true

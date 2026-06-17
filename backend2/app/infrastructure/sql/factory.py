@@ -1,0 +1,108 @@
+import logging
+from collections.abc import Callable, Generator
+
+from sqlalchemy import Engine, create_engine, event
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
+
+logger = logging.getLogger(__name__)
+
+
+def _mask_url(url: str) -> str:
+    """Mask password in a database URL for safe logging."""
+    if "://" in url and "@" in url:
+        scheme, rest = url.split("://", 1)
+        creds, host = rest.split("@", 1)
+        user = creds.split(":")[0] if ":" in creds else creds
+        return f"{scheme}://{user}:***@{host}"
+    return url
+
+
+class SQLConnectionFactory:
+    """
+    Manages SQLAlchemy engine lifecycle and session creation.
+
+    Engines are cached by database URL - each URL gets one engine for the
+    lifetime of this factory instance. Sessions are scoped per request.
+    """
+
+    def __init__(self) -> None:
+        self._engines: dict[str, Engine] = {}
+
+    def get_or_create_engine(
+        self, database_url: str, target_schema: str | None = None
+    ) -> Engine:
+        """Return cached engine for the given URL, or create and cache a new one."""
+        if database_url in self._engines:
+            logger.debug("Returning cached engine for: %s", _mask_url(database_url))
+            return self._engines[database_url]
+
+        logger.info("Creating new engine for: %s", _mask_url(database_url))
+        connect_args = (
+            {"check_same_thread": False} if database_url.startswith("sqlite") else {}
+        )
+        engine = create_engine(
+            database_url,
+            pool_pre_ping=True,
+            connect_args=connect_args,
+        )
+
+        if engine.dialect.name == "postgresql" and target_schema:
+
+            def _on_connect(dbapi_connection, connection_record):
+                try:
+                    # psycopg2 / pg8000: execute SQL to set search_path
+                    cursor = dbapi_connection.cursor()
+                    cursor.execute(f'SET search_path TO "{target_schema}"')
+                    cursor.close()
+                except Exception:
+                    # best-effort: don't fail engine creation
+                    pass
+
+            event.listen(engine, "connect", _on_connect)
+
+        self._engines[database_url] = engine
+        return engine
+
+    def create_session_factory(
+        self,
+        engine: Engine,
+        autocommit: bool = False,
+        autoflush: bool = False,
+    ) -> sessionmaker:
+        """Create session factory bound to the given engine."""
+        return sessionmaker(
+            autocommit=autocommit,
+            autoflush=autoflush,
+            expire_on_commit=False,
+            bind=engine,
+        )
+
+    def get_session_dependency(
+        self,
+        session_factory: sessionmaker[Session],
+    ) -> Callable[[], Generator[Session, None, None]]:
+        """Create FastAPI dependency function for database sessions."""
+
+        def session_generator() -> Generator[Session, None, None]:
+            session = session_factory()
+            try:
+                yield session
+            except Exception:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+        return session_generator
+
+    def dispose_all(self) -> None:
+        """Dispose all cached engines. Call on application shutdown."""
+        for url, engine in list(self._engines.items()):
+            try:
+                engine.dispose()
+            except Exception as exc:
+                logger.warning("Error disposing engine for %s: %s", _mask_url(url), exc)
+        self._engines.clear()
+
+
+sql_factory = SQLConnectionFactory()
