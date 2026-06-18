@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { AxiosError } from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../stores/authStore';
@@ -53,12 +54,13 @@ const RegisterPage = () => {
       navigate('/login', { 
         state: { message: 'Rejestracja zakończona pomyślnie! Zaloguj się na swoje konto.' } 
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error('Registration error:', err);
-      if (err.response?.status === 409) {
-        setError(err.response.data.detail || 'Ta nazwa użytkownika lub email już istnieje');
-      } else if (err.response?.data?.detail) {
-        setError(err.response.data.detail);
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      if (axiosError.response?.status === 409) {
+        setError(axiosError.response.data?.detail || 'Ta nazwa użytkownika lub email już istnieje');
+      } else if (axiosError.response?.data?.detail) {
+        setError(axiosError.response.data.detail);
       } else {
         setError('Wystąpił błąd podczas rejestracji. Spróbuj ponownie.');
       }

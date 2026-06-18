@@ -14,17 +14,18 @@ export const groupService = {
   },
 
   // ── Assignments ──
+  // backend2 (FastAPI) mounts assignments at /api/v1/assignments (sibling of /groups).
   getAssignments: async (): Promise<BeneficiaryAssignment[]> => {
-    const response = await apiClient.get<BeneficiaryAssignment[]>('v1/groups/assignments');
+    const response = await apiClient.get<BeneficiaryAssignment[]>('v1/assignments');
     return response.data;
   },
 
   createAssignment: async (data: { beneficiary: number; volunteer: number }): Promise<BeneficiaryAssignment> => {
-    const response = await apiClient.post<BeneficiaryAssignment>('v1/groups/assignments', data);
+    const response = await apiClient.post<BeneficiaryAssignment>('v1/assignments', data);
     return response.data;
   },
 
   deleteAssignment: async (id: number): Promise<void> => {
-    await apiClient.delete(`v1/groups/assignments/${id}`);
+    await apiClient.delete(`v1/assignments/${id}`);
   },
 };
