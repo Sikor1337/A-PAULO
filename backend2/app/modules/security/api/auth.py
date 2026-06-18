@@ -5,6 +5,7 @@ from app.modules.core_data.models import User
 from app.modules.security.dependencies import get_auth_service, get_current_user
 from app.modules.security.schemas import (
     LoginRequest,
+    ProfileUpdateRequest,
     RegisterRequest,
     Token,
     TokenRefresh,
@@ -45,3 +46,13 @@ def refresh_token(
 def get_user(user: User = Depends(get_current_user)):
     """Get current authenticated user."""
     return user
+
+
+@router.patch("/user", response_model=UserResponse)
+def update_user(
+    data: ProfileUpdateRequest,
+    user: User = Depends(get_current_user),
+    svc: AuthService = Depends(get_auth_service),
+):
+    """Update the current authenticated user's own profile."""
+    return svc.update_profile(user, data)

@@ -8,12 +8,7 @@ import Sidebar from '../components/Sidebar';
 
 const DashboardPage = () => {
     const navigate = useNavigate();
-    const { user, logout } = useAuthStore();
-
-    const handleLogout = () => {
-        logout();
-        navigate('/login');
-    };
+    const { user } = useAuthStore();
 
     const { data: beneficiaries } = useQuery({
         queryKey: ['beneficiaries'],
@@ -35,14 +30,9 @@ const DashboardPage = () => {
             <Sidebar />
 
             <div className="ml-[260px] flex-1 p-12">
-                <header className="flex justify-between items-center mb-12">
-                    <div>
-                        <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--accent-blue)' }}>Dashboard</h1>
-                        <p style={{ color: 'var(--text-secondary)' }}>Witaj ponownie, {user?.email}</p>
-                    </div>
-                    <button onClick={handleLogout} className="px-6 py-2 rounded-lg font-bold bg-red-600 text-white hover:bg-red-700 transition-colors">
-                        Wyloguj
-                    </button>
+                <header className="mb-12">
+                    <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--accent-blue)' }}>Dashboard</h1>
+                    <p style={{ color: 'var(--text-secondary)' }}>Witaj ponownie, {user?.email}</p>
                 </header>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

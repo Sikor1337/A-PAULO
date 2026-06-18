@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuthStore } from '@/stores/authStore';
 
 interface SidebarProps {
     groupsSlot?: React.ReactNode;
@@ -7,6 +9,8 @@ interface SidebarProps {
 const Sidebar = ({ groupsSlot }: SidebarProps) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { user, logout } = useAuthStore();
+    const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
     const sections = [
         {
@@ -77,6 +81,54 @@ const Sidebar = ({ groupsSlot }: SidebarProps) => {
                         </nav>
                     </div>
                 ))}
+            </div>
+
+            <div className="p-3 border-t border-white/10 relative shrink-0">
+                <button
+                    type="button"
+                    onClick={() => setProfileMenuOpen((prev) => !prev)}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#2d3345] transition-colors"
+                >
+                    <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                        {(user?.first_name?.[0] || user?.email?.[0] || '?').toUpperCase()}
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">
+                            {user?.first_name ? `${user.first_name} ${user.last_name}`.trim() : user?.email}
+                        </p>
+                        <p className="text-[10px] text-gray-400 truncate">{user?.email}</p>
+                    </div>
+                    <span className="text-gray-500 text-xs shrink-0">▾</span>
+                </button>
+
+                {profileMenuOpen && (
+                    <div
+                        className="absolute left-3 right-3 bottom-full mb-1 bg-[#2d3345] rounded-xl shadow-2xl border border-white/10 py-1.5 z-50"
+                        onMouseLeave={() => setProfileMenuOpen(false)}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setProfileMenuOpen(false);
+                                navigate('/profile');
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm font-medium text-gray-200 hover:bg-[#3d4558] hover:text-white transition-colors"
+                        >
+                            👤 Moje konto
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setProfileMenuOpen(false);
+                                logout();
+                                navigate('/login');
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm font-medium text-rose-400 hover:bg-[#3d4558] hover:text-rose-300 transition-colors"
+                        >
+                            🚪 Wyloguj
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

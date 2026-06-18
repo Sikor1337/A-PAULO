@@ -1,5 +1,19 @@
 """Security schemas."""
 
-from .auth import LoginRequest, RegisterRequest, Token, TokenRefresh, UserResponse
+from .auth import (
+    LoginRequest,
+    ProfileUpdateRequest,
+    RegisterRequest,
+    Token,
+    TokenRefresh,
+    UserResponse,
+)
 
-__all__ = ["RegisterRequest", "LoginRequest", "Token", "TokenRefresh", "UserResponse"]
+__all__ = [
+    "RegisterRequest",
+    "LoginRequest",
+    "Token",
+    "TokenRefresh",
+    "UserResponse",
+    "ProfileUpdateRequest",
+]

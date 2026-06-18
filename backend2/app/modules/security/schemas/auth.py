@@ -43,3 +43,13 @@ class UserResponse(BaseModel):
     status: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProfileUpdateRequest(BaseModel):
+    """Self-service profile update request (email, name, optional password change)."""
+
+    email: EmailStr | None = None
+    first_name: str | None = Field(default=None, max_length=150)
+    last_name: str | None = Field(default=None, max_length=150)
+    current_password: str | None = None
+    new_password: str | None = Field(default=None, min_length=6)

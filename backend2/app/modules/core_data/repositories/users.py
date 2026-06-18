@@ -37,6 +37,13 @@ class UserRepository:
         self.session.add(user)
         return user
 
+    def update(self, user: User, **kwargs) -> User:
+        """Update user fields."""
+        for key, value in kwargs.items():
+            if value is not None and hasattr(user, key):
+                setattr(user, key, value)
+        return user
+
     def exists(self, username: str = None, email: str = None) -> bool:
         """Check if user exists by username or email."""
         if username:

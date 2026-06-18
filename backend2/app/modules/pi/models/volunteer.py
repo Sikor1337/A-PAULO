@@ -1,7 +1,7 @@
 """Volunteer model for PI domain."""
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, func
+from sqlalchemy import String, DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.sql.base import Base
@@ -18,6 +18,9 @@ class Volunteer(Base):
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     social_link: Mapped[str | None] = mapped_column(String(500), nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="Aktywny")  # Aktywny, Były
+    role_id: Mapped[int | None] = mapped_column(
+        ForeignKey("roles.id", ondelete="SET NULL"), nullable=True
+    )
     join_date: Mapped[datetime] = mapped_column(DateTime)
     notes: Mapped[str] = mapped_column(default="")
     history: Mapped[str] = mapped_column(default="")

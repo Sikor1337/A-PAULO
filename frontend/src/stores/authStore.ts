@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface User {
   id: number;
@@ -16,23 +17,32 @@ interface AuthState {
   updateUser: (user: User) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isAuthenticated: !!localStorage.getItem('access_token'),
-  
-  login: (accessToken: string, refreshToken: string, user: User) => {
-    localStorage.setItem('access_token', accessToken);
-    localStorage.setItem('refresh_token', refreshToken);
-    set({ user, isAuthenticated: true });
-  },
-  
-  logout: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    set({ user: null, isAuthenticated: false });
-  },
-  
-  updateUser: (user: User) => {
-    set({ user });
-  },
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      isAuthenticated: !!localStorage.getItem('access_token'),
+
+      login: (accessToken: string, refreshToken: string, user: User) => {
+        localStorage.setItem('access_token', accessToken);
+        localStorage.setItem('refresh_token', refreshToken);
+        set({ user, isAuthenticated: true });
+      },
+
+      logout: () => {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        set({ user: null, isAuthenticated: false });
+      },
+
+      updateUser: (user: User) => {
+        set({ user });
+      },
+    }),
+    {
+      name: 'auth-user',
+      // Persist only the user profile; auth status is derived from the token in localStorage.
+      partialize: (state) => ({ user: state.user }),
+    },
+  ),
+);

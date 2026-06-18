@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+const API_ROOT = API_URL.replace(/\/api\/?$/, '');
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -42,7 +43,7 @@ apiClient.interceptors.response.use(
         }
 
         // Attempt to refresh the token
-        const response = await axios.post(`${API_URL}/auth/token/refresh/`, {
+        const response = await axios.post(`${API_ROOT}/auth/token/refresh`, {
           refresh: refreshToken,
         });
 

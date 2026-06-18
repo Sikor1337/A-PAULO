@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
-from app.modules.security.schemas import LoginRequest, Token
+from app.modules.security.schemas import LoginRequest, ProfileUpdateRequest, Token
 from app.modules.security.services.password import hash_password, verify_password
 
 from .token import TokenService
@@ -97,6 +97,50 @@ class AuthService:
                 detail="Invalid credentials",
             )
         return self._issue_tokens(user)
+
+    def update_profile(self, user: User, data: ProfileUpdateRequest) -> User:
+        """Update the current user's own profile, optionally changing the password."""
+        try:
+            if data.new_password:
+                if not data.current_password:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Podaj obecne hasło, aby je zmienić.",
+                    )
+                if not verify_password(data.current_password, user.hashed_password):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Nieprawidłowe obecne hasło.",
+                    )
+
+            if data.email and data.email != user.email:
+                normalized_email = data.email.strip().lower()
+                existing = self.repo.get_by_email(normalized_email)
+                if existing and existing.id != user.id:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=f"Email '{data.email}' already exists",
+                    )
+                data.email = normalized_email
+
+            update_fields = {
+                "email": data.email,
+                "first_name": data.first_name,
+                "last_name": data.last_name,
+            }
+            if data.new_password:
+                update_fields["hashed_password"] = hash_password(data.new_password)
+
+            user = self.repo.update(user, **update_fields)
+            self.session.commit()
+            self.session.refresh(user)
+            return user
+        except HTTPException:
+            self.session.rollback()
+            raise
+        except Exception:
+            self.session.rollback()
+            raise
 
     def refresh(self, refresh_token: str) -> Token:
         payload = self.token_service.decode_token(refresh_token)

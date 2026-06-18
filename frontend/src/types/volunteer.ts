@@ -1,5 +1,16 @@
 export type VolunteerStatus = 'Aktywny' | 'Były';
 
+/** Admin-managed, CRUD-able label assignable to a volunteer (not tied to permissions). */
+export interface Role {
+  id: number;
+  name: string;
+}
+
+/** Writable payload for creating/updating a role. */
+export interface RoleInput {
+  name: string;
+}
+
 /** Volunteer as returned by VolunteerSerializer (backend/volunteers/serializers.py). */
 export interface Volunteer {
   id: number;
@@ -7,6 +18,8 @@ export interface Volunteer {
   email: string;
   phone: string;
   social_link: string | null;
+  role: number | null;
+  role_name: string | null;
   status: VolunteerStatus;
   join_date: string | null;
   notes: string | null;
@@ -26,6 +39,7 @@ export interface VolunteerInput {
   email: string;
   phone: string;
   social_link?: string;
+  role?: number | null;
   status: VolunteerStatus;
   join_date: string;
   notes?: string;
