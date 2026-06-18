@@ -1,42 +1,30 @@
-import apiClient from '../lib/api';
+import apiClient from '@/lib/api';
+import { createCrudService } from './crudService';
+import type { GroupListItem, GroupDetail, GroupSaveInput, BeneficiaryAssignment, Paginated } from '@/types';
+
+const crud = createCrudService<GroupListItem, GroupSaveInput>('v1/groups/');
 
 export const groupService = {
-    getAll: async () => {
-        const response = await apiClient.get('v1/groups/');
-        return response.data.results;
-    },
+  ...crud,
 
-    getById: async (id: number) => {
-        const response = await apiClient.get(`v1/groups/${id}/`);
-        return response.data;
-    },
+  // getById returns the richer detail shape (with nested beneficiaries).
+  getById: async (id: number): Promise<GroupDetail> => {
+    const response = await apiClient.get<GroupDetail>(`v1/groups/${id}/`);
+    return response.data;
+  },
 
-    create: async (data: any) => {
-        const response = await apiClient.post('v1/groups/', data);
-        return response.data;
-    },
+  // ── Assignments ──
+  getAssignments: async (): Promise<BeneficiaryAssignment[]> => {
+    const response = await apiClient.get<Paginated<BeneficiaryAssignment>>('v1/groups/assignments/');
+    return response.data.results;
+  },
 
-    update: async (id: number, data: any) => {
-        const response = await apiClient.patch(`v1/groups/${id}/`, data);
-        return response.data;
-    },
+  createAssignment: async (data: { beneficiary: number; volunteer: number }): Promise<BeneficiaryAssignment> => {
+    const response = await apiClient.post<BeneficiaryAssignment>('v1/groups/assignments/', data);
+    return response.data;
+  },
 
-    delete: async (id: number) => {
-        await apiClient.delete(`v1/groups/${id}/`);
-    },
-
-    // Assignments
-    getAssignments: async () => {
-        const response = await apiClient.get('v1/groups/assignments/');
-        return response.data.results;
-    },
-
-    createAssignment: async (data: { beneficiary: number; volunteer: number }) => {
-        const response = await apiClient.post('v1/groups/assignments/', data);
-        return response.data;
-    },
-
-    deleteAssignment: async (id: number) => {
-        await apiClient.delete(`v1/groups/assignments/${id}/`);
-    },
+  deleteAssignment: async (id: number): Promise<void> => {
+    await apiClient.delete(`v1/groups/assignments/${id}/`);
+  },
 };
