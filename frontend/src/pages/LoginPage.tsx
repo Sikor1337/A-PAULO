@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { AxiosError } from 'axios';
 import { useAuthStore } from '../stores/authStore';
 import { authService } from '../services/authService';
 
@@ -64,12 +65,13 @@ const LoginPage = () => {
 
       // Redirect to dashboard
       navigate('/dashboard');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Login error:', err);
-      if (err.response?.status === 401) {
+      const axiosErr = err as AxiosError<{ detail?: string }>;
+      if (axiosErr.response?.status === 401) {
         setError('Nieprawidłowy email lub hasło');
-      } else if (err.response?.data?.detail) {
-        setError(err.response.data.detail);
+      } else if (axiosErr.response?.data?.detail) {
+        setError(axiosErr.response.data.detail);
       } else {
         setError('Wystąpił błąd podczas logowania. Spróbuj ponownie.');
       }
