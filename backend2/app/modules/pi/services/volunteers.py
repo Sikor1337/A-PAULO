@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, select
 
 from app.core.errors import NotFoundError, ConflictError
+from app.modules.core_data.models.role import Role
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.pi.models.group import Group, BeneficiaryAssignment
 from app.modules.pi.models.beneficiary import Beneficiary
@@ -18,6 +19,13 @@ class VolunteerService:
 
     def _enrich_volunteer(self, volunteer: Volunteer) -> Volunteer:
         """Enrich volunteer with computed fields from database."""
+        # role_name: display name of the assigned role, if any
+        if volunteer.role_id:
+            role_name = self.session.query(Role.name).filter(Role.id == volunteer.role_id).scalar()
+        else:
+            role_name = None
+        volunteer.role_name = role_name
+
         # led_group: name of group where volunteer is leader
         led_group = self.session.query(Group.name).filter(Group.leader_id == volunteer.id).first()
         volunteer.led_group = led_group[0] if led_group else None

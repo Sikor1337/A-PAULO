@@ -49,10 +49,18 @@ export interface UserProfile {
   status: 'regular' | 'admin';
 }
 
+export interface UpdateProfilePayload {
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  current_password?: string;
+  new_password?: string;
+}
+
 export const authService = {
   // Register new user
   async register(credentials: RegisterCredentials): Promise<UserProfile> {
-    const response = await authClient.post<UserProfile>('/auth/register/', {
+    const response = await authClient.post<UserProfile>('/auth/register', {
       username: credentials.username,
       email: credentials.email,
       password: credentials.password,
@@ -64,7 +72,7 @@ export const authService = {
 
   // Login user and get JWT tokens
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
-    const response = await authClient.post<LoginResponse>('/auth/token/', {
+    const response = await authClient.post<LoginResponse>('/auth/token', {
       username: credentials.email, // Backend uses username field
       password: credentials.password,
     });
@@ -73,13 +81,19 @@ export const authService = {
 
   // Get current user profile
   async getUserProfile(): Promise<UserProfile> {
-    const response = await authClient.get<UserProfile>('/auth/user/');
+    const response = await authClient.get<UserProfile>('/auth/user');
+    return response.data;
+  },
+
+  // Update own profile (email/name), optionally changing the password
+  async updateProfile(data: UpdateProfilePayload): Promise<UserProfile> {
+    const response = await authClient.patch<UserProfile>('/auth/user', data);
     return response.data;
   },
 
   // Refresh token
   async refreshToken(refreshToken: string): Promise<{ access: string }> {
-    const response = await authClient.post('/auth/token/refresh/', {
+    const response = await authClient.post('/auth/token/refresh', {
       refresh: refreshToken,
     });
     return response.data;

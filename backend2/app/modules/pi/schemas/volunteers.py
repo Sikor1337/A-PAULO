@@ -20,9 +20,12 @@ class VolunteerCreateRequest(BaseModel):
     phone: Optional[str] = Field(None, max_length=20)
     social_link: Optional[str] = Field(None, max_length=500)
     status: str = Field(default="Aktywny")
+    role_id: Optional[int] = Field(default=None, alias="role")
     join_date: datetime
     notes: str = Field(default="")
     history: str = Field(default="")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class VolunteerUpdateRequest(BaseModel):
@@ -33,9 +36,12 @@ class VolunteerUpdateRequest(BaseModel):
     phone: Optional[str] = Field(None, max_length=20)
     social_link: Optional[str] = Field(None, max_length=500)
     status: Optional[str] = None
+    role_id: Optional[int] = Field(default=None, alias="role")
     join_date: Optional[datetime] = None
     notes: Optional[str] = None
     history: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class VolunteerResponse(BaseModel):
@@ -47,6 +53,8 @@ class VolunteerResponse(BaseModel):
     phone: Optional[str]
     social_link: Optional[str]
     status: str
+    role_id: Optional[int] = Field(None, alias="role")
+    role_name: Optional[str] = None
     join_date: datetime
     notes: str
     history: str
@@ -56,4 +64,4 @@ class VolunteerResponse(BaseModel):
     assigned_groups: Optional[int] = None
     main_for_beneficiaries: Optional[list[str]] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

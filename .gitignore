@@ -11,6 +11,12 @@ node_modules/
 .vscode/
 .idea/
 
+# Local dev helper (personal launcher, not shared)
+start-dev.bat
+
+# Claude Code local config (per-developer)
+.claude/settings.local.json
+
 
 
 

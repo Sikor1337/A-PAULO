@@ -1,5 +1,5 @@
 export type { Paginated, WithId } from './api';
-export type { Volunteer, VolunteerStatus, VolunteerInput } from './volunteer';
+export type { Volunteer, VolunteerStatus, VolunteerInput, Role, RoleInput } from './volunteer';
 export type { Beneficiary, BeneficiaryStatus, BeneficiaryInput } from './beneficiary';
 export type {
   GroupListItem,

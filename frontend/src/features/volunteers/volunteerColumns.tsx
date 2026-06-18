@@ -69,6 +69,14 @@ export function buildVolunteerColumns({ onSelect, onEdit, onDelete }: Handlers):
       },
     },
     {
+      id: 'role_name',
+      header: 'Rola',
+      widthClass: 'w-[10%]',
+      sortKey: 'role_name',
+      cellClassName: 'text-gray-500',
+      render: (v) => v.role_name || '—',
+    },
+    {
       id: 'status',
       header: 'Status',
       widthClass: 'w-[10%]',
