@@ -1,12 +1,12 @@
-# Backend
+# Backend 2
 
-Django REST Framework backend.
+FastAPI backend z SQLAlchemy ORM i Alembic do migracji.
 
 ## 📋 Wymagania
 
 - **Python:** 3.12+
 - **Database:** PostgreSQL 14+
-- **Inne:** pip 
+- **Inne:** pip, Alembic
 
 ## 🚀 Setup Lokalny
 
@@ -27,86 +27,167 @@ source venv/bin/activate
 
 ```bash
 cd backend
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 ```
 
 ### 3. Konfiguracja bazy danych
 
-Utwórz plik `.env` w folderze `backend/` (lub ustaw zmienne środowiskowe):
+Utwórz plik `.env` w folderze głównym projektu (lub `backend/`):
 
 ```env
 # Database
-DB_NAME=apaulo_db
-DB_USER=postgres
-DB_PASSWORD=haslo
-DB_HOST=localhost
-DB_PORT=5432
+DATABASE_URL=postgresql://postgres:haslo@localhost:5432/apaulo_db
 
-# Django
-SECRET_KEY=your-secret-key-here
+# Security
+SECRET_KEY=your-super-secret-key-here-at-least-32-chars
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=120
+
+# Environment
 DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
 ```
 
-**Alternatywnie:** Edytuj `core/settings.py` bezpośrednio (dla dev lokalnego).
-
-### 4. Migracje
+### 4. Migracje (Alembic)
 
 ```bash
-# Wykonaj migracje
-python manage.py migrate
+cd backend
 
-# Utwórz superusera
-python manage.py createsuperuser
+# Sprawdź status migracji
+alembic current
+
+# Wykonaj migracje
+alembic upgrade head
+
+# Utwórz nową migrację (jeśli edytujesz modele)
+alembic revision --autogenerate -m "Opis zmian"
+
+# Cofnij ostatnią migrację
+alembic downgrade -1
 ```
 
 ### 5. Uruchomienie serwera
 
 ```bash
-python manage.py runserver
+cd backend
+
+# Development (ze reload)
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# Production
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 Aplikacja będzie dostępna pod: **http://127.0.0.1:8000**  
-Panel admin: **http://127.0.0.1:8000/admin**
+Dokumentacja OpenAPI (Swagger): **http://127.0.0.1:8000/docs**  
+ReDoc: **http://127.0.0.1:8000/redoc**
 
 ## 📂 Struktura Aplikacji
 
 ```
 backend/
-├── core/                   # Ustawienia projektu Django
-│   ├── settings.py        # Konfiguracja główna
-│   ├── urls.py            # Routing główny
-│   └── wsgi.py / asgi.py  # WSGI/ASGI entry points
-├── authentication/         # Moduł uwierzytelniania
-│   ├── models.py          # UserProfile (custom user)
-│   ├── serializers.py     # Serializery JWT
-│   ├── views.py           # Login, Register, Token Refresh
-│   └── urls.py
-├── beneficiaries/          # Moduł podopiecznych
-│   ├── models.py          # Beneficiary, Group, Assignment
-│   ├── serializers.py
-│   ├── views.py           # CRUD endpoints
-│   ├── filters.py         # Django-filters
-│   └── urls.py
-├── volunteers/             # Moduł wolontariuszy
-│   ├── models.py          # Volunteer
-│   ├── serializers.py
-│   ├── views.py
-│   ├── filters.py
-│   └── urls.py
-├── manage.py
+├── alembic/                    # Migracje bazy danych
+│   ├── versions/              # Pliki migracji
+│   ├── env.py                 # Konfiguracja Alembica
+│   └── script.py.mako         # Template migracji
+├── app/                        # Główna aplikacja
+│   ├── main.py                # FastAPI app, routing
+│   ├── core/
+│   │   ├── config.py          # Konfiguracja (settings)
+│   │   ├── dependencies.py    # Globalne dependencies
+│   │   └── errors.py          # Exception handlers
+│   ├── infrastructure/
+│   │   └── sql/
+│   │       ├── base.py        # SQLAlchemy Base
+│   │       ├── factory.py     # Session factory
+│   │       ├── models_registry.py  # Rejestr wszystkich modeli
+│   │       └── tests/         # SQL testy
+│   └── modules/               # Moduły biznesowe
+│       ├── security/          # Uwierzytelnianie & tokeny
+│       │   ├── api/
+│       │   │   └── auth.py    # Endpoints
+│       │   ├── schemas/
+│       │   │   └── auth.py    # Pydantic schemas
+│       │   ├── services/
+│       │   │   ├── auth.py    # Business logic
+│       │   │   ├── password.py # Hash/Verify
+│       │   │   └── token.py   # JWT management
+│       │   ├── dependencies.py# DI (get_auth_service, etc)
+│       │   └── tests/
+│       ├── core_data/         # Dane użytkowników & role
+│       │   ├── api/
+│       │   │   ├── users.py   # User endpoints
+│       │   │   └── roles.py   # Role endpoints
+│       │   ├── schemas/
+│       │   ├── services/
+│       │   ├── repositories/
+│       │   ├── models/
+│       │   ├── dependencies.py# DI
+│       │   └── tests/
+│       └── pi/                # Podopieczni & Wolontariusze
+│           ├── api/
+│           │   ├── volunteers.py
+│           │   ├── beneficiaries.py
+│           │   └── groups.py
+│           ├── schemas/
+│           ├── services/
+│           ├── repositories/
+│           ├── models/
+│           ├── dependencies.py
+│           └── tests/
+├── alembic.ini
+├── pyproject.toml
 └── requirements.txt
+```
+
+## 🏗️ Architektura Modułów
+
+Każdy moduł (`security`, `core_data`, `pi`) ma strukturę:
+
+```
+module/
+├── __init__.py           # Exports
+├── api/
+│   ├── __init__.py       # Exports router
+│   └── {resource}.py     # FastAPI endpoints
+├── schemas/
+│   ├── __init__.py       # Exports schemas
+│   └── {resource}.py     # Pydantic models
+├── services/
+│   ├── __init__.py       # Exports services
+│   └── {resource}.py     # Business logic, transaction mgmt
+├── repositories/
+│   ├── __init__.py       # Exports repos
+│   └── {resource}.py     # Data access (no transactions)
+├── models/
+│   ├── __init__.py       # Exports models
+│   └── {resource}.py     # SQLAlchemy ORM models
+├── dependencies.py       # Dependency injection
+└── tests/
+    ├── conftest.py       # Fixtures
+    ├── test_api.py
+    └── test_service.py
 ```
 
 ## 🔧 Główne Zależności
 
 | Pakiet | Wersja | Opis |
 |--------|--------|------|
-| Django | 6.0.1 | Framework webowy |
-| djangorestframework | 3.16.1 | REST API toolkit |
-| djangorestframework-simplejwt | 5.5.1 | JWT authentication |
-| psycopg2-binary | 2.9.11 | PostgreSQL adapter |
-| django-cors-headers | 4.9.0 | CORS support |
-| drf-spectacular | 0.29.0 | OpenAPI schema generator |
-| django-filter | (dependency) | Filtrowanie query |
+| fastapi | 0.115+ | Web framework |
+| sqlalchemy | 2.0+ | ORM |
+| alembic | 1.13+ | Database migrations |
+| psycopg | 3.2+ | PostgreSQL adapter |
+| pydantic | 2.0+ | Data validation |
+| python-jose | 3.3+ | JWT tokens |
+| passlib | 1.7+ | Password hashing |
+| bcrypt | 4.0+ | Bcrypt password hashing |
+| python-multipart | 0.0.6+ | Form data support |
+
+
+```bash
+# Install production dependencies
+pip install gunicorn
+
+# Run with Gunicorn
+gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+```
 

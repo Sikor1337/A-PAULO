@@ -3,7 +3,7 @@ import apiClient from '@/lib/api';
 /**
  * Builds a typed CRUD service for a FastAPI resource.
  *
- * The backend2 (FastAPI) contract uses no trailing slashes and returns
+ * The backend (FastAPI) contract uses no trailing slashes and returns
  * plain arrays for list endpoints (no DRF pagination envelope).
  *
  * @param path resource path relative to the API base, e.g. "v1/volunteers".
