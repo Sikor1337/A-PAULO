@@ -14,7 +14,7 @@ export const groupService = {
   },
 
   // ── Assignments ──
-  // backend2 (FastAPI) mounts assignments at /api/v1/assignments (sibling of /groups).
+  // backend (FastAPI) mounts assignments at /api/v1/assignments (sibling of /groups).
   getAssignments: async (): Promise<BeneficiaryAssignment[]> => {
     const response = await apiClient.get<BeneficiaryAssignment[]>('v1/assignments');
     return response.data;

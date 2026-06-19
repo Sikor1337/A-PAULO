@@ -26,13 +26,13 @@ source venv/bin/activate
 ### 2. Instalacja zależności
 
 ```bash
-cd backend2
+cd backend
 pip install -r ../requirements.txt
 ```
 
 ### 3. Konfiguracja bazy danych
 
-Utwórz plik `.env` w folderze głównym projektu (lub `backend2/`):
+Utwórz plik `.env` w folderze głównym projektu (lub `backend/`):
 
 ```env
 # Database
@@ -50,7 +50,7 @@ DEBUG=True
 ### 4. Migracje (Alembic)
 
 ```bash
-cd backend2
+cd backend
 
 # Sprawdź status migracji
 alembic current
@@ -68,7 +68,7 @@ alembic downgrade -1
 ### 5. Uruchomienie serwera
 
 ```bash
-cd backend2
+cd backend
 
 # Development (ze reload)
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
@@ -84,7 +84,7 @@ ReDoc: **http://127.0.0.1:8000/redoc**
 ## 📂 Struktura Aplikacji
 
 ```
-backend2/
+backend/
 ├── alembic/                    # Migracje bazy danych
 │   ├── versions/              # Pliki migracji
 │   ├── env.py                 # Konfiguracja Alembica

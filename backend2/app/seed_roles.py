@@ -7,7 +7,7 @@ three defaults exist.
 
 Idempotent: re-running only adds roles that are missing.
 
-Usage (from backend2/, venv active):
+Usage (from backend/, venv active):
     python -m app.seed_roles
 """
 from app.core.dependencies import _sql_session_factory
