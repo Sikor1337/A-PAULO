@@ -4,12 +4,14 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db
+from app.modules.core_data.models import User
 from app.modules.pi.schemas.beneficiaries import (
     BeneficiaryCreateRequest,
     BeneficiaryUpdateRequest,
     BeneficiaryResponse,
 )
 from app.modules.pi.services.beneficiaries import BeneficiaryService
+from app.modules.security.dependencies import get_current_user
 
 router = APIRouter(prefix="/beneficiaries", tags=["beneficiaries"])
 
@@ -22,6 +24,7 @@ def list_beneficiaries(
     status: Optional[str] = Query(None),
     bo_enrolled: Optional[bool] = Query(None),
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """List all beneficiaries with optional filters."""
     service = BeneficiaryService(session)
@@ -39,6 +42,7 @@ def list_beneficiaries(
 def create_beneficiary(
     request: BeneficiaryCreateRequest,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Create new beneficiary."""
     service = BeneficiaryService(session)
@@ -50,6 +54,7 @@ def create_beneficiary(
 def get_beneficiary(
     beneficiary_id: int,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Get beneficiary by ID."""
     service = BeneficiaryService(session)
@@ -62,6 +67,7 @@ def update_beneficiary(
     beneficiary_id: int,
     request: BeneficiaryUpdateRequest,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Update beneficiary."""
     service = BeneficiaryService(session)
@@ -75,6 +81,7 @@ def update_beneficiary(
 def delete_beneficiary(
     beneficiary_id: int,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Delete beneficiary."""
     service = BeneficiaryService(session)

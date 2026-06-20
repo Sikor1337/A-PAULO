@@ -4,12 +4,14 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db
+from app.modules.core_data.models import User
 from app.modules.pi.schemas.volunteers import (
     VolunteerCreateRequest,
     VolunteerUpdateRequest,
     VolunteerResponse,
 )
 from app.modules.pi.services.volunteers import VolunteerService
+from app.modules.security.dependencies import get_current_user
 
 router = APIRouter(prefix="/volunteers", tags=["volunteers"])
 
@@ -22,6 +24,7 @@ def list_volunteers(
     email: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """List all volunteers with optional filters."""
     service = VolunteerService(session)
@@ -39,6 +42,7 @@ def list_volunteers(
 def create_volunteer(
     request: VolunteerCreateRequest,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Create new volunteer."""
     service = VolunteerService(session)
@@ -50,6 +54,7 @@ def create_volunteer(
 def get_volunteer(
     volunteer_id: int,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Get volunteer by ID."""
     service = VolunteerService(session)
@@ -62,6 +67,7 @@ def update_volunteer(
     volunteer_id: int,
     request: VolunteerUpdateRequest,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Update volunteer."""
     service = VolunteerService(session)
@@ -75,6 +81,7 @@ def update_volunteer(
 def delete_volunteer(
     volunteer_id: int,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Delete volunteer."""
     service = VolunteerService(session)

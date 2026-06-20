@@ -9,6 +9,7 @@ from app.core.errors import register_error_handlers
 from app.infrastructure.sql.base import Base
 from app.infrastructure.sql import models_registry  # noqa: F401 - Register all models
 from app.modules.core_data.api.roles import router as roles_router
+from app.modules.core_data.api.users import router as users_router
 from app.modules.security.api import router as security_router
 from app.modules.pi.api.volunteers import router as volunteers_router
 from app.modules.pi.api.beneficiaries import router as beneficiaries_router
@@ -46,6 +47,7 @@ app.include_router(security_router)
 
 # API v1 endpoints
 app.include_router(roles_router, prefix="/api/v1")
+app.include_router(users_router, prefix="/api/v1")
 app.include_router(volunteers_router, prefix="/api/v1")
 app.include_router(beneficiaries_router, prefix="/api/v1")
 app.include_router(groups_router, prefix="/api/v1")

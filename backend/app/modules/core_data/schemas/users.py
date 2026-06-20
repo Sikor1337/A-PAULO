@@ -1,5 +1,9 @@
 """Pydantic schemas for users."""
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+UserStatus = Literal["regular", "admin"]
 
 
 class UserRegisterRequest(BaseModel):
@@ -10,6 +14,7 @@ class UserRegisterRequest(BaseModel):
     password: str = Field(..., min_length=6)
     first_name: str = Field(default="", max_length=150)
     last_name: str = Field(default="", max_length=150)
+    status: UserStatus = "regular"
 
 
 class UserLoginRequest(BaseModel):
@@ -37,6 +42,31 @@ class UserResponse(BaseModel):
     email: str
     first_name: str
     last_name: str
-    status: str
+    status: UserStatus
+    is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserCreateRequest(BaseModel):
+    """Admin user creation request."""
+
+    username: str = Field(..., min_length=3, max_length=150)
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+    first_name: str = Field(default="", max_length=150)
+    last_name: str = Field(default="", max_length=150)
+    status: UserStatus = "regular"
+    is_active: bool = True
+
+
+class UserUpdateRequest(BaseModel):
+    """Admin user update request."""
+
+    username: str | None = Field(default=None, min_length=3, max_length=150)
+    email: EmailStr | None = None
+    first_name: str | None = Field(default=None, max_length=150)
+    last_name: str | None = Field(default=None, max_length=150)
+    status: UserStatus | None = None
+    is_active: bool | None = None
+    password: str | None = Field(default=None, min_length=6)

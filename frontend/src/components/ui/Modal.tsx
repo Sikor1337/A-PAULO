@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 
 interface ModalProps {
@@ -7,21 +8,45 @@ interface ModalProps {
   maxWidth?: string;
   /** Whether clicking the dark backdrop closes the modal (default true). */
   closeOnBackdrop?: boolean;
+  /** Whether pressing Escape closes the modal (default true). */
+  closeOnEscape?: boolean;
 }
 
 /** Centered dialog with a dark backdrop. Stops click propagation inside the card. */
-const Modal = ({ onClose, children, maxWidth = 'max-w-lg', closeOnBackdrop = true }: ModalProps) => (
-  <div
-    className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-    onClick={closeOnBackdrop ? onClose : undefined}
-  >
+const Modal = ({
+  onClose,
+  children,
+  maxWidth = 'max-w-lg',
+  closeOnBackdrop = true,
+  closeOnEscape = true,
+}: ModalProps) => {
+  useEffect(() => {
+    if (!closeOnEscape) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [closeOnEscape, onClose]);
+
+  return (
     <div
-      className={`bg-white rounded-xl p-8 w-full ${maxWidth} shadow-2xl max-h-[90vh] overflow-y-auto`}
-      onClick={(e) => e.stopPropagation()}
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      onClick={closeOnBackdrop ? onClose : undefined}
+      role="presentation"
     >
-      {children}
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={`bg-white rounded-xl p-8 w-full ${maxWidth} shadow-2xl max-h-[90vh] overflow-y-auto`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default Modal;

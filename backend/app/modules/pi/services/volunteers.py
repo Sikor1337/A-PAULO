@@ -1,6 +1,5 @@
 """Volunteer service for PI domain."""
 from sqlalchemy.orm import Session
-from sqlalchemy import func, select
 
 from app.core.errors import NotFoundError, ConflictError
 from app.modules.core_data.models.role import Role
@@ -30,11 +29,20 @@ class VolunteerService:
         led_group = self.session.query(Group.name).filter(Group.leader_id == volunteer.id).first()
         volunteer.led_group = led_group[0] if led_group else None
 
-        # assigned_groups: count of unique beneficiaries in assignments
-        assigned_groups_count = self.session.query(
-            func.count(func.distinct(BeneficiaryAssignment.beneficiary_id))
-        ).filter(BeneficiaryAssignment.volunteer_id == volunteer.id).scalar()
-        volunteer.assigned_groups = assigned_groups_count or 0
+        # assigned_groups: comma-joined group names from assigned beneficiaries
+        assigned_group_rows = (
+            self.session.query(Group.name)
+            .join(Beneficiary, Beneficiary.group_id == Group.id)
+            .join(
+                BeneficiaryAssignment,
+                BeneficiaryAssignment.beneficiary_id == Beneficiary.id,
+            )
+            .filter(BeneficiaryAssignment.volunteer_id == volunteer.id)
+            .distinct()
+            .order_by(Group.name)
+            .all()
+        )
+        volunteer.assigned_groups = ", ".join(row[0] for row in assigned_group_rows)
 
         # main_for_beneficiaries: list of beneficiary names where is_main=True
         main_beneficiaries = self.session.query(Beneficiary.full_name).join(
