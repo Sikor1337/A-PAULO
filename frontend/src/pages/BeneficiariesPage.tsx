@@ -8,6 +8,7 @@ import { useTableControls } from '@/hooks/useTableControls';
 import { buildBeneficiaryColumns } from '@/features/beneficiaries/beneficiaryColumns';
 import { beneficiaryDetailFields } from '@/features/beneficiaries/beneficiaryDetail';
 import BeneficiaryFormModal from '@/features/beneficiaries/BeneficiaryFormModal';
+import { exportRowsToCsv } from '@/lib/csv';
 import type { Beneficiary } from '@/types';
 
 const BeneficiariesPage: React.FC = () => {
@@ -44,6 +45,24 @@ const BeneficiariesPage: React.FC = () => {
     onDelete: remove.mutate,
   });
 
+  const exportBeneficiaries = () => {
+    exportRowsToCsv(
+      'podopieczni.csv',
+      [
+        { header: 'Imię i nazwisko', value: (b) => b.full_name },
+        { header: 'Adres', value: (b) => b.address },
+        { header: 'Telefon', value: (b) => b.phone },
+        { header: 'Telefon rodziny', value: (b) => b.family_phone },
+        { header: 'Grupa', value: (b) => b.group_name },
+        { header: 'BO', value: (b) => (b.bo_enrolled ? 'TAK' : 'NIE') },
+        { header: 'Status', value: (b) => b.status },
+        { header: 'Ostatnia wizyta księdza', value: (b) => b.last_priest_visit },
+        { header: 'Ostatnie spotkanie z wolontariuszem', value: (b) => b.last_volunteer_meeting },
+      ],
+      rows,
+    );
+  };
+
   return (
     <PageShell>
       <div className="flex items-center justify-between mb-6 border-b pb-4">
@@ -51,12 +70,21 @@ const BeneficiariesPage: React.FC = () => {
           <span className="text-2xl">📄</span>
           <h1 className="text-xl font-bold text-gray-900 uppercase">Podopieczni</h1>
         </div>
-        <button
-          onClick={() => setIsAdding(true)}
-          className="bg-[#10b981] text-white px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2"
-        >
-          + Dodaj
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={exportBeneficiaries}
+            className="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-50 transition-all"
+          >
+            Eksport CSV
+          </button>
+          <button
+            onClick={() => setIsAdding(true)}
+            className="bg-[#10b981] text-white px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2"
+          >
+            + Dodaj
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 flex gap-2 items-center">

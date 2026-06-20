@@ -27,7 +27,7 @@ export interface Volunteer {
   // Computed, read-only:
   led_group: string | null;
   /** Comma-joined group names, e.g. "GRUPA A, GRUPA B". */
-  assigned_groups: string;
+  assigned_groups: string | null;
   main_for_beneficiaries: string[];
   created_at: string;
   updated_at: string;

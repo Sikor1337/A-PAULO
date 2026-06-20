@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { clearSessionAndRedirect, refreshSession } from '@/lib/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 const API_ROOT = API_URL.replace(/\/api\/?$/, '');
@@ -20,6 +21,36 @@ authClient.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error)
+);
+
+authClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const url = String(error.config?.url ?? '');
+    const isLoginRequest = url.includes('/auth/token') && !url.includes('/auth/token/refresh');
+    const isRegisterRequest = url.includes('/auth/register');
+    const isRefreshRequest = url.includes('/auth/token/refresh');
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !isLoginRequest && !isRegisterRequest && !isRefreshRequest && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const access = await refreshSession();
+        originalRequest.headers.Authorization = `Bearer ${access}`;
+        return authClient(originalRequest);
+      } catch (refreshError) {
+        clearSessionAndRedirect();
+        return Promise.reject(refreshError);
+      }
+    }
+
+    if (error.response?.status === 401 && !isLoginRequest && !isRegisterRequest) {
+      clearSessionAndRedirect();
+    }
+
+    return Promise.reject(error);
+  },
 );
 
 export interface LoginCredentials {
@@ -47,6 +78,7 @@ export interface UserProfile {
   first_name: string;
   last_name: string;
   status: 'regular' | 'admin';
+  is_active?: boolean;
 }
 
 export interface UpdateProfilePayload {

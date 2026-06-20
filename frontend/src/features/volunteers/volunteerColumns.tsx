@@ -11,12 +11,21 @@ interface Handlers {
 const statusColor = (status: Volunteer['status']) =>
   status === 'Aktywny' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
 
+const splitGroups = (groups: unknown) =>
+  (typeof groups === 'string' ? groups : '')
+    .split(',')
+    .map((group) => group.trim())
+    .filter(Boolean);
+
+const uniqueGroups = (v: Volunteer) =>
+  Array.from(new Set([...splitGroups(v.assigned_groups), v.led_group].filter((group): group is string => Boolean(group))));
+
 export function buildVolunteerColumns({ onSelect, onEdit, onDelete }: Handlers): Column<Volunteer>[] {
   return [
     {
       id: 'full_name',
       header: 'Imię i nazwisko',
-      widthClass: 'w-[20%]',
+      widthClass: 'w-[18%]',
       sortKey: 'full_name',
       cellClassName: 'font-medium text-indigo-700 cursor-pointer hover:underline',
       onClick: onSelect,
@@ -25,7 +34,7 @@ export function buildVolunteerColumns({ onSelect, onEdit, onDelete }: Handlers):
     {
       id: 'email',
       header: 'Email',
-      widthClass: 'w-[20%]',
+      widthClass: 'w-[18%]',
       sortKey: 'email',
       cellClassName: 'text-gray-500',
       render: (v) => v.email || '—',
@@ -33,7 +42,7 @@ export function buildVolunteerColumns({ onSelect, onEdit, onDelete }: Handlers):
     {
       id: 'phone',
       header: 'Tel',
-      widthClass: 'w-[15%]',
+      widthClass: 'w-[12%]',
       sortKey: 'phone',
       cellClassName: 'text-gray-500',
       render: (v) => v.phone || '—',
@@ -41,29 +50,46 @@ export function buildVolunteerColumns({ onSelect, onEdit, onDelete }: Handlers):
     {
       id: 'assigned_groups',
       header: 'Grupa',
-      widthClass: 'w-[15%]',
+      widthClass: 'w-[13%]',
       align: 'center',
       sortKey: 'assigned_groups',
       render: (v) => {
-        const hasNothing = !v.led_group && (!v.main_for_beneficiaries || v.main_for_beneficiaries.length === 0) && !v.assigned_groups;
+        const groups = uniqueGroups(v);
+        if (groups.length === 0) return <span className="text-gray-400">—</span>;
+
         return (
           <div className="flex flex-col items-center gap-1">
-            {v.led_group && (
-              <span className="bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase" title="Lider Grupy">
-                👑 {v.led_group}
-              </span>
-            )}
-            {v.main_for_beneficiaries?.map((bName) => (
-              <span
-                key={bName}
-                className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded font-bold uppercase flex items-center gap-0.5"
-                title={`Główny wolontariusz dla: ${bName}`}
-              >
-                ⭐ {bName}
+            {groups.map((group) => (
+              <span key={group} className="text-gray-600 text-xs font-medium">
+                {group}
               </span>
             ))}
-            {v.assigned_groups && <span className="text-gray-500 text-xs">{v.assigned_groups}</span>}
-            {hasNothing && <span className="text-gray-400">—</span>}
+          </div>
+        );
+      },
+    },
+    {
+      id: 'functions',
+      header: 'Funkcja',
+      widthClass: 'w-[17%]',
+      render: (v) => {
+        const functions = [
+          ...(v.led_group ? [`Przewodnik: ${v.led_group}`] : []),
+          ...(v.main_for_beneficiaries ?? []).map((name) => `Lider podopiecznego: ${name}`),
+        ];
+        if (functions.length === 0) return <span className="text-gray-400">—</span>;
+
+        return (
+          <div className="flex flex-col gap-1">
+            {functions.map((label) => (
+              <span
+                key={label}
+                className="bg-gray-100 text-gray-700 text-[11px] px-2 py-0.5 rounded font-semibold leading-snug"
+                title={label}
+              >
+                {label}
+              </span>
+            ))}
           </div>
         );
       },
@@ -71,7 +97,7 @@ export function buildVolunteerColumns({ onSelect, onEdit, onDelete }: Handlers):
     {
       id: 'role_name',
       header: 'Rola',
-      widthClass: 'w-[10%]',
+      widthClass: 'w-[8%]',
       sortKey: 'role_name',
       cellClassName: 'text-gray-500',
       render: (v) => v.role_name || '—',
@@ -79,14 +105,14 @@ export function buildVolunteerColumns({ onSelect, onEdit, onDelete }: Handlers):
     {
       id: 'status',
       header: 'Status',
-      widthClass: 'w-[10%]',
+      widthClass: 'w-[8%]',
       sortKey: 'status',
       render: (v) => <StatusBadge status={v.status} colorClass={statusColor(v.status)} />,
     },
     {
       id: 'actions',
       header: 'Akcje',
-      widthClass: 'w-[10%] min-w-[100px]',
+      widthClass: 'w-[8%] min-w-[100px]',
       align: 'center',
       render: (v) => (
         <div className="flex justify-center gap-2">

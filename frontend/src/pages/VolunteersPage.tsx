@@ -8,6 +8,7 @@ import { useTableControls } from '@/hooks/useTableControls';
 import { buildVolunteerColumns } from '@/features/volunteers/volunteerColumns';
 import { volunteerDetailFields } from '@/features/volunteers/volunteerDetail';
 import VolunteerFormModal from '@/features/volunteers/VolunteerFormModal';
+import { exportRowsToCsv } from '@/lib/csv';
 import type { Volunteer, VolunteerStatus } from '@/types';
 
 const VolunteersPage: React.FC = () => {
@@ -28,7 +29,8 @@ const VolunteersPage: React.FC = () => {
     searchFields: ['full_name', 'email', 'phone', 'status'],
     initialSort: 'full_name',
     filterPredicate: (v) => {
-      if (filterGroup && !(v.led_group === filterGroup || v.assigned_groups.split(', ').includes(filterGroup))) return false;
+      const assignedGroups = typeof v.assigned_groups === 'string' ? v.assigned_groups : '';
+      if (filterGroup && !(v.led_group === filterGroup || assignedGroups.split(', ').includes(filterGroup))) return false;
       if (filterStatus && v.status !== filterStatus) return false;
       return true;
     },
@@ -40,6 +42,30 @@ const VolunteersPage: React.FC = () => {
     onDelete: remove.mutate,
   });
 
+  const exportVolunteers = () => {
+    exportRowsToCsv(
+      'wolontariusze.csv',
+      [
+        { header: 'Imię i nazwisko', value: (v) => v.full_name },
+        { header: 'Email', value: (v) => v.email },
+        { header: 'Telefon', value: (v) => v.phone },
+        { header: 'Grupa', value: (v) => [v.assigned_groups, v.led_group].filter(Boolean).join(', ') },
+        {
+          header: 'Funkcja',
+          value: (v) =>
+            [
+              ...(v.led_group ? [`Przewodnik: ${v.led_group}`] : []),
+              ...(v.main_for_beneficiaries ?? []).map((name) => `Lider podopiecznego: ${name}`),
+            ].join(', '),
+        },
+        { header: 'Rola', value: (v) => v.role_name },
+        { header: 'Status', value: (v) => v.status },
+        { header: 'Data przystąpienia', value: (v) => v.join_date },
+      ],
+      rows,
+    );
+  };
+
   return (
     <PageShell>
       <div className="flex items-center justify-between mb-6 border-b pb-4">
@@ -47,12 +73,21 @@ const VolunteersPage: React.FC = () => {
           <span className="text-2xl">🙋</span>
           <h1 className="text-xl font-bold text-gray-900 uppercase">Wolontariusze</h1>
         </div>
-        <button
-          onClick={() => setIsAdding(true)}
-          className="bg-[#10b981] text-white px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2"
-        >
-          + Dodaj
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={exportVolunteers}
+            className="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-50 transition-all"
+          >
+            Eksport CSV
+          </button>
+          <button
+            onClick={() => setIsAdding(true)}
+            className="bg-[#10b981] text-white px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2"
+          >
+            + Dodaj
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 flex gap-2 items-center">

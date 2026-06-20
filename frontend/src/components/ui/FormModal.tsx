@@ -12,8 +12,8 @@ interface FormModalProps {
 
 /** Modal wrapping a CRUD form: title, body fields (children) and a Cancel/Submit footer. */
 const FormModal = ({ title, onClose, onSubmit, isPending, children, submitLabel = 'Zatwierdź' }: FormModalProps) => (
-  <Modal onClose={onClose} closeOnBackdrop={false}>
-    <h2 className="text-xl font-bold mb-6">{title}</h2>
+  <Modal onClose={onClose}>
+    <h2 className="text-xl font-bold mb-6 text-gray-900">{title}</h2>
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       {children}
       <div className="flex justify-end gap-3 pt-6">
