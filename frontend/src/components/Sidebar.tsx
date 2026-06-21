@@ -47,9 +47,6 @@ const Sidebar = ({ groupsSlot }: SidebarProps) => {
             title: 'ADMIN',
             items: [
                 { name: 'Ustawienia', icon: '⚙', path: '/settings', adminOnly: true },
-                { name: 'Wizyty', icon: '🏠', path: '/visits' },
-                { name: 'Komunikacja', icon: '💬', path: '/communication' },
-                { name: 'Fundusze', icon: '💰', path: '/funds' },
             ]
         }
     ];

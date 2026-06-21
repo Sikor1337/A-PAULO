@@ -60,8 +60,6 @@ class VolunteerRepository:
         for key, value in kwargs.items():
             if hasattr(volunteer, key):
                 setattr(volunteer, key, value)
-        self.session.commit()
-        self.session.refresh(volunteer)
         return volunteer
 
     def delete(self, volunteer: Volunteer) -> None:

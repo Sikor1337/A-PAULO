@@ -6,8 +6,8 @@ import type { Volunteer } from '@/types';
 export function volunteerDetailFields(v: Volunteer): DetailField[] {
   return [
     { label: 'Email', value: v.email },
-    { label: 'Rola', value: v.role_name },
-    { label: 'Lider Grupy', value: v.led_group },
+    { label: 'Funkcje', value: v.functions?.join(', ') },
+    { label: 'Przewodnik grupy', value: v.led_group },
     { label: 'Członek Grup', value: v.assigned_groups },
     { label: 'Główny wolontariusz dla', value: v.main_for_beneficiaries?.join(', ') },
     { label: 'Telefon', value: v.phone },

@@ -1,8 +1,9 @@
 """Volunteer service for PI domain."""
+from sqlalchemy import delete, insert
 from sqlalchemy.orm import Session
 
 from app.core.errors import NotFoundError, ConflictError
-from app.modules.core_data.models.role import Role
+from app.modules.pi.models.function import Function, volunteer_function
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.pi.models.group import Group, BeneficiaryAssignment
 from app.modules.pi.models.beneficiary import Beneficiary
@@ -18,12 +19,18 @@ class VolunteerService:
 
     def _enrich_volunteer(self, volunteer: Volunteer) -> Volunteer:
         """Enrich volunteer with computed fields from database."""
-        # role_name: display name of the assigned role, if any
-        if volunteer.role_id:
-            role_name = self.session.query(Role.name).filter(Role.id == volunteer.role_id).scalar()
-        else:
-            role_name = None
-        volunteer.role_name = role_name
+        manual_functions = (
+            self.session.query(Function)
+            .join(volunteer_function, Function.id == volunteer_function.c.function_id)
+            .filter(
+                volunteer_function.c.volunteer_id == volunteer.id,
+                Function.is_active == True,
+            )
+            .order_by(Function.name)
+            .all()
+        )
+        volunteer.function_ids = [function.id for function in manual_functions]
+        volunteer.manual_functions = [function.name for function in manual_functions]
 
         # led_group: name of group where volunteer is leader
         led_group = self.session.query(Group.name).filter(Group.leader_id == volunteer.id).first()
@@ -53,7 +60,37 @@ class VolunteerService:
         ).all()
         volunteer.main_for_beneficiaries = [b[0] for b in main_beneficiaries] if main_beneficiaries else []
 
+        derived_functions = []
+        if volunteer.led_group:
+            derived_functions.append("Przewodnik")
+        if volunteer.main_for_beneficiaries:
+            derived_functions.append("Lider Podopiecznego")
+        volunteer.derived_functions = derived_functions
+        volunteer.functions = list(dict.fromkeys([*volunteer.manual_functions, *derived_functions]))
+
         return volunteer
+
+    def _sync_functions(self, volunteer_id: int, function_ids: list[int]) -> None:
+        """Replace manually assigned functions for a volunteer."""
+        unique_ids = list(dict.fromkeys(function_ids or []))
+
+        if unique_ids:
+            existing_count = (
+                self.session.query(Function.id)
+                .filter(Function.id.in_(unique_ids), Function.is_active == True)
+                .count()
+            )
+            if existing_count != len(unique_ids):
+                raise NotFoundError("One or more functions were not found")
+
+        self.session.execute(
+            delete(volunteer_function).where(volunteer_function.c.volunteer_id == volunteer_id)
+        )
+        if unique_ids:
+            self.session.execute(
+                insert(volunteer_function),
+                [{"volunteer_id": volunteer_id, "function_id": function_id} for function_id in unique_ids],
+            )
 
     def get_volunteer_by_id(self, volunteer_id: int) -> Volunteer:
         """Get volunteer by ID or raise NotFoundError."""
@@ -78,12 +115,14 @@ class VolunteerService:
     def create_volunteer(self, **kwargs) -> Volunteer:
         """Create new volunteer."""
         try:
+            function_ids = kwargs.pop("function_ids", [])
             # Check if email already exists
             if self.repo.exists(kwargs.get("email")):
                 raise ConflictError(f"Volunteer with email '{kwargs.get('email')}' already exists")
 
             volunteer = self.repo.create(**kwargs)
             self.session.flush()
+            self._sync_functions(volunteer.id, function_ids)
             self.session.refresh(volunteer)
             self.session.commit()
             return self._enrich_volunteer(volunteer)
@@ -94,6 +133,7 @@ class VolunteerService:
     def update_volunteer(self, volunteer_id: int, **kwargs) -> Volunteer:
         """Update volunteer."""
         try:
+            function_ids = kwargs.pop("function_ids", None)
             volunteer = self.get_volunteer_by_id(volunteer_id)
 
             # If email is being updated, check uniqueness (excluding current volunteer)
@@ -103,6 +143,8 @@ class VolunteerService:
 
             volunteer = self.repo.update(volunteer, **kwargs)
             self.session.flush()
+            if function_ids is not None:
+                self._sync_functions(volunteer.id, function_ids)
             self.session.refresh(volunteer)
             self.session.commit()
             return self._enrich_volunteer(volunteer)

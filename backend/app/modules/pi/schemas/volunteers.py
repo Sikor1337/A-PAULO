@@ -19,13 +19,11 @@ class VolunteerCreateRequest(BaseModel):
     email: EmailStr
     phone: Optional[str] = Field(None, max_length=20)
     social_link: Optional[str] = Field(None, max_length=500)
+    function_ids: list[int] = Field(default_factory=list)
     status: str = Field(default="Aktywny")
-    role_id: Optional[int] = Field(default=None, alias="role")
     join_date: datetime
     notes: str = Field(default="")
     history: str = Field(default="")
-
-    model_config = ConfigDict(populate_by_name=True)
 
 
 class VolunteerUpdateRequest(BaseModel):
@@ -35,13 +33,11 @@ class VolunteerUpdateRequest(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = Field(None, max_length=20)
     social_link: Optional[str] = Field(None, max_length=500)
+    function_ids: Optional[list[int]] = None
     status: Optional[str] = None
-    role_id: Optional[int] = Field(default=None, alias="role")
     join_date: Optional[datetime] = None
     notes: Optional[str] = None
     history: Optional[str] = None
-
-    model_config = ConfigDict(populate_by_name=True)
 
 
 class VolunteerResponse(BaseModel):
@@ -52,9 +48,11 @@ class VolunteerResponse(BaseModel):
     email: str
     phone: Optional[str]
     social_link: Optional[str]
+    function_ids: list[int] = Field(default_factory=list)
+    manual_functions: list[str] = Field(default_factory=list)
+    derived_functions: list[str] = Field(default_factory=list)
+    functions: list[str] = Field(default_factory=list)
     status: str
-    role_id: Optional[int] = Field(None, alias="role")
-    role_name: Optional[str] = None
     join_date: datetime
     notes: str
     history: str
@@ -64,4 +62,4 @@ class VolunteerResponse(BaseModel):
     assigned_groups: str = ""
     main_for_beneficiaries: Optional[list[str]] = None
 
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    model_config = ConfigDict(from_attributes=True)
