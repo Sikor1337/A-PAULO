@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Optional
 
 from fastapi import Depends, Header, HTTPException, status
@@ -88,4 +89,21 @@ def get_current_user(
         )
 
     return user
+
+
+def require_status(*allowed_statuses: str) -> Callable[[User], User]:
+    """Build a FastAPI dependency that allows only selected user statuses."""
+
+    def dependency(user: User = Depends(get_current_user)) -> User:
+        if user.status not in allowed_statuses:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        return user
+
+    return dependency
+
+
+require_admin = require_status("admin")
 

@@ -1,9 +1,22 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 
 interface SidebarProps {
-    groupsSlot?: React.ReactNode;
+    groupsSlot?: ReactNode;
+}
+
+interface SidebarItem {
+    name: string;
+    icon: string;
+    path: string;
+    adminOnly?: boolean;
+}
+
+interface SidebarSection {
+    title: string;
+    items: SidebarItem[];
 }
 
 const Sidebar = ({ groupsSlot }: SidebarProps) => {
@@ -12,7 +25,7 @@ const Sidebar = ({ groupsSlot }: SidebarProps) => {
     const { user, logout } = useAuthStore();
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
-    const sections = [
+    const sections: SidebarSection[] = [
         {
             title: 'ZARZĄDZANIE',
             items: [
@@ -33,6 +46,7 @@ const Sidebar = ({ groupsSlot }: SidebarProps) => {
         {
             title: 'ADMIN',
             items: [
+                { name: 'Ustawienia', icon: '⚙', path: '/settings', adminOnly: true },
                 { name: 'Wizyty', icon: '🏠', path: '/visits' },
                 { name: 'Komunikacja', icon: '💬', path: '/communication' },
                 { name: 'Fundusze', icon: '💰', path: '/funds' },
@@ -59,7 +73,9 @@ const Sidebar = ({ groupsSlot }: SidebarProps) => {
                             {section.title}
                         </h3>
                         <nav className="space-y-0.5">
-                            {section.items.map((item) => (
+                            {section.items
+                                .filter((item) => !item.adminOnly || user?.role === 'admin')
+                                .map((item) => (
                                 <div
                                     key={item.name}
                                     onClick={() => navigate(item.path)}

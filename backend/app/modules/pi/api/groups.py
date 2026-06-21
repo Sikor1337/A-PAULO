@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db
+from app.modules.core_data.models import User
 from app.modules.pi.schemas.groups import (
     BeneficiaryAssignmentCreateRequest,
     BeneficiaryAssignmentResponse,
@@ -15,6 +16,7 @@ from app.modules.pi.schemas.groups import (
     GroupUpdateRequest,
 )
 from app.modules.pi.services.groups import BeneficiaryAssignmentService, GroupService
+from app.modules.security.dependencies import get_current_user
 
 router = APIRouter(tags=["groups"])
 
@@ -29,6 +31,7 @@ def list_groups(
     limit: int = Query(100, ge=1, le=1000),
     name: Optional[str] = Query(None),
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """List all groups with optional filters."""
     service = GroupService(session)
@@ -40,6 +43,7 @@ def list_groups(
 def create_group(
     request: GroupCreateRequest,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Create new group."""
     service = GroupService(session)
@@ -51,6 +55,7 @@ def create_group(
 def get_group(
     group_id: int,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Get group by ID with beneficiaries and volunteers."""
     service = GroupService(session)
@@ -62,6 +67,7 @@ def update_group(
     group_id: int,
     request: GroupUpdateRequest,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Update group."""
     service = GroupService(session)
@@ -74,6 +80,7 @@ def update_group(
 def delete_group(
     group_id: int,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Delete group."""
     service = GroupService(session)
@@ -90,6 +97,7 @@ def list_assignments(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """List all beneficiary assignments."""
     service = BeneficiaryAssignmentService(session)
@@ -101,6 +109,7 @@ def list_assignments(
 def create_assignment(
     request: BeneficiaryAssignmentCreateRequest,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Create new beneficiary assignment."""
     service = BeneficiaryAssignmentService(session)
@@ -117,6 +126,7 @@ def create_assignment(
 def get_assignment(
     assignment_id: int,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Get assignment by ID."""
     service = BeneficiaryAssignmentService(session)
@@ -129,6 +139,7 @@ def update_assignment(
     assignment_id: int,
     request: BeneficiaryAssignmentUpdateRequest,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Update assignment."""
     service = BeneficiaryAssignmentService(session)
@@ -141,6 +152,7 @@ def update_assignment(
 def delete_assignment(
     assignment_id: int,
     session: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ):
     """Delete assignment."""
     service = BeneficiaryAssignmentService(session)

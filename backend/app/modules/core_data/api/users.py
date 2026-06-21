@@ -1,61 +1,85 @@
-"""Users API endpoints."""
-from fastapi import APIRouter, Depends, Header
+"""Admin users API endpoints."""
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db
+from app.modules.core_data.models import User
 from app.modules.core_data.schemas.users import (
-    UserRegisterRequest,
-    UserLoginRequest,
-    TokenResponse,
+    UserCreateRequest,
     UserResponse,
+    UserUpdateRequest,
 )
 from app.modules.core_data.services.users import UserService
+from app.modules.security.dependencies import require_admin
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.post("/register", response_model=UserResponse)
-def register(
-    request: UserRegisterRequest,
+@router.get("", response_model=list[UserResponse])
+def list_users(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    is_active: Optional[bool] = Query(None),
     session: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
 ):
-    """Register new user."""
+    """List users with optional filters."""
     service = UserService(session)
-    user = service.register_user(
-        username=request.username,
-        email=request.email,
-        password=request.password,
-        first_name=request.first_name,
-        last_name=request.last_name,
+    users, _ = service.list_users(
+        skip=skip,
+        limit=limit,
+        search=search,
+        status=status,
+        is_active=is_active,
     )
-    return user
+    return users
 
 
-@router.post("/token", response_model=TokenResponse)
-def login(
-    request: UserLoginRequest,
+@router.post("", response_model=UserResponse)
+def create_user(
+    request: UserCreateRequest,
     session: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
 ):
-    """Login user and get tokens."""
+    """Create new user."""
     service = UserService(session)
-    user = service.authenticate_user(request.username, request.password)
-    access_token = service.create_access_token(user.id)
-    # For now, refresh token is same as access token (can be extended)
-    refresh_token = access_token
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    return service.create_user(**request.model_dump())
 
 
-@router.get("/user", response_model=UserResponse)
-def get_current_user(
-    authorization: str = Header(None),
+@router.get("/{user_id}", response_model=UserResponse)
+def get_user(
+    user_id: int,
     session: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
 ):
-    """Get current authenticated user."""
-    if not authorization or not authorization.startswith("Bearer "):
-        from app.core.errors import AuthenticationError
-        raise AuthenticationError("Missing or invalid authorization header")
-
-    token = authorization.split(" ")[1]
+    """Get user by ID."""
     service = UserService(session)
-    user = service.get_current_user(token)
-    return user
+    return service.get_user_by_id(user_id)
+
+
+@router.patch("/{user_id}", response_model=UserResponse)
+def update_user(
+    user_id: int,
+    request: UserUpdateRequest,
+    session: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    """Update user."""
+    service = UserService(session)
+    return service.update_user(user_id, **request.model_dump(exclude_unset=True))
+
+
+@router.delete("/{user_id}")
+def delete_user(
+    user_id: int,
+    session: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """Delete user."""
+    service = UserService(session)
+    service.delete_user(user_id, current_user_id=admin.id)
+    return {"message": "User deleted successfully"}

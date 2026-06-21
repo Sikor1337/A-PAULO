@@ -61,7 +61,7 @@ class VolunteerResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     led_group: Optional[str] = None
-    assigned_groups: Optional[int] = None
+    assigned_groups: str = ""
     main_for_beneficiaries: Optional[list[str]] = None
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
