@@ -28,10 +28,9 @@ def upgrade() -> None:
     sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    schema='public'
+    sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_public_roles_name'), 'roles', ['name'], unique=True, schema='public')
+    op.create_index(op.f('ix_public_roles_name'), 'roles', ['name'], unique=True)
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('username', sa.String(length=150), nullable=False),
@@ -43,11 +42,10 @@ def upgrade() -> None:
     sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    schema='public'
+    sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_public_users_email'), 'users', ['email'], unique=True, schema='public')
-    op.create_index(op.f('ix_public_users_username'), 'users', ['username'], unique=True, schema='public')
+    op.create_index(op.f('ix_public_users_email'), 'users', ['email'], unique=True)
+    op.create_index(op.f('ix_public_users_username'), 'users', ['username'], unique=True)
     op.create_table('volunteers',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('full_name', sa.String(length=200), nullable=False),
@@ -61,23 +59,21 @@ def upgrade() -> None:
     sa.Column('history', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['role_id'], ['public.roles.id'], ondelete='SET NULL'),
-    sa.PrimaryKeyConstraint('id'),
-    schema='public'
+    sa.ForeignKeyConstraint(['role_id'], ['roles.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_public_volunteers_email'), 'volunteers', ['email'], unique=True, schema='public')
-    op.create_index(op.f('ix_public_volunteers_full_name'), 'volunteers', ['full_name'], unique=False, schema='public')
+    op.create_index(op.f('ix_public_volunteers_email'), 'volunteers', ['email'], unique=True)
+    op.create_index(op.f('ix_public_volunteers_full_name'), 'volunteers', ['full_name'], unique=False)
     op.create_table('groups',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
     sa.Column('leader_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['leader_id'], ['public.volunteers.id'], ondelete='SET NULL'),
-    sa.PrimaryKeyConstraint('id'),
-    schema='public'
+    sa.ForeignKeyConstraint(['leader_id'], ['volunteers.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_public_groups_name'), 'groups', ['name'], unique=False, schema='public')
+    op.create_index(op.f('ix_public_groups_name'), 'groups', ['name'], unique=False)
     op.create_table('beneficiaries',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('full_name', sa.String(length=200), nullable=False),
@@ -93,18 +89,17 @@ def upgrade() -> None:
     sa.Column('history', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['group_id'], ['public.groups.id'], ondelete='SET NULL'),
-    sa.PrimaryKeyConstraint('id'),
-    schema='public'
+    sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_public_beneficiaries_full_name'), 'beneficiaries', ['full_name'], unique=False, schema='public')
+    op.create_index(op.f('ix_public_beneficiaries_full_name'), 'beneficiaries', ['full_name'], unique=False)
     op.create_table('group_volunteer',
     sa.Column('group_id', sa.Integer(), nullable=False),
     sa.Column('volunteer_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['group_id'], ['public.groups.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['volunteer_id'], ['public.volunteers.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['volunteer_id'], ['volunteers.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('group_id', 'volunteer_id'),
-    schema='public'
+
     )
     op.create_table('beneficiary_assignments',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -113,11 +108,11 @@ def upgrade() -> None:
     sa.Column('is_main', sa.Boolean(), nullable=False),
     sa.Column('additional_info', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['beneficiary_id'], ['public.beneficiaries.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['volunteer_id'], ['public.volunteers.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['beneficiary_id'], ['beneficiaries.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['volunteer_id'], ['volunteers.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('beneficiary_id', 'volunteer_id', name='uq_beneficiary_volunteer'),
-    schema='public'
+
     )
     # ### end Alembic commands ###
 
@@ -125,18 +120,18 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_table('beneficiary_assignments', schema='public')
-    op.drop_table('group_volunteer', schema='public')
-    op.drop_index(op.f('ix_public_beneficiaries_full_name'), table_name='beneficiaries', schema='public')
-    op.drop_table('beneficiaries', schema='public')
-    op.drop_index(op.f('ix_public_groups_name'), table_name='groups', schema='public')
-    op.drop_table('groups', schema='public')
-    op.drop_index(op.f('ix_public_volunteers_full_name'), table_name='volunteers', schema='public')
-    op.drop_index(op.f('ix_public_volunteers_email'), table_name='volunteers', schema='public')
-    op.drop_table('volunteers', schema='public')
-    op.drop_index(op.f('ix_public_users_username'), table_name='users', schema='public')
-    op.drop_index(op.f('ix_public_users_email'), table_name='users', schema='public')
-    op.drop_table('users', schema='public')
-    op.drop_index(op.f('ix_public_roles_name'), table_name='roles', schema='public')
-    op.drop_table('roles', schema='public')
+    op.drop_table('beneficiary_assignments')
+    op.drop_table('group_volunteer')
+    op.drop_index(op.f('ix_public_beneficiaries_full_name'), table_name='beneficiaries')
+    op.drop_table('beneficiaries')
+    op.drop_index(op.f('ix_public_groups_name'), table_name='groups')
+    op.drop_table('groups')
+    op.drop_index(op.f('ix_public_volunteers_full_name'), table_name='volunteers')
+    op.drop_index(op.f('ix_public_volunteers_email'), table_name='volunteers')
+    op.drop_table('volunteers')
+    op.drop_index(op.f('ix_public_users_username'), table_name='users')
+    op.drop_index(op.f('ix_public_users_email'), table_name='users')
+    op.drop_table('users')
+    op.drop_index(op.f('ix_public_roles_name'), table_name='roles')
+    op.drop_table('roles')
     # ### end Alembic commands ###
