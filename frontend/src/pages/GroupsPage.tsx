@@ -120,10 +120,14 @@ const GroupsPage: React.FC = () => {
 
   const startNewGroup = () => {
     setPreviousGroupId(selectedGroupId);
+    setShowKartyBO(false);
+    setIsEditing(false);
     setSelectedGroupId(null);
   };
 
   const cancelNewGroup = () => {
+    setShowKartyBO(false);
+    setIsEditing(false);
     setSelectedGroupId(previousGroupId ?? groups?.[0]?.id ?? null);
     setPreviousGroupId(null);
   };
@@ -134,6 +138,7 @@ const GroupsPage: React.FC = () => {
       setFormLeader(groupDetail.leader || '');
       setBenRows(buildRowsFromDetail(groupDetail));
     }
+    setShowKartyBO(false);
     setIsEditing(true);
   };
 
@@ -145,6 +150,7 @@ const GroupsPage: React.FC = () => {
         onSuccess: () => {
           setPreviousGroupId(null);
           setIsEditing(false);
+          setShowKartyBO(false);
           setSelectedGroupId(groups?.find((g) => g.id !== selectedGroupId)?.id ?? null);
         },
       });
@@ -172,6 +178,7 @@ const GroupsPage: React.FC = () => {
         onSuccess: (saved) => {
           setPreviousGroupId(null);
           setIsEditing(false);
+          setShowKartyBO(false);
           if (saved?.id) setSelectedGroupId(saved.id);
         },
       },
@@ -210,6 +217,7 @@ const GroupsPage: React.FC = () => {
 
   const kartyKey = (bId: number, vId: number, month: string) => `${bId}-${vId}-${month}`;
   const showForm = isNewGroup || isEditing;
+  const showCardsView = showKartyBO && !showForm && !isNewGroup;
 
   const sidebarSlot = (
     <div className="relative">
@@ -282,17 +290,17 @@ const GroupsPage: React.FC = () => {
           )}
           {!isNewGroup && !isEditing && (
             <button
-              onClick={() => setShowKartyBO(!showKartyBO)}
+              onClick={() => setShowKartyBO((prev) => !prev)}
               className={`px-3 py-2 rounded-lg font-bold text-xs uppercase transition-all ${showKartyBO ? 'bg-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
             >
-              💳 Karty BO
+              {showKartyBO ? '↩ Widok grupy' : '💳 Karty BO'}
             </button>
           )}
         </div>
       </div>
 
       {/* ── VIEW MODE — read-only ── */}
-      {!showForm && !showKartyBO && groupDetail && (
+      {!showForm && !showCardsView && groupDetail && (
         <div className="flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-2 gap-6 mb-8">
             <div>
@@ -372,8 +380,12 @@ const GroupsPage: React.FC = () => {
       )}
 
       {/* ── KARTY BO — Excel monthly grid ── */}
-      {showKartyBO && !isNewGroup && (
+      {showCardsView && (
         <div className="flex-1 overflow-auto p-6">
+          <div className="mb-4">
+            <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Karty BO</p>
+            <h2 className="text-base font-bold text-gray-900">{groupDetail?.name ?? 'Grupa'}</h2>
+          </div>
           {boEligibleRows.length === 0 ? (
             <div className="text-center py-16 text-gray-300">
               <div className="text-5xl mb-4">💳</div>
@@ -680,7 +692,10 @@ const GroupsPage: React.FC = () => {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={isNewGroup ? cancelNewGroup : () => setIsEditing(false)}
+                onClick={isNewGroup ? cancelNewGroup : () => {
+                  setIsEditing(false);
+                  setShowKartyBO(false);
+                }}
                 className="text-gray-400 font-bold text-sm hover:text-gray-600 transition-colors"
               >
                 Anuluj

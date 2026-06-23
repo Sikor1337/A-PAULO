@@ -1,13 +1,13 @@
 export type VolunteerStatus = 'Aktywny' | 'Były';
 
-/** Admin-managed, CRUD-able label assignable to a volunteer (not tied to permissions). */
-export interface Role {
+export interface VolunteerFunction {
   id: number;
   name: string;
+  is_system: boolean;
+  is_active: boolean;
 }
 
-/** Writable payload for creating/updating a role. */
-export interface RoleInput {
+export interface VolunteerFunctionInput {
   name: string;
 }
 
@@ -18,8 +18,10 @@ export interface Volunteer {
   email: string;
   phone: string;
   social_link: string | null;
-  role: number | null;
-  role_name: string | null;
+  function_ids: number[];
+  manual_functions: string[];
+  derived_functions: string[];
+  functions: string[];
   status: VolunteerStatus;
   join_date: string | null;
   notes: string | null;
@@ -39,7 +41,7 @@ export interface VolunteerInput {
   email: string;
   phone: string;
   social_link?: string;
-  role?: number | null;
+  function_ids?: number[];
   status: VolunteerStatus;
   join_date: string;
   notes?: string;

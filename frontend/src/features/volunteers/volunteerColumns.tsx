@@ -1,4 +1,5 @@
 import type { Column } from '@/components/ui/DataTable';
+import GroupNameCell from '@/components/ui/GroupNameCell';
 import StatusBadge from '@/components/ui/StatusBadge';
 import type { Volunteer } from '@/types';
 
@@ -19,6 +20,24 @@ const splitGroups = (groups: unknown) =>
 
 const uniqueGroups = (v: Volunteer) =>
   Array.from(new Set([...splitGroups(v.assigned_groups), v.led_group].filter((group): group is string => Boolean(group))));
+
+const renderFunctionList = (functions: string[]) => {
+  if (functions.length === 0) return <span className="text-gray-400">—</span>;
+
+  return (
+    <div className="flex flex-col gap-1">
+      {functions.map((label) => (
+        <span
+          key={label}
+          className="bg-gray-100 text-gray-700 text-[11px] px-2 py-0.5 rounded font-semibold leading-snug"
+          title={label}
+        >
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+};
 
 export function buildVolunteerColumns({ onSelect, onEdit, onDelete }: Handlers): Column<Volunteer>[] {
   return [
@@ -53,54 +72,14 @@ export function buildVolunteerColumns({ onSelect, onEdit, onDelete }: Handlers):
       widthClass: 'w-[13%]',
       align: 'center',
       sortKey: 'assigned_groups',
-      render: (v) => {
-        const groups = uniqueGroups(v);
-        if (groups.length === 0) return <span className="text-gray-400">—</span>;
-
-        return (
-          <div className="flex flex-col items-center gap-1">
-            {groups.map((group) => (
-              <span key={group} className="text-gray-600 text-xs font-medium">
-                {group}
-              </span>
-            ))}
-          </div>
-        );
-      },
+      render: (v) => <GroupNameCell value={uniqueGroups(v)} align="center" />,
     },
     {
       id: 'functions',
-      header: 'Funkcja',
-      widthClass: 'w-[17%]',
-      render: (v) => {
-        const functions = [
-          ...(v.led_group ? [`Przewodnik: ${v.led_group}`] : []),
-          ...(v.main_for_beneficiaries ?? []).map((name) => `Lider podopiecznego: ${name}`),
-        ];
-        if (functions.length === 0) return <span className="text-gray-400">—</span>;
-
-        return (
-          <div className="flex flex-col gap-1">
-            {functions.map((label) => (
-              <span
-                key={label}
-                className="bg-gray-100 text-gray-700 text-[11px] px-2 py-0.5 rounded font-semibold leading-snug"
-                title={label}
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-        );
-      },
-    },
-    {
-      id: 'role_name',
-      header: 'Rola',
-      widthClass: 'w-[8%]',
-      sortKey: 'role_name',
-      cellClassName: 'text-gray-500',
-      render: (v) => v.role_name || '—',
+      header: 'Funkcje',
+      widthClass: 'w-[28%]',
+      sortKey: 'functions',
+      render: (v) => renderFunctionList(v.functions ?? []),
     },
     {
       id: 'status',

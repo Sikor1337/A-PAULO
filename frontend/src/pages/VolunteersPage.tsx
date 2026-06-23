@@ -26,7 +26,7 @@ const VolunteersPage: React.FC = () => {
   const { data: groups } = useGroupList();
 
   const { search, setSearch, toggleSort, sortIcon, rows } = useTableControls(data, {
-    searchFields: ['full_name', 'email', 'phone', 'status'],
+    searchFields: ['full_name', 'email', 'phone', 'functions', 'status'],
     initialSort: 'full_name',
     filterPredicate: (v) => {
       const assignedGroups = typeof v.assigned_groups === 'string' ? v.assigned_groups : '';
@@ -50,15 +50,7 @@ const VolunteersPage: React.FC = () => {
         { header: 'Email', value: (v) => v.email },
         { header: 'Telefon', value: (v) => v.phone },
         { header: 'Grupa', value: (v) => [v.assigned_groups, v.led_group].filter(Boolean).join(', ') },
-        {
-          header: 'Funkcja',
-          value: (v) =>
-            [
-              ...(v.led_group ? [`Przewodnik: ${v.led_group}`] : []),
-              ...(v.main_for_beneficiaries ?? []).map((name) => `Lider podopiecznego: ${name}`),
-            ].join(', '),
-        },
-        { header: 'Rola', value: (v) => v.role_name },
+        { header: 'Funkcje', value: (v) => v.functions?.join(', ') },
         { header: 'Status', value: (v) => v.status },
         { header: 'Data przystąpienia', value: (v) => v.join_date },
       ],

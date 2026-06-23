@@ -1,4 +1,5 @@
 import type { Column } from '@/components/ui/DataTable';
+import GroupNameCell from '@/components/ui/GroupNameCell';
 import StatusBadge from '@/components/ui/StatusBadge';
 import type { Beneficiary } from '@/types';
 
@@ -54,8 +55,7 @@ export function buildBeneficiaryColumns({ onSelect, onEdit, onDelete }: Handlers
       widthClass: 'w-[15%]',
       align: 'center',
       sortKey: 'group_name',
-      cellClassName: 'text-gray-400',
-      render: (b) => b.group_name || '—',
+      render: (b) => <GroupNameCell value={b.group_name} align="center" />,
     },
     {
       id: 'bo_enrolled',

@@ -1,6 +1,5 @@
-"""Core data models - User and Role."""
+"""Core data models."""
 
 from app.modules.core_data.models.user import User
-from app.modules.core_data.models.role import Role
 
-__all__ = ["User", "Role"]
+__all__ = ["User"]
