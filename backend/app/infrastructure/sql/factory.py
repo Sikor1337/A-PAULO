@@ -68,18 +68,22 @@ class SQLConnectionFactory:
         engine: Engine,
         autocommit: bool = False,
         autoflush: bool = False,
-    ) -> sessionmaker:
+        use_scoped_session: bool = True,
+    ) -> sessionmaker | scoped_session:
         """Create session factory bound to the given engine."""
-        return sessionmaker(
+        factory = sessionmaker(
             autocommit=autocommit,
             autoflush=autoflush,
             expire_on_commit=False,
             bind=engine,
         )
+        if use_scoped_session:
+            return scoped_session(factory)
+        return factory
 
     def get_session_dependency(
         self,
-        session_factory: sessionmaker[Session],
+        session_factory: sessionmaker[Session] | scoped_session[Session],
     ) -> Callable[[], Generator[Session, None, None]]:
         """Create FastAPI dependency function for database sessions."""
 
@@ -92,6 +96,8 @@ class SQLConnectionFactory:
                 raise
             finally:
                 session.close()
+                if hasattr(session_factory, "remove"):
+                    session_factory.remove()
 
         return session_generator
 
