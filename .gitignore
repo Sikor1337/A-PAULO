@@ -6,6 +6,7 @@ db.sqlite3
 
 # Frontend
 node_modules/
+frontend/.npm-cache/
 
 # IDE files
 .vscode/
