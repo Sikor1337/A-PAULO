@@ -16,7 +16,7 @@ const FormModal = ({ title, onClose, onSubmit, isPending, children, submitLabel 
     <h2 className="text-xl font-bold mb-6 text-gray-900">{title}</h2>
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       {children}
-      <div className="flex justify-end gap-3 pt-6">
+      <div className="flex flex-col-reverse gap-2 pt-6 sm:flex-row sm:justify-end sm:gap-3">
         <button type="button" onClick={onClose} className="px-4 py-2 text-gray-400 font-bold hover:text-gray-600">
           Anuluj
         </button>

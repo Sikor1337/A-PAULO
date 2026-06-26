@@ -14,9 +14,16 @@
     --border-color: #3d4458;
 }
 
+html,
+body,
+#root {
+    min-height: 100%;
+}
+
 body {
     background-color: var(--bg-dark);
     color: var(--text-primary);
+    overflow-x: hidden;
 }
 
 input,

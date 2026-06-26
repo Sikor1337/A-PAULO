@@ -81,8 +81,8 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
+    <div className="flex min-h-dvh items-center justify-center bg-gray-100 px-4 py-6">
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-md sm:p-8">
         <h1 className="text-2xl font-bold text-center mb-6 text-gray-900">A-PAULO</h1>
         <h2 className="text-xl text-center mb-6 text-gray-600">Logowanie</h2>
         
@@ -107,7 +107,7 @@ const LoginPage = () => {
                   message: 'Nieprawidłowy adres email',
                 },
               })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="min-h-10 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="twoj@email.pl"
               disabled={isLoading}
             />
@@ -130,7 +130,7 @@ const LoginPage = () => {
                   message: 'Hasło musi mieć minimum 6 znaków',
                 },
               })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="min-h-10 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="••••••••"
               disabled={isLoading}
             />
@@ -142,7 +142,7 @@ const LoginPage = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="min-h-10 w-full rounded-md bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
           >
             {isLoading ? 'Logowanie...' : 'Zaloguj się'}
           </button>

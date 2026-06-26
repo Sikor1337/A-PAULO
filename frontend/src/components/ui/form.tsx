@@ -2,7 +2,7 @@ import { forwardRef } from 'react';
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'react';
 
 const LABEL = 'block text-[10px] font-black uppercase text-gray-400 mb-1';
-const CONTROL = 'w-full border p-2 rounded-md outline-none focus:border-blue-500';
+const CONTROL = 'w-full min-h-10 border p-2 rounded-md outline-none focus:border-blue-500';
 const ERROR_BORDER = 'border-red-500 bg-red-50';
 
 function ErrorText({ message }: { message?: string }) {
@@ -70,7 +70,7 @@ TextArea.displayName = 'TextArea';
 type CheckboxProps = InputHTMLAttributes<HTMLInputElement> & { label: string };
 
 export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(({ label, className = '', ...rest }, ref) => (
-  <label className="flex items-center gap-2 cursor-pointer">
+  <label className="flex min-h-10 items-center gap-2 cursor-pointer">
     <input ref={ref} type="checkbox" className={`w-4 h-4 rounded ${className}`} {...rest} />
     <span className="text-sm font-medium text-gray-600">{label}</span>
   </label>

@@ -28,10 +28,10 @@ const DetailModal = ({
   footer,
 }: DetailModalProps) => (
   <Modal onClose={onClose}>
-    <div className="flex justify-between items-start mb-6">
+    <div className="mb-6 flex items-start justify-between gap-4">
       <div>
         {tag && <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${tag.className}`}>{tag.text}</p>}
-        <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+        <h2 className="break-words text-xl font-bold text-gray-900">{title}</h2>
       </div>
       <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">
         &times;
@@ -45,7 +45,7 @@ const DetailModal = ({
         </div>
       ))}
     </dl>
-    <div className="flex justify-end gap-3 pt-6 border-t mt-6">
+    <div className="mt-6 flex flex-col-reverse gap-2 border-t pt-6 sm:flex-row sm:justify-end sm:gap-3">
       {footer ?? (
         <button onClick={onClose} className="px-4 py-2 text-gray-400 font-bold">
           Zamknij

@@ -103,8 +103,8 @@ const ProfilePage = () => {
   });
 
   return (
-    <PageShell cardClassName="bg-white rounded-xl shadow-lg max-w-2xl mx-auto p-8">
-      <div className="flex items-center justify-between gap-4 mb-6 border-b pb-4">
+    <PageShell cardClassName="mx-auto max-w-2xl rounded-xl bg-white p-4 shadow-lg sm:p-8">
+      <div className="mb-6 flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="text-2xl">👤</span>
           <h1 className="text-xl font-bold text-gray-900 uppercase">Moje konto</h1>
@@ -118,7 +118,7 @@ const ProfilePage = () => {
               setIsEditing(true);
             }}
             disabled={isProfileLoading || !profile}
-            className="bg-indigo-600 text-white px-5 py-2 rounded-lg font-bold text-sm hover:bg-indigo-700 disabled:opacity-50"
+            className="min-h-10 rounded-lg bg-indigo-600 px-5 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             Edytuj
           </button>
@@ -131,7 +131,7 @@ const ProfilePage = () => {
       {errorMsg && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm font-medium">{errorMsg}</div>}
 
       {!isEditing ? (
-        <div className="grid grid-cols-2 gap-5 text-sm">
+        <div className="grid grid-cols-1 gap-5 text-sm sm:grid-cols-2">
           <div>
             <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Imię</p>
             <p className="text-gray-800 font-medium">{displayValue(profile?.first_name)}</p>
@@ -140,18 +140,18 @@ const ProfilePage = () => {
             <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Nazwisko</p>
             <p className="text-gray-800 font-medium">{displayValue(profile?.last_name)}</p>
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Email</p>
             <p className="text-gray-800 font-medium">{displayValue(profile?.email)}</p>
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Nazwa użytkownika</p>
             <p className="text-gray-800 font-medium">{displayValue(profile?.username)}</p>
           </div>
         </div>
       ) : (
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <TextInput label="Imię" {...register('first_name')} />
             <TextInput label="Nazwisko" {...register('last_name')} />
           </div>
@@ -166,7 +166,7 @@ const ProfilePage = () => {
           <div className="pt-4 border-t">
             <h2 className="text-sm font-bold text-gray-700 mb-3">Zmiana hasła</h2>
             <TextInput label="Obecne hasło" type="password" autoComplete="current-password" {...register('current_password')} />
-            <div className="grid grid-cols-2 gap-4 mt-4">
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <TextInput
                 label="Nowe hasło"
                 type="password"
@@ -186,7 +186,7 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end sm:gap-3">
             <button type="button" onClick={cancelEdit} className="px-5 py-2 text-gray-400 font-bold hover:text-gray-600">
               Anuluj
             </button>
