@@ -4,6 +4,8 @@ import DetailModal from '@/components/ui/DetailModal';
 import { useGroups, useGroupDetail } from '@/hooks/useGroups';
 import { useVolunteerList } from '@/hooks/useVolunteers';
 import { useBeneficiaryList } from '@/hooks/useBeneficiaries';
+import { useBOCardAttachmentActions, useBOCardAttachments } from '@/hooks/useAttachments';
+import { attachmentService, BO_CARD_ACCEPT, BO_CARD_MAX_SIZE_BYTES, BO_CARD_SUPPORTED_LABEL } from '@/services/attachmentService';
 import { volunteerDetailFields } from '@/features/volunteers/volunteerDetail';
 import { beneficiaryDetailFields } from '@/features/beneficiaries/beneficiaryDetail';
 import type {
@@ -13,6 +15,7 @@ import type {
   GroupBeneficiary,
   AssignmentVolunteer,
   AssignmentInput,
+  BOCardAttachment,
 } from '@/types';
 
 interface VolunteerEntry {
@@ -32,6 +35,7 @@ const MONTHS_PL = ['Sty', 'Lut', 'Mar', 'Kwi', 'Maj', 'Cze', 'Lip', 'Sie', 'Wrz'
 let _rowCounter = 0;
 const newRowId = () => `r${++_rowCounter}`;
 const emptyVolunteer = (): VolunteerEntry => ({ localId: newRowId(), volunteerId: '', isMain: false, additionalInfo: '' });
+const boCardKey = (beneficiaryId: number, volunteerId: number, period: string) => `${beneficiaryId}-${volunteerId}-${period}`;
 
 /** Builds the editable beneficiary/volunteer rows from a loaded group detail. */
 const buildRowsFromDetail = (detail: GroupDetail): BeneficiaryRow[] =>
@@ -45,6 +49,10 @@ const buildRowsFromDetail = (detail: GroupDetail): BeneficiaryRow[] =>
 
 const GROUPS_CARD =
   'flex min-h-[calc(100dvh-88px)] flex-col overflow-hidden rounded-xl bg-white shadow-lg lg:min-h-[calc(100dvh-48px)]';
+const formatAttachmentSize = (sizeBytes: number) => {
+  if (sizeBytes < 1024 * 1024) return `${Math.max(1, Math.round(sizeBytes / 1024))} KB`;
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const GroupsPage: React.FC = () => {
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
@@ -54,7 +62,6 @@ const GroupsPage: React.FC = () => {
 
   const [detailBeneficiary, setDetailBeneficiary] = useState<Beneficiary | null>(null);
   const [detailVolunteer, setDetailVolunteer] = useState<Volunteer | null>(null);
-  const [kartyBOStatus, setKartyBOStatus] = useState<Record<string, boolean>>({});
 
   const [benRows, setBenRows] = useState<BeneficiaryRow[]>([]);
   const [formName, setFormName] = useState('');
@@ -68,6 +75,8 @@ const GroupsPage: React.FC = () => {
   const { data: volunteers } = useVolunteerList();
   const { data: beneficiaries } = useBeneficiaryList();
   const { data: groupDetail } = useGroupDetail(selectedGroupId);
+  const { data: boCardAttachments = [], isFetching: isFetchingBOCards } = useBOCardAttachments(selectedGroupId, showKartyBO);
+  const { uploadBOCard, updateAttachment, deleteAttachment } = useBOCardAttachmentActions(selectedGroupId);
 
   const isNewGroup = selectedGroupId === null;
 
@@ -75,7 +84,7 @@ const GroupsPage: React.FC = () => {
     const now = new Date();
     return Array.from({ length: 6 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      return { key: `${d.getFullYear()}-${d.getMonth() + 1}`, label: `${MONTHS_PL[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` };
+      return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: `${MONTHS_PL[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` };
     });
   }, []);
 
@@ -85,6 +94,16 @@ const GroupsPage: React.FC = () => {
       .filter((b) => beneficiaries.find((fb) => fb.id === b.id)?.bo_enrolled === true)
       .flatMap((b) => b.volunteers.map((v) => ({ beneficiary: b, volunteer: v })));
   }, [groupDetail, beneficiaries]);
+
+  const boCardAttachmentsByCell = useMemo(() => {
+    const map = new Map<string, BOCardAttachment[]>();
+    boCardAttachments.forEach((attachment) => {
+      if (!attachment.beneficiary_id || !attachment.volunteer_id || !attachment.period) return;
+      const key = boCardKey(attachment.beneficiary_id, attachment.volunteer_id, attachment.period);
+      map.set(key, [...(map.get(key) ?? []), attachment]);
+    });
+    return map;
+  }, [boCardAttachments]);
 
   // Auto-select first group on initial load (the condition turns false once set)
   if (groups?.length && selectedGroupId === null && previousGroupId === null) {
@@ -216,9 +235,153 @@ const GroupsPage: React.FC = () => {
       }),
     );
 
-  const kartyKey = (bId: number, vId: number, month: string) => `${bId}-${vId}-${month}`;
   const showForm = isNewGroup || isEditing;
   const showCardsView = showKartyBO && !showForm && !isNewGroup;
+  const attachmentActionsDisabled = uploadBOCard.isPending || updateAttachment.isPending || deleteAttachment.isPending;
+
+  const handleBOCardSelected = (
+    files: FileList | null,
+    beneficiary: GroupBeneficiary,
+    volunteer: AssignmentVolunteer,
+    period: string,
+  ) => {
+    const file = files?.item(0);
+    if (!file || selectedGroupId === null) return;
+    if (file.size > BO_CARD_MAX_SIZE_BYTES) {
+      alert('Plik jest za duży. Maksymalny rozmiar to 10 MB.');
+      return;
+    }
+    uploadBOCard.mutate({
+      groupId: selectedGroupId,
+      beneficiaryId: beneficiary.id,
+      volunteerId: volunteer.id,
+      period,
+      file,
+    });
+  };
+
+  const handleViewAttachment = async (attachment: BOCardAttachment) => {
+    try {
+      await attachmentService.openContent(attachment);
+    } catch {
+      alert('Nie udało się otworzyć pliku.');
+    }
+  };
+
+  const handleRenameAttachment = (attachment: BOCardAttachment) => {
+    const nextName = prompt('Nazwa pliku', attachment.display_name)?.trim();
+    if (!nextName || nextName === attachment.display_name) return;
+    updateAttachment.mutate({ id: attachment.id, data: { display_name: nextName } });
+  };
+
+  const handleDeleteAttachment = (attachment: BOCardAttachment) => {
+    if (!confirm(`Usunąć plik „${attachment.display_name}”?`)) return;
+    deleteAttachment.mutate(attachment.id);
+  };
+
+  const renderBOCardCell = (
+    beneficiary: GroupBeneficiary,
+    volunteer: AssignmentVolunteer,
+    month: { key: string; label: string },
+  ) => {
+    const key = boCardKey(beneficiary.id, volunteer.id, month.key);
+    const attachments = boCardAttachmentsByCell.get(key) ?? [];
+    const fileInputId = `bo-file-${beneficiary.id}-${volunteer.id}-${month.key}`;
+    const cameraInputId = `bo-camera-${beneficiary.id}-${volunteer.id}-${month.key}`;
+
+    return (
+      <div
+        className={`flex min-h-[132px] flex-col gap-2 rounded-lg border px-2.5 py-2 text-left ${
+          attachments.length ? 'border-emerald-200 bg-emerald-50/60' : 'border-dashed border-gray-200 bg-gray-50/70'
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-black uppercase text-gray-400">{attachments.length ? `${attachments.length} plik` : 'Brak pliku'}</span>
+          {isFetchingBOCards && <span className="h-2 w-2 rounded-full bg-amber-400" title="Odświeżanie" />}
+        </div>
+
+        <div className="max-h-44 min-h-8 space-y-1.5 overflow-y-auto pr-1">
+          {attachments.map((attachment) => (
+            <div key={attachment.id} className="rounded-md border border-white/70 bg-white px-2 py-1.5 shadow-sm">
+              <p className="truncate text-xs font-bold text-gray-800" title={attachment.display_name}>
+                {attachment.display_name}
+              </p>
+              <p className="text-[10px] text-gray-400">{formatAttachmentSize(attachment.size_bytes)}</p>
+              <div className="mt-1 flex flex-wrap gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleViewAttachment(attachment)}
+                  className="rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600 hover:bg-indigo-100"
+                >
+                  Podgląd
+                </button>
+                <button
+                  type="button"
+                  disabled={attachmentActionsDisabled}
+                  onClick={() => handleRenameAttachment(attachment)}
+                  className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-600 hover:bg-gray-200 disabled:opacity-50"
+                >
+                  Zmień
+                </button>
+                <button
+                  type="button"
+                  disabled={attachmentActionsDisabled}
+                  onClick={() => handleDeleteAttachment(attachment)}
+                  className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-600 hover:bg-rose-100 disabled:opacity-50"
+                >
+                  Usuń
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-auto grid grid-cols-2 gap-1.5">
+          <input
+            id={fileInputId}
+            type="file"
+            accept={BO_CARD_ACCEPT}
+            disabled={uploadBOCard.isPending}
+            onChange={(e) => {
+              handleBOCardSelected(e.currentTarget.files, beneficiary, volunteer, month.key);
+              e.currentTarget.value = '';
+            }}
+            className="hidden"
+          />
+          <label
+            htmlFor={fileInputId}
+            className={`flex min-h-8 cursor-pointer items-center justify-center rounded-md px-2 text-[10px] font-black uppercase ${
+              uploadBOCard.isPending ? 'bg-gray-100 text-gray-300' : 'bg-amber-500 text-white hover:bg-amber-600'
+            }`}
+          >
+            Plik
+          </label>
+
+          <input
+            id={cameraInputId}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            disabled={uploadBOCard.isPending}
+            onChange={(e) => {
+              handleBOCardSelected(e.currentTarget.files, beneficiary, volunteer, month.key);
+              e.currentTarget.value = '';
+            }}
+            className="hidden"
+          />
+          <label
+            htmlFor={cameraInputId}
+            className={`flex min-h-8 cursor-pointer items-center justify-center rounded-md px-2 text-[10px] font-black uppercase ${
+              uploadBOCard.isPending ? 'bg-gray-100 text-gray-300' : 'bg-gray-900 text-white hover:bg-gray-800'
+            }`}
+          >
+            Aparat
+          </label>
+        </div>
+        <p className="text-[10px] leading-tight text-gray-400">{BO_CARD_SUPPORTED_LABEL}</p>
+      </div>
+    );
+  };
 
   const sidebarSlot = (
     <div className="relative">
@@ -456,37 +619,26 @@ const GroupsPage: React.FC = () => {
                         {v.full_name}
                       </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {months.map((m) => {
-                        const key = kartyKey(b.id, v.id, m.key);
-                        return (
-                          <label
-                            key={m.key}
-                            className="flex min-h-11 items-center justify-between rounded-md bg-gray-50 px-3 text-xs font-bold text-gray-600"
-                          >
-                            <span>{m.label}</span>
-                            <input
-                              type="checkbox"
-                              checked={kartyBOStatus[key] || false}
-                              onChange={() => setKartyBOStatus((prev) => ({ ...prev, [key]: !prev[key] }))}
-                              className="h-4 w-4 cursor-pointer rounded border-gray-300 accent-amber-500"
-                            />
-                          </label>
-                        );
-                      })}
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {months.map((m) => (
+                        <div key={m.key}>
+                          <p className="mb-1 text-[10px] font-black uppercase text-gray-400">{m.label}</p>
+                          {renderBOCardCell(b, v, m)}
+                        </div>
+                      ))}
                     </div>
                   </article>
                 ))}
               </div>
 
               <div className="hidden overflow-x-auto rounded-xl border border-gray-200 md:block">
-                <table className="text-sm border-collapse w-full min-w-[760px]">
+                <table className="text-sm border-collapse w-full min-w-[1320px]">
                 <thead>
                   <tr className="bg-[#1e2330] text-white text-[10px] uppercase tracking-widest">
                     <th className="px-4 py-3 text-left font-bold border-r border-white/10 w-44">Podopieczny</th>
                     <th className="px-4 py-3 text-left font-bold border-r border-white/10 w-44">Wolontariusz</th>
                     {months.map((m) => (
-                      <th key={m.key} className="px-3 py-3 text-center font-bold border-r border-white/10 last:border-0 w-20">{m.label}</th>
+                      <th key={m.key} className="px-3 py-3 text-center font-bold border-r border-white/10 last:border-0 w-40">{m.label}</th>
                     ))}
                   </tr>
                 </thead>
@@ -516,15 +668,9 @@ const GroupsPage: React.FC = () => {
                           </button>
                         </td>
                         {months.map((m) => {
-                          const key = kartyKey(b.id, v.id, m.key);
                           return (
-                            <td key={m.key} className="px-3 py-2.5 text-center border-r border-gray-100 last:border-0">
-                              <input
-                                type="checkbox"
-                                checked={kartyBOStatus[key] || false}
-                                onChange={() => setKartyBOStatus((prev) => ({ ...prev, [key]: !prev[key] }))}
-                                className="w-4 h-4 rounded border-gray-300 cursor-pointer accent-amber-500"
-                              />
+                            <td key={m.key} className="px-2 py-2 align-top border-r border-gray-100 last:border-0">
+                              {renderBOCardCell(b, v, m)}
                             </td>
                           );
                         })}

@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 120
     algorithm: str = "HS256"
 
+    # Attachments
+    attachment_storage_path: str = "storage/attachments"
+    attachment_max_size_bytes: int = 10 * 1024 * 1024
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

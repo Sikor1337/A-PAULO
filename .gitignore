@@ -3,6 +3,7 @@
 __pycache__/
 .env
 db.sqlite3
+backend/storage/
 
 # Frontend
 node_modules/

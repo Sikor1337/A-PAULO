@@ -8,6 +8,7 @@ from app.core.dependencies import _sql_engine
 from app.core.errors import register_error_handlers
 from app.infrastructure.sql.base import Base
 from app.infrastructure.sql import models_registry  # noqa: F401 - Register all models
+from app.modules.attachments.api import router as attachments_router
 from app.modules.core_data.api.users import router as users_router
 from app.modules.security.api import router as security_router
 from app.modules.pi.api.volunteers import router as volunteers_router
@@ -51,4 +52,5 @@ app.include_router(volunteers_router, prefix="/api/v1")
 app.include_router(functions_router, prefix="/api/v1")
 app.include_router(beneficiaries_router, prefix="/api/v1")
 app.include_router(groups_router, prefix="/api/v1")
+app.include_router(attachments_router, prefix="/api/v1")
 
