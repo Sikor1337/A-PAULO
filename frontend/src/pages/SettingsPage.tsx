@@ -126,7 +126,7 @@ const SettingsAdminPanel = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4 mb-6 border-b pb-4">
+      <div className="mb-6 flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900 uppercase">Ustawienia</h1>
           <p className="text-sm text-gray-500 mt-1">Użytkownicy aplikacji i ich uprawnienia.</p>
@@ -134,14 +134,14 @@ const SettingsAdminPanel = () => {
         <button
           type="button"
           onClick={() => setIsAdding(true)}
-          className="bg-[#10b981] text-white px-5 py-2 rounded-lg font-bold text-sm hover:opacity-90"
+          className="min-h-10 rounded-lg bg-[#10b981] px-5 py-2 text-sm font-bold text-white hover:opacity-90"
         >
           + Dodaj użytkownika
         </button>
       </div>
 
-      <div className="grid grid-cols-[220px_1fr] gap-6">
-        <aside className="border-r pr-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_1fr] lg:gap-6">
+        <aside className="border-b pb-3 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-4">
           <button
             type="button"
             className="w-full text-left px-3 py-2 rounded-md bg-[#eef2ff] text-indigo-700 text-sm font-bold"
@@ -150,19 +150,19 @@ const SettingsAdminPanel = () => {
           </button>
         </aside>
 
-        <section>
-          <div className="mb-4 flex gap-2 items-center">
+        <section className="min-w-0">
+          <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:items-center">
             <input
               type="text"
               placeholder="Szukaj po imieniu, nazwisku, emailu lub loginie..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 px-4 h-10 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 outline-none text-sm font-medium"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 text-sm font-medium outline-none focus:border-indigo-500 focus:bg-white xl:flex-1"
             />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as '' | UserStatus)}
-              className="h-10 px-3 border border-gray-200 rounded-lg bg-gray-50 focus:border-indigo-500 outline-none text-sm font-medium text-gray-600 min-w-[150px]"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-600 outline-none focus:border-indigo-500 xl:w-auto xl:min-w-[150px]"
             >
               <option value="">Wszystkie role</option>
               <option value="admin">Administratorzy</option>
@@ -171,7 +171,7 @@ const SettingsAdminPanel = () => {
             <button
               type="button"
               onClick={exportUsers}
-              className="h-10 px-4 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-50"
+              className="h-10 rounded-lg border border-gray-200 px-4 text-sm font-bold text-gray-600 hover:bg-gray-50 sm:col-span-2 xl:col-span-1"
             >
               Eksport CSV
             </button>

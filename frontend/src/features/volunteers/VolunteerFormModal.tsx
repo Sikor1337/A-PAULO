@@ -72,7 +72,7 @@ const VolunteerFormModal = ({ volunteer, onClose, onSave, isPending }: Props) =>
     >
       <TextInput label="Imię i Nazwisko" error={errors.full_name?.message} {...register('full_name', rules.required('Imię i nazwisko jest wymagane'))} />
       <TextInput label="Email" autoComplete="off" error={errors.email?.message} {...register('email', rules.requiredEmail())} />
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <TextInput
           label="Telefon"
           autoComplete="off"
@@ -122,7 +122,7 @@ const VolunteerFormModal = ({ volunteer, onClose, onSave, isPending }: Props) =>
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               value={newFunctionName}
               onChange={(e) => setNewFunctionName(e.target.value)}

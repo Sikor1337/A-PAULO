@@ -33,14 +33,14 @@ const Modal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
       onClick={closeOnBackdrop ? onClose : undefined}
       role="presentation"
     >
       <div
         role="dialog"
         aria-modal="true"
-        className={`bg-white rounded-xl p-8 w-full ${maxWidth} shadow-2xl max-h-[90vh] overflow-y-auto`}
+        className={`max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-xl sm:p-8 ${maxWidth}`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

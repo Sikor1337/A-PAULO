@@ -43,7 +43,8 @@ const buildRowsFromDetail = (detail: GroupDetail): BeneficiaryRow[] =>
       : [emptyVolunteer()],
   }));
 
-const GROUPS_CARD = 'bg-white rounded-xl shadow-lg min-h-[calc(100vh-48px)] flex flex-col';
+const GROUPS_CARD =
+  'flex min-h-[calc(100dvh-88px)] flex-col overflow-hidden rounded-xl bg-white shadow-lg lg:min-h-[calc(100dvh-48px)]';
 
 const GroupsPage: React.FC = () => {
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
@@ -255,15 +256,15 @@ const GroupsPage: React.FC = () => {
   return (
     <PageShell sidebarSlot={sidebarSlot} cardClassName={GROUPS_CARD}>
       {/* ── HEADER ── */}
-      <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
-        <div className="flex items-center gap-3">
+      <div className="flex shrink-0 flex-col gap-3 border-b px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex flex-wrap items-center gap-3">
           <span className="text-2xl">👥</span>
           <h1 className="text-xl font-bold text-gray-900 uppercase">Grupy</h1>
           {isNewGroup ? (
             <button
               type="button"
               onClick={cancelNewGroup}
-              className="px-3 py-1.5 rounded-lg font-bold text-xs border border-gray-200 text-gray-400 hover:bg-gray-50 transition-all"
+              className="min-h-9 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-bold text-gray-400 transition-all hover:bg-gray-50"
             >
               Anuluj
             </button>
@@ -271,19 +272,19 @@ const GroupsPage: React.FC = () => {
             <button
               type="button"
               onClick={startNewGroup}
-              className="bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-emerald-600 transition-all"
+              className="min-h-9 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-white transition-all hover:bg-emerald-600"
             >
               + Nowa
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
           {!isNewGroup && !isEditing && (
             <button
               type="button"
               onClick={enterEditMode}
-              className="px-3 py-2 rounded-lg font-bold text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all"
+              className="min-h-9 rounded-lg bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-600 transition-all hover:bg-indigo-100"
             >
               ✏️ Edytuj
             </button>
@@ -291,7 +292,7 @@ const GroupsPage: React.FC = () => {
           {!isNewGroup && !isEditing && (
             <button
               onClick={() => setShowKartyBO((prev) => !prev)}
-              className={`px-3 py-2 rounded-lg font-bold text-xs uppercase transition-all ${showKartyBO ? 'bg-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              className={`min-h-9 rounded-lg px-3 py-2 text-xs font-bold uppercase transition-all ${showKartyBO ? 'bg-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
             >
               {showKartyBO ? '↩ Widok grupy' : '💳 Karty BO'}
             </button>
@@ -301,8 +302,8 @@ const GroupsPage: React.FC = () => {
 
       {/* ── VIEW MODE — read-only ── */}
       {!showForm && !showCardsView && groupDetail && (
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-2 gap-6 mb-8">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:mb-8 sm:grid-cols-2 sm:gap-6">
             <div>
               <p className="text-[10px] font-black uppercase text-gray-400 mb-1.5 ml-1">Nazwa Grupy</p>
               <p className="h-10 flex items-center px-4 border border-gray-100 rounded-lg bg-gray-50 font-bold text-sm text-gray-800">{groupDetail.name}</p>
@@ -313,8 +314,49 @@ const GroupsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-gray-200">
-            <table className="w-full text-sm border-collapse">
+          <div className="space-y-3 md:hidden">
+            {(groupDetail.beneficiaries || []).length === 0 ? (
+              <div className="rounded-lg border border-gray-200 p-8 text-center text-sm italic text-gray-300">
+                Brak podopiecznych w tej grupie
+              </div>
+            ) : (
+              (groupDetail.beneficiaries || []).map((b: GroupBeneficiary) => (
+                <article key={b.id} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setDetailBeneficiary(beneficiaries?.find((fb) => fb.id === b.id) ?? null)}
+                    className="mb-3 text-left text-sm font-bold text-indigo-700 hover:underline"
+                  >
+                    {b.full_name}
+                  </button>
+
+                  {b.volunteers.length === 0 ? (
+                    <p className="rounded-md bg-gray-50 px-3 py-2 text-sm italic text-gray-400">Brak wolontariusza</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {b.volunteers.map((v: AssignmentVolunteer) => (
+                        <div key={v.id} className="rounded-md bg-gray-50 p-3">
+                          <button
+                            type="button"
+                            onClick={() => setDetailVolunteer(volunteers?.find((fv) => fv.id === v.id) ?? null)}
+                            className={`text-left text-sm font-bold hover:underline ${v.is_main ? 'text-amber-700' : 'text-gray-700'}`}
+                          >
+                            {v.is_main ? 'Główny: ' : ''}
+                            {v.full_name}
+                          </button>
+                          <p className="mt-2 text-xs font-black uppercase text-gray-400">Bieżące informacje</p>
+                          <p className="text-sm text-gray-600">{v.additional_info || '-'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </article>
+              ))
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-xl border border-gray-200 md:block">
+            <table className="w-full min-w-[720px] text-sm border-collapse">
               <thead>
                 <tr className="bg-[#1e2330] text-white text-[10px] uppercase tracking-widest">
                   <th className="px-4 py-3 text-left font-bold border-r border-white/10 w-[30%]">Podopieczny</th>
@@ -381,7 +423,7 @@ const GroupsPage: React.FC = () => {
 
       {/* ── KARTY BO — Excel monthly grid ── */}
       {showCardsView && (
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-4 sm:p-6">
           <div className="mb-4">
             <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Karty BO</p>
             <h2 className="text-base font-bold text-gray-900">{groupDetail?.name ?? 'Grupa'}</h2>
@@ -393,8 +435,52 @@ const GroupsPage: React.FC = () => {
               <p className="text-sm mt-2">Przypisz podopiecznych z aktywnym BO do tej grupy.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-gray-200">
-              <table className="text-sm border-collapse w-full">
+            <>
+              <div className="space-y-3 md:hidden">
+                {boEligibleRows.map(({ beneficiary: b, volunteer: v }) => (
+                  <article key={`${b.id}-${v.id}`} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                    <div className="mb-3">
+                      <button
+                        type="button"
+                        onClick={() => setDetailBeneficiary(beneficiaries?.find((fb) => fb.id === b.id) ?? null)}
+                        className="text-left text-sm font-bold text-indigo-700 hover:underline"
+                      >
+                        {b.full_name}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDetailVolunteer(volunteers?.find((fv) => fv.id === v.id) ?? null)}
+                        className={`mt-1 block text-left text-sm font-bold hover:underline ${v.is_main ? 'text-amber-700' : 'text-gray-700'}`}
+                      >
+                        {v.is_main ? 'Główny: ' : ''}
+                        {v.full_name}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {months.map((m) => {
+                        const key = kartyKey(b.id, v.id, m.key);
+                        return (
+                          <label
+                            key={m.key}
+                            className="flex min-h-11 items-center justify-between rounded-md bg-gray-50 px-3 text-xs font-bold text-gray-600"
+                          >
+                            <span>{m.label}</span>
+                            <input
+                              type="checkbox"
+                              checked={kartyBOStatus[key] || false}
+                              onChange={() => setKartyBOStatus((prev) => ({ ...prev, [key]: !prev[key] }))}
+                              className="h-4 w-4 cursor-pointer rounded border-gray-300 accent-amber-500"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto rounded-xl border border-gray-200 md:block">
+                <table className="text-sm border-collapse w-full min-w-[760px]">
                 <thead>
                   <tr className="bg-[#1e2330] text-white text-[10px] uppercase tracking-widest">
                     <th className="px-4 py-3 text-left font-bold border-r border-white/10 w-44">Podopieczny</th>
@@ -446,18 +532,19 @@ const GroupsPage: React.FC = () => {
                     );
                   })}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}
 
       {/* ── EDIT / CREATE FORM ── */}
       {showForm && (
-        <form onSubmit={handleFormSubmit} className="flex flex-col flex-1">
-          <div className="flex-1 overflow-y-auto p-6">
+        <form onSubmit={handleFormSubmit} className="flex flex-1 flex-col">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {/* Name + Leader */}
-            <div className="grid grid-cols-2 gap-6 mb-8">
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:mb-8 sm:grid-cols-2 sm:gap-6">
               <div>
                 <label className="block text-[10px] font-black uppercase text-gray-400 mb-1.5 ml-1">Nazwa Grupy</label>
                 <input
@@ -486,8 +573,110 @@ const GroupsPage: React.FC = () => {
             </div>
 
             {/* Excel table */}
-            <div className="overflow-hidden rounded-xl border border-gray-200">
-              <table className="w-full text-sm border-collapse">
+            <div className="space-y-3 md:hidden">
+              {benRows.length === 0 ? (
+                <div className="rounded-lg border border-gray-200 p-6 text-center text-sm italic text-gray-300">
+                  Kliknij "+ Dodaj podopiecznego" aby dodać podopiecznych do grupy
+                </div>
+              ) : (
+                benRows.map((benRow) => {
+                  const vols = benRow.volunteers;
+                  const ben = beneficiaries?.find((b) => b.id === benRow.beneficiaryId);
+
+                  return (
+                    <article key={benRow.localId} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                      <div className="mb-3 flex items-start gap-3">
+                        {ben ? (
+                          <button
+                            type="button"
+                            onClick={() => setDetailBeneficiary(ben)}
+                            className="min-w-0 flex-1 text-left text-sm font-bold leading-tight text-indigo-700 hover:underline"
+                          >
+                            {ben.full_name}
+                          </button>
+                        ) : (
+                          <span className="min-w-0 flex-1 text-sm italic text-gray-300">— wybierz —</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeBenRow(benRow.localId)}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-xl font-bold leading-none text-gray-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                          title="Usuń podopiecznego"
+                        >
+                          &times;
+                        </button>
+                      </div>
+
+                      <div className="space-y-3">
+                        {vols.map((vol) => (
+                          <div key={vol.localId} className="rounded-md bg-gray-50 p-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => toggleMain(benRow.localId, vol.localId)}
+                                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded text-xs transition-all ${vol.isMain ? 'text-amber-500' : 'text-gray-300 hover:text-gray-400'}`}
+                              >
+                                {vol.isMain ? '*' : '+'}
+                              </button>
+                              <select
+                                value={vol.volunteerId}
+                                onChange={(e) => updateVolunteer(benRow.localId, vol.localId, { volunteerId: Number(e.target.value) || '', additionalInfo: '' })}
+                                className={`min-h-10 min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2 text-sm font-bold outline-none focus:border-indigo-300 ${vol.isMain ? 'text-amber-700' : 'text-gray-700'}`}
+                              >
+                                <option value="">— wybierz —</option>
+                                {volunteers
+                                  ?.filter((v) => v.id === vol.volunteerId || !vols.some((ve) => ve.localId !== vol.localId && ve.volunteerId === v.id))
+                                  .map((v) => (
+                                    <option key={v.id} value={v.id}>
+                                      {v.full_name}
+                                    </option>
+                                  ))}
+                              </select>
+                              {vol.volunteerId !== '' && (
+                                <button
+                                  type="button"
+                                  title="Szczegóły wolontariusza"
+                                  onClick={() => setDetailVolunteer(volunteers?.find((fv) => fv.id === vol.volunteerId) ?? null)}
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-bold text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-500"
+                                >
+                                  i
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => removeVolunteer(benRow.localId, vol.localId)}
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-xl font-bold leading-none text-gray-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                                title="Usuń wolontariusza"
+                              >
+                                &times;
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Bieżące informacje..."
+                              value={vol.additionalInfo}
+                              onChange={(e) => updateVolunteer(benRow.localId, vol.localId, { additionalInfo: e.target.value })}
+                              className="mt-2 min-h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none placeholder:text-gray-300 focus:border-indigo-300"
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => addVolunteer(benRow.localId)}
+                        className="mt-3 min-h-9 rounded-lg px-2 text-xs font-bold text-indigo-500 transition-all hover:bg-indigo-50 hover:text-indigo-700"
+                      >
+                        + wolontariusz
+                      </button>
+                    </article>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="hidden overflow-x-auto rounded-xl border border-gray-200 md:block">
+              <table className="w-full min-w-[820px] text-sm border-collapse">
                 <thead>
                   <tr className="bg-[#1e2330] text-white text-[10px] uppercase tracking-widest">
                     <th className="px-4 py-3 text-left font-bold border-r border-white/10 w-[28%]">Podopieczny</th>
@@ -624,7 +813,7 @@ const GroupsPage: React.FC = () => {
                   setShowBeneficiaryPicker((prev) => !prev);
                   setBeneficiaryPickerSearch('');
                 }}
-                className="text-xs font-bold text-indigo-500 hover:text-indigo-700 px-2 py-1 hover:bg-indigo-50 rounded-lg transition-all"
+                className="min-h-9 rounded-lg px-2 py-1 text-xs font-bold text-indigo-500 transition-all hover:bg-indigo-50 hover:text-indigo-700"
               >
                 + Dodaj podopiecznego
               </button>
@@ -639,7 +828,7 @@ const GroupsPage: React.FC = () => {
                       b.full_name.toLowerCase().includes(beneficiaryPickerSearch.toLowerCase()),
                   );
                   return (
-                    <div className="absolute left-0 bottom-full mb-1 w-64 bg-white rounded-xl shadow-xl border border-gray-200 z-30 overflow-hidden">
+                    <div className="absolute bottom-full left-0 right-0 z-30 mb-1 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl sm:right-auto sm:w-64">
                       <div className="p-2 border-b border-gray-100">
                         <input
                           autoFocus
@@ -676,34 +865,34 @@ const GroupsPage: React.FC = () => {
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t flex items-center justify-between shrink-0">
+          <div className="flex shrink-0 flex-col gap-3 border-t px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div>
               {!isNewGroup && (
                 <button
                   type="button"
                   onClick={handleDeleteGroup}
                   disabled={deleteGroup.isPending}
-                  className="px-4 py-2 rounded-lg font-bold text-sm text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50"
+                  className="min-h-10 rounded-lg px-4 py-2 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50"
                 >
                   🗑️ Usuń Grupę
                 </button>
               )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:gap-3">
               <button
                 type="button"
                 onClick={isNewGroup ? cancelNewGroup : () => {
                   setIsEditing(false);
                   setShowKartyBO(false);
                 }}
-                className="text-gray-400 font-bold text-sm hover:text-gray-600 transition-colors"
+                className="min-h-10 px-3 text-sm font-bold text-gray-400 transition-colors hover:text-gray-600"
               >
                 Anuluj
               </button>
               <button
                 type="submit"
                 disabled={saveGroup.isPending}
-                className="bg-indigo-600 text-white px-10 py-3 rounded-xl font-bold text-sm uppercase hover:bg-indigo-700 shadow-lg shadow-indigo-100 disabled:opacity-60"
+                className="min-h-11 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-bold uppercase text-white shadow-lg shadow-indigo-100 hover:bg-indigo-700 disabled:opacity-60 sm:px-10"
               >
                 {saveGroup.isPending ? 'Zapisywanie...' : isNewGroup ? 'Utwórz Grupę' : 'Zapisz Konfigurację'}
               </button>

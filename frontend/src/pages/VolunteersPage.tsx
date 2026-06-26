@@ -60,40 +60,40 @@ const VolunteersPage: React.FC = () => {
 
   return (
     <PageShell>
-      <div className="flex items-center justify-between mb-6 border-b pb-4">
+      <div className="mb-6 flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🙋</span>
           <h1 className="text-xl font-bold text-gray-900 uppercase">Wolontariusze</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex">
           <button
             type="button"
             onClick={exportVolunteers}
-            className="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-50 transition-all"
+            className="min-h-10 rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold text-gray-600 transition-all hover:bg-gray-50"
           >
             Eksport CSV
           </button>
           <button
             onClick={() => setIsAdding(true)}
-            className="bg-[#10b981] text-white px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2"
+            className="flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#10b981] px-6 py-2 text-sm font-bold text-white transition-all hover:opacity-90"
           >
             + Dodaj
           </button>
         </div>
       </div>
 
-      <div className="mb-4 flex gap-2 items-center">
+      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:items-center">
         <input
           type="text"
           placeholder="Szukaj po nazwisku, emailu, telefonie..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 px-4 h-10 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 outline-none text-sm font-medium"
+          className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 text-sm font-medium outline-none focus:border-indigo-500 focus:bg-white lg:flex-1"
         />
         <select
           value={filterGroup}
           onChange={(e) => setFilterGroup(e.target.value)}
-          className="h-10 px-3 border border-gray-200 rounded-lg bg-gray-50 focus:border-indigo-500 outline-none text-sm font-medium text-gray-600 min-w-[150px]"
+          className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-600 outline-none focus:border-indigo-500 lg:w-auto lg:min-w-[150px]"
         >
           <option value="">Wszystkie grupy</option>
           {groups?.map((g) => (
@@ -105,7 +105,7 @@ const VolunteersPage: React.FC = () => {
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as '' | VolunteerStatus)}
-          className="h-10 px-3 border border-gray-200 rounded-lg bg-gray-50 focus:border-indigo-500 outline-none text-sm font-medium text-gray-600 min-w-[130px]"
+          className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-600 outline-none focus:border-indigo-500 lg:w-auto lg:min-w-[130px]"
         >
           <option value="">Wszystkie statusy</option>
           <option value="Aktywny">Aktywny</option>
