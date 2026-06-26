@@ -1,15 +1,96 @@
 """Attachment API endpoints."""
 
+from typing import Literal
+
 from fastapi import APIRouter, Body, Depends, Query, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from app.modules.attachments.dependencies import get_attachment_service
-from app.modules.attachments.schemas import AttachmentResponse, AttachmentUpdateRequest
+from app.modules.attachments.schemas import (
+    AttachmentResponse,
+    AttachmentUpdateRequest,
+    BOCardAttachmentListResponse,
+)
 from app.modules.attachments.services import AttachmentService
 from app.modules.core_data.models import User
 from app.modules.security.dependencies import get_current_user
 
 router = APIRouter(prefix="/attachments", tags=["attachments"])
+
+
+@router.get("/bo-cards/all", response_model=BOCardAttachmentListResponse)
+def list_all_bo_card_attachments(
+    group_id: int | None = Query(None),
+    beneficiary_id: int | None = Query(None),
+    volunteer_id: int | None = Query(None),
+    period_from: str | None = Query(None),
+    period_to: str | None = Query(None),
+    search: str | None = Query(None),
+    has_comment: bool | None = Query(None),
+    sort_by: Literal[
+        "created_at",
+        "updated_at",
+        "period",
+        "display_name",
+        "group_name",
+        "beneficiary_name",
+        "volunteer_name",
+        "size_bytes",
+    ] = Query("created_at"),
+    sort_direction: Literal["asc", "desc"] = Query("desc"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    service: AttachmentService = Depends(get_attachment_service),
+    _user: User = Depends(get_current_user),
+):
+    """List all BO-card metadata without file contents."""
+    items, total = service.list_bo_cards_overview(
+        group_id=group_id,
+        beneficiary_id=beneficiary_id,
+        volunteer_id=volunteer_id,
+        period_from=period_from,
+        period_to=period_to,
+        search=search,
+        has_comment=has_comment,
+        sort_by=sort_by,
+        sort_direction=sort_direction,
+        skip=skip,
+        limit=limit,
+    )
+    return {"items": items, "total": total, "skip": skip, "limit": limit}
+
+
+@router.get("/bo-cards/all/download")
+def download_all_bo_card_attachments(
+    group_id: int | None = Query(None),
+    beneficiary_id: int | None = Query(None),
+    volunteer_id: int | None = Query(None),
+    period_from: str | None = Query(None),
+    period_to: str | None = Query(None),
+    search: str | None = Query(None),
+    has_comment: bool | None = Query(None),
+    service: AttachmentService = Depends(get_attachment_service),
+    _user: User = Depends(get_current_user),
+):
+    """Download a ZIP archive with all BO cards matching filters."""
+    archive, included_count = service.build_bo_cards_archive(
+        group_id=group_id,
+        beneficiary_id=beneficiary_id,
+        volunteer_id=volunteer_id,
+        period_from=period_from,
+        period_to=period_to,
+        search=search,
+        has_comment=has_comment,
+    )
+    filename = service.archive_filename()
+    return StreamingResponse(
+        iter([archive]),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-BO-Cards-Included": str(included_count),
+        },
+    )
 
 
 @router.get("/bo-cards", response_model=list[AttachmentResponse])

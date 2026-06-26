@@ -37,3 +37,19 @@ class AttachmentResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class BOCardAttachmentOverview(AttachmentResponse):
+    """BO-card metadata enriched for the cross-group management panel."""
+
+    group_name: str | None
+    beneficiary_name: str | None
+    volunteer_name: str | None
+
+
+class BOCardAttachmentListResponse(BaseModel):
+    """Paginated BO-card overview response."""
+
+    items: list[BOCardAttachmentOverview]
+    total: int
+    skip: int
+    limit: int

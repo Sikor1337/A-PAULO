@@ -2,7 +2,16 @@ export type { Paginated, WithId } from './api';
 export type { AdminUser, AdminUserInput, UserStatus } from './user';
 export type { Volunteer, VolunteerStatus, VolunteerInput, VolunteerFunction, VolunteerFunctionInput } from './volunteer';
 export type { Beneficiary, BeneficiaryStatus, BeneficiaryInput } from './beneficiary';
-export type { BOCardAttachment, BOCardUploadInput, AttachmentUpdateInput } from './attachment';
+export type {
+  AttachmentUpdateInput,
+  BOCardAttachment,
+  BOCardOverviewAttachment,
+  BOCardOverviewFilters,
+  BOCardOverviewResponse,
+  BOCardSortKey,
+  BOCardUploadInput,
+  SortDirection,
+} from './attachment';
 export type {
   GroupListItem,
   GroupDetail,

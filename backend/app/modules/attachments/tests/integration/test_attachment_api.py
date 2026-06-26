@@ -1,5 +1,7 @@
 from collections.abc import Generator
 from datetime import datetime
+from io import BytesIO
+from zipfile import ZipFile
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -93,12 +95,35 @@ def test_bo_card_attachment_api_flow(
         assert list_response.status_code == 200
         assert [item["id"] for item in list_response.json()] == [uploaded["id"]]
 
+        overview_response = client.get(
+            "/api/v1/attachments/bo-cards/all",
+            params={"search": "Jan", "limit": 10},
+        )
+        assert overview_response.status_code == 200
+        overview = overview_response.json()
+        assert overview["total"] == 1
+        assert overview["items"][0]["id"] == uploaded["id"]
+        assert overview["items"][0]["group_name"] == "Grupa BO"
+        assert overview["items"][0]["beneficiary_name"] == "Jan BO"
+        assert overview["items"][0]["volunteer_name"] == "Anna Wolontariusz"
+
         patch_response = client.patch(
             f"/api/v1/attachments/{uploaded['id']}",
-            json={"display_name": "Karta czerwiec.pdf"},
+            json={
+                "display_name": "Karta czerwiec.pdf",
+                "description": "Sprawdzone przez koordynatora",
+            },
         )
         assert patch_response.status_code == 200
         assert patch_response.json()["display_name"] == "Karta czerwiec.pdf"
+        assert patch_response.json()["description"] == "Sprawdzone przez koordynatora"
+
+        commented_response = client.get(
+            "/api/v1/attachments/bo-cards/all",
+            params={"has_comment": True},
+        )
+        assert commented_response.status_code == 200
+        assert commented_response.json()["total"] == 1
 
         content_response = client.get(
             f"/api/v1/attachments/{uploaded['id']}/content",
@@ -106,6 +131,18 @@ def test_bo_card_attachment_api_flow(
         assert content_response.status_code == 200
         assert content_response.content == b"%PDF-1.4"
         assert content_response.headers["content-type"] == "application/pdf"
+
+        archive_response = client.get(
+            "/api/v1/attachments/bo-cards/all/download",
+            params={"search": "Jan"},
+        )
+        assert archive_response.status_code == 200
+        assert archive_response.headers["x-bo-cards-included"] == "1"
+        with ZipFile(BytesIO(archive_response.content)) as archive:
+            names = archive.namelist()
+            assert len(names) == 1
+            assert names[0].endswith("Karta czerwiec.pdf")
+            assert archive.read(names[0]) == b"%PDF-1.4"
 
         delete_response = client.delete(f"/api/v1/attachments/{uploaded['id']}")
         assert delete_response.status_code == 200
