@@ -7,27 +7,24 @@ from urllib.parse import unquote
 
 from sqlalchemy.orm import Session
 
+from app.core.constants import (
+    ATTACHMENT_ALLOWED_CONTENT_TYPES,
+    ATTACHMENT_ALLOWED_EXTENSIONS,
+    ATTACHMENT_FALLBACK_CONTENT_TYPES,
+    ATTACHMENT_SUPPORTED_FILES_MESSAGE,
+    BO_CARD_CONTEXT,
+)
 from app.core.errors import NotFoundError, ValidationException
 from app.modules.attachments.models import Attachment
 from app.modules.attachments.repositories import AttachmentRepository
 from app.modules.attachments.storage import AttachmentStorage
 from app.modules.core_data.models import User
-from app.modules.pi.models.beneficiary import Beneficiary
-from app.modules.pi.models.group import BeneficiaryAssignment, Group
-from app.modules.pi.models.volunteer import Volunteer
-
-
-ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
-ALLOWED_CONTENT_TYPES = {
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/heic",
-    "image/heif",
-}
-FALLBACK_CONTENT_TYPES = {"", "application/octet-stream"}
-SUPPORTED_FILES_MESSAGE = "Supported files: PDF, JPG, PNG, WEBP, HEIC, HEIF"
+from app.modules.pi.repositories import (
+    BeneficiaryAssignmentRepository,
+    BeneficiaryRepository,
+    GroupRepository,
+    VolunteerRepository,
+)
 
 
 class AttachmentService:
@@ -43,6 +40,10 @@ class AttachmentService:
         self.storage = storage
         self.max_size_bytes = max_size_bytes
         self.repo = AttachmentRepository(session)
+        self.group_repo = GroupRepository(session)
+        self.beneficiary_repo = BeneficiaryRepository(session)
+        self.volunteer_repo = VolunteerRepository(session)
+        self.assignment_repo = BeneficiaryAssignmentRepository(session)
 
     def list_bo_cards(
         self,
@@ -85,10 +86,10 @@ class AttachmentService:
         self._validate_file(original_filename, normalized_content_type, content)
         self._validate_bo_card_scope(group_id, beneficiary_id, volunteer_id)
 
-        stored = self.storage.save(content, original_filename, "bo_card")
+        stored = self.storage.save(content, original_filename, BO_CARD_CONTEXT)
         try:
             attachment = self.repo.create(
-                context="bo_card",
+                context=BO_CARD_CONTEXT,
                 group_id=group_id,
                 beneficiary_id=beneficiary_id,
                 volunteer_id=volunteer_id,
@@ -175,38 +176,26 @@ class AttachmentService:
         beneficiary_id: int,
         volunteer_id: int,
     ) -> None:
-        group = self.session.query(Group).filter(Group.id == group_id).first()
+        group = self.group_repo.get_by_id(group_id)
         if not group:
             raise NotFoundError(f"Group with ID {group_id} not found")
 
-        beneficiary = (
-            self.session.query(Beneficiary)
-            .filter(Beneficiary.id == beneficiary_id)
-            .first()
-        )
+        beneficiary = self.beneficiary_repo.get_by_id(beneficiary_id)
         if not beneficiary:
             raise NotFoundError(f"Beneficiary with ID {beneficiary_id} not found")
         if beneficiary.group_id != group_id:
             raise ValidationException("Beneficiary does not belong to the group")
 
-        volunteer = (
-            self.session.query(Volunteer).filter(Volunteer.id == volunteer_id).first()
-        )
+        volunteer = self.volunteer_repo.get_by_id(volunteer_id)
         if not volunteer:
             raise NotFoundError(f"Volunteer with ID {volunteer_id} not found")
 
-        assignment = (
-            self.session.query(BeneficiaryAssignment)
-            .filter(
-                BeneficiaryAssignment.beneficiary_id == beneficiary_id,
-                BeneficiaryAssignment.volunteer_id == volunteer_id,
-            )
-            .first()
+        assignment = self.assignment_repo.get_by_beneficiary_volunteer(
+            beneficiary_id,
+            volunteer_id,
         )
         if not assignment:
-            raise ValidationException(
-                "Volunteer is not assigned to this beneficiary"
-            )
+            raise ValidationException("Volunteer is not assigned to this beneficiary")
 
     def _validate_file(
         self,
@@ -220,13 +209,13 @@ class AttachmentService:
             raise ValidationException("Attachment file is too large")
 
         extension = Path(filename).suffix.lower()
-        if extension not in ALLOWED_EXTENSIONS:
-            raise ValidationException(SUPPORTED_FILES_MESSAGE)
+        if extension not in ATTACHMENT_ALLOWED_EXTENSIONS:
+            raise ValidationException(ATTACHMENT_SUPPORTED_FILES_MESSAGE)
         if (
-            content_type not in ALLOWED_CONTENT_TYPES
-            and content_type not in FALLBACK_CONTENT_TYPES
+            content_type not in ATTACHMENT_ALLOWED_CONTENT_TYPES
+            and content_type not in ATTACHMENT_FALLBACK_CONTENT_TYPES
         ):
-            raise ValidationException(SUPPORTED_FILES_MESSAGE)
+            raise ValidationException(ATTACHMENT_SUPPORTED_FILES_MESSAGE)
 
     @staticmethod
     def _normalize_content_type(content_type: str) -> str:

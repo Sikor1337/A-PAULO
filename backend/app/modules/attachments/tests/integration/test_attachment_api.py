@@ -70,17 +70,15 @@ def test_bo_card_attachment_api_flow(
     with TestClient(app) as client:
         upload_response = client.post(
             "/api/v1/attachments/bo-cards",
-            params={
+            data={
                 "group_id": group["id"],
                 "beneficiary_id": beneficiary.id,
                 "volunteer_id": volunteer.id,
                 "period": "2026-06",
-                "filename": "karta.pdf",
             },
-            content=b"%PDF-1.4",
-            headers={"Content-Type": "application/pdf"},
+            files={"content": ("karta.pdf", b"%PDF-1.4", "application/pdf")},
         )
-        assert upload_response.status_code == 200
+        assert upload_response.status_code == 201, upload_response.text
         uploaded = upload_response.json()
         assert uploaded["display_name"] == "karta.pdf"
         assert uploaded["created_by_username"] == "admin"
@@ -116,5 +114,23 @@ def test_bo_card_attachment_api_flow(
         )
         assert empty_list_response.status_code == 200
         assert empty_list_response.json() == []
+
+        invalid_query_response = client.get(
+            "/api/v1/attachments/bo-cards",
+            params={"group_id": 0},
+        )
+        assert invalid_query_response.status_code == 422
+
+        invalid_upload_response = client.post(
+            "/api/v1/attachments/bo-cards",
+            data={
+                "group_id": group["id"],
+                "beneficiary_id": beneficiary.id,
+                "volunteer_id": volunteer.id,
+                "period": "06-2026",
+            },
+            files={"content": ("karta.txt", b"text", "text/plain")},
+        )
+        assert invalid_upload_response.status_code == 422
 
     app.dependency_overrides.clear()

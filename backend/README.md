@@ -197,6 +197,8 @@ Moduł `app/modules/attachments` obsługuje metadane i pliki załączników.
 
 - Endpointy: `/api/v1/attachments`.
 - Upload Kart BO: `POST /api/v1/attachments/bo-cards`.
+- Upload wykorzystuje `multipart/form-data`: pole `content` zawiera plik, a pola
+  `group_id`, `beneficiary_id`, `volunteer_id` i `period` zawierają metadane.
 - Lista metadanych: `GET /api/v1/attachments/bo-cards?group_id=...`.
 - Podgląd/treść pliku: `GET /api/v1/attachments/{attachment_id}/content`.
 - Edycja nazwy/opisu: `PATCH /api/v1/attachments/{attachment_id}`.

@@ -13,11 +13,7 @@ class AttachmentRepository:
 
     def get_by_id(self, attachment_id: int) -> Attachment | None:
         """Get attachment by ID."""
-        return (
-            self.session.query(Attachment)
-            .filter(Attachment.id == attachment_id)
-            .first()
-        )
+        return self.session.get(Attachment, attachment_id)
 
     def list_bo_cards(
         self,
@@ -64,4 +60,3 @@ class AttachmentRepository:
     def delete(self, attachment: Attachment) -> None:
         """Delete attachment metadata."""
         self.session.delete(attachment)
-

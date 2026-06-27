@@ -1,2 +1,1 @@
 """Attachment unit tests."""
-

@@ -67,4 +67,3 @@ class Attachment(Base):
 
     def __repr__(self) -> str:
         return f"<Attachment {self.id} {self.display_name}>"
-

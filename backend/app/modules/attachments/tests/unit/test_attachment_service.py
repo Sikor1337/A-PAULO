@@ -89,3 +89,27 @@ def test_create_bo_card_saves_file_and_metadata(
     assert payload["updated_by_username"] == "admin"
     service.session.commit.assert_called_once()
 
+
+def test_scope_validation_uses_domain_repositories() -> None:
+    service = build_service(MagicMock(), FakeStorage())
+    service.group_repo = MagicMock()
+    service.beneficiary_repo = MagicMock()
+    service.volunteer_repo = MagicMock()
+    service.assignment_repo = MagicMock()
+    service.group_repo.get_by_id.return_value = SimpleNamespace(id=1)
+    service.beneficiary_repo.get_by_id.return_value = SimpleNamespace(
+        id=2,
+        group_id=1,
+    )
+    service.volunteer_repo.get_by_id.return_value = SimpleNamespace(id=3)
+    service.assignment_repo.get_by_beneficiary_volunteer.return_value = SimpleNamespace(
+        id=4
+    )
+
+    service._validate_bo_card_scope(1, 2, 3)
+
+    service.group_repo.get_by_id.assert_called_once_with(1)
+    service.beneficiary_repo.get_by_id.assert_called_once_with(2)
+    service.volunteer_repo.get_by_id.assert_called_once_with(3)
+    service.assignment_repo.get_by_beneficiary_volunteer.assert_called_once_with(2, 3)
+    service.session.query.assert_not_called()

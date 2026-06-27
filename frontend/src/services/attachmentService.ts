@@ -14,18 +14,14 @@ export const attachmentService = {
   },
 
   uploadBOCard: async ({ groupId, beneficiaryId, volunteerId, period, file }: BOCardUploadInput): Promise<BOCardAttachment> => {
-    const response = await apiClient.post<BOCardAttachment>('v1/attachments/bo-cards', file, {
-      params: {
-        group_id: groupId,
-        beneficiary_id: beneficiaryId,
-        volunteer_id: volunteerId,
-        period,
-        filename: file.name,
-      },
-      headers: {
-        'Content-Type': file.type || 'application/octet-stream',
-      },
-    });
+    const form = new FormData();
+    form.append('content', file);
+    form.append('group_id', String(groupId));
+    form.append('beneficiary_id', String(beneficiaryId));
+    form.append('volunteer_id', String(volunteerId));
+    form.append('period', period);
+
+    const response = await apiClient.post<BOCardAttachment>('v1/attachments/bo-cards', form);
     return response.data;
   },
 
