@@ -20,28 +20,36 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.create_table(
-        "functions",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("name", sa.String(length=100), nullable=False),
-        sa.Column("is_system", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
-        schema="public",
-    )
-    op.create_index(op.f("ix_public_functions_name"), "functions", ["name"], unique=True, schema="public")
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS public.functions (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            is_system BOOLEAN NOT NULL DEFAULT false,
+            is_active BOOLEAN NOT NULL DEFAULT true,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+        )
+    """)
 
-    op.create_table(
-        "volunteer_function",
-        sa.Column("volunteer_id", sa.Integer(), nullable=False),
-        sa.Column("function_id", sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(["function_id"], ["public.functions.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["volunteer_id"], ["public.volunteers.id"], ondelete="CASCADE"),
-        sa.PrimaryKeyConstraint("volunteer_id", "function_id"),
-        schema="public",
-    )
+    op.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS ix_public_functions_name
+        ON public.functions (name)
+    """)
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS public.volunteer_function (
+            volunteer_id INTEGER NOT NULL,
+            function_id INTEGER NOT NULL,
+            PRIMARY KEY (volunteer_id, function_id),
+            CONSTRAINT volunteer_function_volunteer_id_fkey
+                FOREIGN KEY (volunteer_id)
+                REFERENCES public.volunteers(id)
+                ON DELETE CASCADE,
+            CONSTRAINT volunteer_function_function_id_fkey
+                FOREIGN KEY (function_id)
+                REFERENCES public.functions(id)
+                ON DELETE CASCADE
+        )
+    """)
 
     op.execute(
         """
