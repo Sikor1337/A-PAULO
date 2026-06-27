@@ -26,6 +26,12 @@ class AttachmentStorage(Protocol):
     def delete(self, storage_key: str) -> None:
         """Delete bytes for the given storage key."""
 
+    def read(self, storage_key: str) -> bytes:
+        """Read bytes for backup or integrity operations."""
+
+    def restore(self, storage_key: str, content: bytes) -> None:
+        """Restore bytes under an existing opaque storage key."""
+
     def get_path(self, storage_key: str) -> Path:
         """Return a local path for backends that can serve files directly."""
 
@@ -52,6 +58,14 @@ class LocalAttachmentStorage:
         path = self._resolve_key(storage_key)
         if path.exists():
             path.unlink()
+
+    def read(self, storage_key: str) -> bytes:
+        return self.get_path(storage_key).read_bytes()
+
+    def restore(self, storage_key: str, content: bytes) -> None:
+        path = self._resolve_key(storage_key)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
 
     def get_path(self, storage_key: str) -> Path:
         path = self._resolve_key(storage_key)

@@ -5,6 +5,7 @@ Revises: pap64_functions_catalog
 Create Date: 2026-06-26 00:00:01.000000+00:00
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -40,11 +41,27 @@ def upgrade() -> None:
         sa.Column("created_by_username", sa.String(length=150), nullable=True),
         sa.Column("updated_by_id", sa.Integer(), nullable=True),
         sa.Column("updated_by_username", sa.String(length=150), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.ForeignKeyConstraint(["beneficiary_id"], ["public.beneficiaries.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["group_id"], ["public.groups.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["volunteer_id"], ["public.volunteers.id"], ondelete="CASCADE"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(
+            ["beneficiary_id"], ["public.beneficiaries.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["group_id"], ["public.groups.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["volunteer_id"], ["public.volunteers.id"], ondelete="SET NULL"
+        ),
         sa.PrimaryKeyConstraint("id"),
         schema="public",
     )
@@ -55,21 +72,79 @@ def upgrade() -> None:
         unique=False,
         schema="public",
     )
-    op.create_index(op.f("ix_public_attachments_beneficiary_id"), "attachments", ["beneficiary_id"], unique=False, schema="public")
-    op.create_index(op.f("ix_public_attachments_context"), "attachments", ["context"], unique=False, schema="public")
-    op.create_index(op.f("ix_public_attachments_group_id"), "attachments", ["group_id"], unique=False, schema="public")
-    op.create_index(op.f("ix_public_attachments_period"), "attachments", ["period"], unique=False, schema="public")
-    op.create_index(op.f("ix_public_attachments_storage_key"), "attachments", ["storage_key"], unique=True, schema="public")
-    op.create_index(op.f("ix_public_attachments_volunteer_id"), "attachments", ["volunteer_id"], unique=False, schema="public")
+    op.create_index(
+        op.f("ix_public_attachments_beneficiary_id"),
+        "attachments",
+        ["beneficiary_id"],
+        unique=False,
+        schema="public",
+    )
+    op.create_index(
+        op.f("ix_public_attachments_context"),
+        "attachments",
+        ["context"],
+        unique=False,
+        schema="public",
+    )
+    op.create_index(
+        op.f("ix_public_attachments_group_id"),
+        "attachments",
+        ["group_id"],
+        unique=False,
+        schema="public",
+    )
+    op.create_index(
+        op.f("ix_public_attachments_period"),
+        "attachments",
+        ["period"],
+        unique=False,
+        schema="public",
+    )
+    op.create_index(
+        op.f("ix_public_attachments_storage_key"),
+        "attachments",
+        ["storage_key"],
+        unique=True,
+        schema="public",
+    )
+    op.create_index(
+        op.f("ix_public_attachments_volunteer_id"),
+        "attachments",
+        ["volunteer_id"],
+        unique=False,
+        schema="public",
+    )
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_index(op.f("ix_public_attachments_volunteer_id"), table_name="attachments", schema="public")
-    op.drop_index(op.f("ix_public_attachments_storage_key"), table_name="attachments", schema="public")
-    op.drop_index(op.f("ix_public_attachments_period"), table_name="attachments", schema="public")
-    op.drop_index(op.f("ix_public_attachments_group_id"), table_name="attachments", schema="public")
-    op.drop_index(op.f("ix_public_attachments_context"), table_name="attachments", schema="public")
-    op.drop_index(op.f("ix_public_attachments_beneficiary_id"), table_name="attachments", schema="public")
-    op.drop_index("ix_attachments_bo_card_lookup", table_name="attachments", schema="public")
+    op.drop_index(
+        op.f("ix_public_attachments_volunteer_id"),
+        table_name="attachments",
+        schema="public",
+    )
+    op.drop_index(
+        op.f("ix_public_attachments_storage_key"),
+        table_name="attachments",
+        schema="public",
+    )
+    op.drop_index(
+        op.f("ix_public_attachments_period"), table_name="attachments", schema="public"
+    )
+    op.drop_index(
+        op.f("ix_public_attachments_group_id"),
+        table_name="attachments",
+        schema="public",
+    )
+    op.drop_index(
+        op.f("ix_public_attachments_context"), table_name="attachments", schema="public"
+    )
+    op.drop_index(
+        op.f("ix_public_attachments_beneficiary_id"),
+        table_name="attachments",
+        schema="public",
+    )
+    op.drop_index(
+        "ix_attachments_bo_card_lookup", table_name="attachments", schema="public"
+    )
     op.drop_table("attachments", schema="public")

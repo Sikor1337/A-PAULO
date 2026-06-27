@@ -1,6 +1,7 @@
 """Attachment services."""
 
 import hashlib
+import logging
 import re
 from pathlib import Path
 from urllib.parse import unquote
@@ -25,6 +26,8 @@ from app.modules.pi.repositories import (
     GroupRepository,
     VolunteerRepository,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class AttachmentService:
@@ -115,7 +118,13 @@ class AttachmentService:
             return attachment
         except Exception:
             self.session.rollback()
-            self.storage.delete(stored.storage_key)
+            try:
+                self.storage.delete(stored.storage_key)
+            except Exception:
+                logger.exception(
+                    "Failed to clean up attachment after metadata creation error: %s",
+                    stored.storage_key,
+                )
             raise
 
     def get_attachment_by_id(self, attachment_id: int) -> Attachment:
@@ -159,15 +168,32 @@ class AttachmentService:
             raise
 
     def delete_attachment(self, attachment_id: int) -> None:
-        """Delete metadata and its stored file."""
+        """Delete metadata and file, restoring the file if the DB commit fails."""
+        attachment = self.get_attachment_by_id(attachment_id)
+        storage_key = attachment.storage_key
+        backup: bytes | None
         try:
-            attachment = self.get_attachment_by_id(attachment_id)
-            storage_key = attachment.storage_key
+            backup = self.storage.read(storage_key)
+        except NotFoundError:
+            backup = None
+
+        if backup is not None:
+            self.storage.delete(storage_key)
+
+        try:
             self.repo.delete(attachment)
             self.session.commit()
-            self.storage.delete(storage_key)
         except Exception:
             self.session.rollback()
+            if backup is not None:
+                try:
+                    self.storage.restore(storage_key, backup)
+                except Exception:
+                    logger.exception(
+                        "Failed to restore attachment after metadata "
+                        "deletion error: %s",
+                        storage_key,
+                    )
             raise
 
     def _validate_bo_card_scope(
