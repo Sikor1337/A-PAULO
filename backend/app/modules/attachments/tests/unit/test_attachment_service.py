@@ -1,9 +1,10 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
+from zipfile import ZipFile
 
 import pytest
 
-from app.core.errors import ValidationException
+from app.core.errors import NotFoundError, ValidationException
 from app.modules.attachments.services.attachments import AttachmentService
 from app.modules.attachments.storage import StoredFile
 
@@ -12,13 +13,25 @@ class FakeStorage:
     def __init__(self) -> None:
         self.saved: list[tuple[bytes, str, str]] = []
         self.deleted: list[str] = []
+        self.files: dict[str, bytes] = {}
 
     def save(self, content: bytes, filename: str, context: str) -> StoredFile:
         self.saved.append((content, filename, context))
+        self.files["fake/key.pdf"] = content
         return StoredFile(storage_backend="fake", storage_key="fake/key.pdf")
 
     def delete(self, storage_key: str) -> None:
         self.deleted.append(storage_key)
+        self.files.pop(storage_key, None)
+
+    def read(self, storage_key: str) -> bytes:
+        try:
+            return self.files[storage_key]
+        except KeyError as exc:
+            raise NotFoundError("Attachment file not found") from exc
+
+    def restore(self, storage_key: str, content: bytes) -> None:
+        self.files[storage_key] = content
 
     def get_path(self, storage_key: str):
         raise NotImplementedError
@@ -113,3 +126,79 @@ def test_scope_validation_uses_domain_repositories() -> None:
     service.volunteer_repo.get_by_id.assert_called_once_with(3)
     service.assignment_repo.get_by_beneficiary_volunteer.assert_called_once_with(2, 3)
     service.session.query.assert_not_called()
+
+
+def test_delete_attachment_removes_file_before_committing_metadata() -> None:
+    repo = MagicMock()
+    storage = FakeStorage()
+    storage.files["fake/key.pdf"] = b"pdf"
+    repo.get_by_id.return_value = SimpleNamespace(storage_key="fake/key.pdf")
+    service = build_service(repo, storage)
+
+    service.delete_attachment(1)
+
+    assert storage.deleted == ["fake/key.pdf"]
+    assert storage.files == {}
+    repo.delete.assert_called_once_with(repo.get_by_id.return_value)
+    service.session.commit.assert_called_once()
+
+
+def test_delete_attachment_restores_file_when_commit_fails() -> None:
+    repo = MagicMock()
+    storage = FakeStorage()
+    storage.files["fake/key.pdf"] = b"pdf"
+    repo.get_by_id.return_value = SimpleNamespace(storage_key="fake/key.pdf")
+    service = build_service(repo, storage)
+    service.session.commit.side_effect = RuntimeError("database unavailable")
+
+    with pytest.raises(RuntimeError, match="database unavailable"):
+        service.delete_attachment(1)
+
+    assert storage.files["fake/key.pdf"] == b"pdf"
+    service.session.rollback.assert_called_once()
+
+
+def test_delete_attachment_removes_metadata_when_file_is_already_missing() -> None:
+    repo = MagicMock()
+    storage = FakeStorage()
+    repo.get_by_id.return_value = SimpleNamespace(storage_key="missing.pdf")
+    service = build_service(repo, storage)
+
+    service.delete_attachment(1)
+
+    repo.delete.assert_called_once_with(repo.get_by_id.return_value)
+    service.session.commit.assert_called_once()
+
+
+def test_archive_skips_missing_files_and_returns_seeked_stream(tmp_path) -> None:
+    existing_path = tmp_path / "existing.pdf"
+    existing_path.write_bytes(b"pdf")
+    missing = SimpleNamespace(storage_key="missing.pdf", size_bytes=3)
+    existing = SimpleNamespace(
+        storage_key="existing.pdf",
+        size_bytes=3,
+        period="2026-06",
+        display_name="Karta.pdf",
+        original_filename="Karta.pdf",
+    )
+    storage = MagicMock()
+    storage.get_path.side_effect = [
+        NotFoundError("Attachment file not found"),
+        existing_path,
+    ]
+    service = build_service(MagicMock(), storage)
+
+    archive_file, included_count = service._create_bo_cards_archive(
+        [
+            (missing, "Grupa", "Jan", "Anna"),
+            (existing, "Grupa", "Jan", "Anna"),
+        ]
+    )
+    try:
+        assert included_count == 1
+        assert archive_file.tell() == 0
+        with ZipFile(archive_file) as archive:
+            assert len(archive.namelist()) == 1
+            assert archive.read(archive.namelist()[0]) == b"pdf"
+    finally:
+        archive_file.close()

@@ -160,6 +160,18 @@ def test_bo_card_attachment_api_flow(
             assert names[0].endswith("Karta czerwiec.pdf")
             assert archive.read(names[0]) == b"%PDF-1.4"
 
+        GroupService(db_session).delete_group(group["id"])
+        db_session.expire_all()
+        retained_response = client.get(f"/api/v1/attachments/{uploaded['id']}")
+        assert retained_response.status_code == 200
+        assert retained_response.json()["group_id"] is None
+
+        retained_content_response = client.get(
+            f"/api/v1/attachments/{uploaded['id']}/content",
+        )
+        assert retained_content_response.status_code == 200
+        assert retained_content_response.content == b"%PDF-1.4"
+
         delete_response = client.delete(f"/api/v1/attachments/{uploaded['id']}")
         assert delete_response.status_code == 200
 

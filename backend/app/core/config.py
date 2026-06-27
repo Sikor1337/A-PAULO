@@ -2,8 +2,6 @@ from functools import lru_cache
 
 from pydantic_settings import BaseSettings
 
-from app.core.constants import ATTACHMENT_MAX_SIZE_BYTES
-
 
 class Settings(BaseSettings):
     # Database - required, must be set in .env
@@ -18,7 +16,6 @@ class Settings(BaseSettings):
 
     # Attachments
     attachment_storage_path: str = "storage/attachments"
-    attachment_max_size_bytes: int = ATTACHMENT_MAX_SIZE_BYTES
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

@@ -1,5 +1,7 @@
 """Attachment repositories."""
 
+from collections.abc import Iterable
+
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
@@ -71,8 +73,8 @@ class AttachmentRepository:
         period_to: str | None = None,
         search: str | None = None,
         has_comment: bool | None = None,
-    ) -> list[BOCardOverviewRow]:
-        """List all filtered BO-card rows for archive generation."""
+    ) -> Iterable[BOCardOverviewRow]:
+        """Stream filtered BO-card rows for archive generation."""
         query = self._bo_cards_overview_query()
         query = self._apply_bo_card_filters(
             query,
@@ -90,7 +92,7 @@ class AttachmentRepository:
             func.lower(Group.name).asc(),
             func.lower(Beneficiary.full_name).asc(),
             Attachment.id.desc(),
-        ).all()
+        ).yield_per(100)
 
     def create(self, **kwargs) -> Attachment:
         """Create attachment metadata."""

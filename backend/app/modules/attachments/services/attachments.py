@@ -1,11 +1,13 @@
 """Attachment services."""
 
 import hashlib
+import logging
 import re
+from collections.abc import Iterable
 from datetime import datetime
-from io import BytesIO
 from pathlib import Path
-from typing import cast
+from tempfile import SpooledTemporaryFile
+from typing import BinaryIO, cast
 from urllib.parse import unquote
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -16,6 +18,9 @@ from app.core.constants import (
     ATTACHMENT_ALLOWED_EXTENSIONS,
     ATTACHMENT_FALLBACK_CONTENT_TYPES,
     ATTACHMENT_SUPPORTED_FILES_MESSAGE,
+    BO_CARD_ARCHIVE_MAX_FILES,
+    BO_CARD_ARCHIVE_MAX_UNCOMPRESSED_BYTES,
+    BO_CARD_ARCHIVE_MEMORY_THRESHOLD_BYTES,
     BO_CARD_CONTEXT,
     BO_CARD_SORT_KEYS,
     BOCardSortKey,
@@ -35,6 +40,8 @@ from app.modules.pi.repositories import (
     GroupRepository,
     VolunteerRepository,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class AttachmentService:
@@ -106,8 +113,8 @@ class AttachmentService:
         period_to: str | None = None,
         search: str | None = None,
         has_comment: bool | None = None,
-    ) -> tuple[bytes, int]:
-        """Build a ZIP archive containing all BO cards matching filters."""
+    ) -> tuple[BinaryIO, int]:
+        """Build a bounded, disk-spooled ZIP archive for matching BO cards."""
         normalized_period = self._normalize_period(period) if period else None
         normalized_from, normalized_to = self._normalize_period_range(
             period_from,
@@ -127,29 +134,54 @@ class AttachmentService:
 
     def _create_bo_cards_archive(
         self,
-        rows: list[BOCardOverviewRow],
-    ) -> tuple[bytes, int]:
-        """Write repository rows to a ZIP archive and count included files."""
-        buffer = BytesIO()
+        rows: Iterable[BOCardOverviewRow],
+    ) -> tuple[BinaryIO, int]:
+        """Write rows to a bounded spooled ZIP and count included files."""
+        archive_file: BinaryIO = SpooledTemporaryFile(  # noqa: SIM115
+            max_size=BO_CARD_ARCHIVE_MEMORY_THRESHOLD_BYTES,
+            mode="w+b",
+        )
         used_names: set[str] = set()
         included_count = 0
-        with ZipFile(buffer, "w", ZIP_DEFLATED) as archive:
-            for row in rows:
-                attachment, group_name, beneficiary_name, volunteer_name = row
-                path = self.storage.get_path(attachment.storage_key)
-                if not path.exists():
-                    continue
-                archive_name = self._build_archive_name(
-                    attachment=attachment,
-                    group_name=group_name,
-                    beneficiary_name=beneficiary_name,
-                    volunteer_name=volunteer_name,
-                    used_names=used_names,
-                )
-                archive.write(path, archive_name)
-                included_count += 1
+        total_size = 0
+        try:
+            with ZipFile(archive_file, "w", ZIP_DEFLATED) as archive:
+                for row in rows:
+                    attachment, group_name, beneficiary_name, volunteer_name = row
+                    try:
+                        path = self.storage.get_path(attachment.storage_key)
+                    except NotFoundError:
+                        logger.warning(
+                            "Skipping missing attachment in BO-card archive: %s",
+                            attachment.storage_key,
+                        )
+                        continue
 
-        return buffer.getvalue(), included_count
+                    if included_count >= BO_CARD_ARCHIVE_MAX_FILES:
+                        raise ValidationException(
+                            "Too many files selected for one BO-card archive"
+                        )
+                    total_size += attachment.size_bytes
+                    if total_size > BO_CARD_ARCHIVE_MAX_UNCOMPRESSED_BYTES:
+                        raise ValidationException(
+                            "BO-card archive selection is too large"
+                        )
+
+                    archive_name = self._build_archive_name(
+                        attachment=attachment,
+                        group_name=group_name,
+                        beneficiary_name=beneficiary_name,
+                        volunteer_name=volunteer_name,
+                        used_names=used_names,
+                    )
+                    archive.write(path, archive_name)
+                    included_count += 1
+
+            archive_file.seek(0)
+            return archive_file, included_count
+        except Exception:
+            archive_file.close()
+            raise
 
     def create_bo_card(
         self,
@@ -201,7 +233,13 @@ class AttachmentService:
             return attachment
         except Exception:
             self.session.rollback()
-            self.storage.delete(stored.storage_key)
+            try:
+                self.storage.delete(stored.storage_key)
+            except Exception:
+                logger.exception(
+                    "Failed to clean up attachment after metadata creation error: %s",
+                    stored.storage_key,
+                )
             raise
 
     def get_attachment_by_id(self, attachment_id: int) -> Attachment:
@@ -245,15 +283,32 @@ class AttachmentService:
             raise
 
     def delete_attachment(self, attachment_id: int) -> None:
-        """Delete metadata and its stored file."""
+        """Delete metadata and file, restoring the file if the DB commit fails."""
+        attachment = self.get_attachment_by_id(attachment_id)
+        storage_key = attachment.storage_key
+        backup: bytes | None
         try:
-            attachment = self.get_attachment_by_id(attachment_id)
-            storage_key = attachment.storage_key
+            backup = self.storage.read(storage_key)
+        except NotFoundError:
+            backup = None
+
+        if backup is not None:
+            self.storage.delete(storage_key)
+
+        try:
             self.repo.delete(attachment)
             self.session.commit()
-            self.storage.delete(storage_key)
         except Exception:
             self.session.rollback()
+            if backup is not None:
+                try:
+                    self.storage.restore(storage_key, backup)
+                except Exception:
+                    logger.exception(
+                        "Failed to restore attachment after metadata "
+                        "deletion error: %s",
+                        storage_key,
+                    )
             raise
 
     def _validate_bo_card_scope(

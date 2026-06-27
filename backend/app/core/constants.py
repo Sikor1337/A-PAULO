@@ -3,6 +3,9 @@
 from typing import Final, Literal, get_args
 
 ATTACHMENT_MAX_SIZE_BYTES: Final = 10 * 1024 * 1024
+BO_CARD_ARCHIVE_MEMORY_THRESHOLD_BYTES: Final = 16 * 1024 * 1024
+BO_CARD_ARCHIVE_MAX_UNCOMPRESSED_BYTES: Final = 1024 * 1024 * 1024
+BO_CARD_ARCHIVE_MAX_FILES: Final = 5000
 ATTACHMENT_ALLOWED_EXTENSIONS: Final = frozenset(
     {".pdf", ".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
 )

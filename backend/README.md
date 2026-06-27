@@ -45,7 +45,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES=120
 
 # Attachments
 ATTACHMENT_STORAGE_PATH=storage/attachments
-ATTACHMENT_MAX_SIZE_BYTES=10485760
 ```
 
 ### 4. Migracje (Alembic)

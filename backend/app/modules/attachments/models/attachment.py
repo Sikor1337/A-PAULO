@@ -30,13 +30,13 @@ class Attachment(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     context: Mapped[str] = mapped_column(String(50), index=True)
     group_id: Mapped[int | None] = mapped_column(
-        ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, index=True
+        ForeignKey("groups.id", ondelete="SET NULL"), nullable=True, index=True
     )
     beneficiary_id: Mapped[int | None] = mapped_column(
-        ForeignKey("beneficiaries.id", ondelete="CASCADE"), nullable=True, index=True
+        ForeignKey("beneficiaries.id", ondelete="SET NULL"), nullable=True, index=True
     )
     volunteer_id: Mapped[int | None] = mapped_column(
-        ForeignKey("volunteers.id", ondelete="CASCADE"), nullable=True, index=True
+        ForeignKey("volunteers.id", ondelete="SET NULL"), nullable=True, index=True
     )
     period: Mapped[str | None] = mapped_column(String(7), nullable=True, index=True)
 

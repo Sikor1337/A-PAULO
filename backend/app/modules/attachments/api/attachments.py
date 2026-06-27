@@ -1,9 +1,11 @@
 """Attachment API endpoints."""
 
-from typing import Annotated
+from collections.abc import Iterator
+from typing import Annotated, BinaryIO
 
 from fastapi import APIRouter, Depends, Form, Query, status
 from fastapi.responses import FileResponse, StreamingResponse
+from starlette.background import BackgroundTask
 
 from app.core.constants import ATTACHMENT_MAX_SIZE_BYTES
 from app.modules.attachments.dependencies import get_attachment_service
@@ -20,6 +22,12 @@ from app.modules.core_data.models import User
 from app.modules.security.dependencies import get_current_user
 
 router = APIRouter(prefix="/attachments", tags=["attachments"])
+
+
+def _iter_file(file: BinaryIO, chunk_size: int = 64 * 1024) -> Iterator[bytes]:
+    """Stream a binary file-like object in bounded chunks."""
+    while chunk := file.read(chunk_size):
+        yield chunk
 
 
 @router.get("/bo-cards", response_model=BOCardAttachmentListResponse)
@@ -48,12 +56,13 @@ def download_bo_card_attachments(
     archive, included_count = service.build_bo_cards_archive(**filters.model_dump())
     filename = service.archive_filename()
     return StreamingResponse(
-        iter([archive]),
+        _iter_file(archive),
         media_type="application/zip",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
             "X-BO-Cards-Included": str(included_count),
         },
+        background=BackgroundTask(archive.close),
     )
 
 
