@@ -20,15 +20,22 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.add_column(
-        "volunteers",
-        sa.Column("function", sa.String(length=200), nullable=True),
-        schema="public",
+
+    op.execute(
+        'ALTER TABLE public.volunteers ADD COLUMN IF NOT EXISTS "function" VARCHAR(200)'
     )
-    op.execute("ALTER TABLE public.volunteers DROP CONSTRAINT IF EXISTS volunteers_role_id_fkey")
-    op.drop_column("volunteers", "role_id", schema="public")
-    op.execute("DROP INDEX IF EXISTS public.ix_public_roles_name")
-    op.drop_table("roles", schema="public")
+    op.execute(
+        "ALTER TABLE public.volunteers DROP CONSTRAINT IF EXISTS volunteers_role_id_fkey"
+    )
+    op.execute(
+        "ALTER TABLE public.volunteers DROP COLUMN IF EXISTS role_id"
+    )
+    op.execute(
+        "DROP INDEX IF EXISTS public.ix_public_roles_name"
+    )
+    op.execute(
+        "DROP TABLE IF EXISTS public.roles CASCADE"
+    )
 
 
 def downgrade() -> None:
