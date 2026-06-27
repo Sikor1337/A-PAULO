@@ -72,17 +72,15 @@ def test_bo_card_attachment_api_flow(
     with TestClient(app) as client:
         upload_response = client.post(
             "/api/v1/attachments/bo-cards",
-            params={
+            data={
                 "group_id": group["id"],
                 "beneficiary_id": beneficiary.id,
                 "volunteer_id": volunteer.id,
                 "period": "2026-06",
-                "filename": "karta.pdf",
             },
-            content=b"%PDF-1.4",
-            headers={"Content-Type": "application/pdf"},
+            files={"content": ("karta.pdf", b"%PDF-1.4", "application/pdf")},
         )
-        assert upload_response.status_code == 200
+        assert upload_response.status_code == 201, upload_response.text
         uploaded = upload_response.json()
         assert uploaded["display_name"] == "karta.pdf"
         assert uploaded["created_by_username"] == "admin"
@@ -93,10 +91,12 @@ def test_bo_card_attachment_api_flow(
             params={"group_id": group["id"]},
         )
         assert list_response.status_code == 200
-        assert [item["id"] for item in list_response.json()] == [uploaded["id"]]
+        listed = list_response.json()
+        assert listed["total"] == 1
+        assert [item["id"] for item in listed["items"]] == [uploaded["id"]]
 
         overview_response = client.get(
-            "/api/v1/attachments/bo-cards/all",
+            "/api/v1/attachments/bo-cards",
             params={"search": "Jan", "limit": 10},
         )
         assert overview_response.status_code == 200
@@ -106,6 +106,22 @@ def test_bo_card_attachment_api_flow(
         assert overview["items"][0]["group_name"] == "Grupa BO"
         assert overview["items"][0]["beneficiary_name"] == "Jan BO"
         assert overview["items"][0]["volunteer_name"] == "Anna Wolontariusz"
+
+        exact_period_response = client.get(
+            "/api/v1/attachments/bo-cards",
+            params={"period": "2026-06"},
+        )
+        assert exact_period_response.status_code == 200
+        assert exact_period_response.json()["total"] == 1
+
+        inverted_range_response = client.get(
+            "/api/v1/attachments/bo-cards",
+            params={"period_from": "2026-07", "period_to": "2026-06"},
+        )
+        assert inverted_range_response.status_code == 422
+
+        legacy_all_response = client.get("/api/v1/attachments/bo-cards/all")
+        assert legacy_all_response.status_code == 404
 
         patch_response = client.patch(
             f"/api/v1/attachments/{uploaded['id']}",
@@ -119,7 +135,7 @@ def test_bo_card_attachment_api_flow(
         assert patch_response.json()["description"] == "Sprawdzone przez koordynatora"
 
         commented_response = client.get(
-            "/api/v1/attachments/bo-cards/all",
+            "/api/v1/attachments/bo-cards",
             params={"has_comment": True},
         )
         assert commented_response.status_code == 200
@@ -133,7 +149,7 @@ def test_bo_card_attachment_api_flow(
         assert content_response.headers["content-type"] == "application/pdf"
 
         archive_response = client.get(
-            "/api/v1/attachments/bo-cards/all/download",
+            "/api/v1/attachments/bo-cards/download",
             params={"search": "Jan"},
         )
         assert archive_response.status_code == 200
@@ -152,6 +168,25 @@ def test_bo_card_attachment_api_flow(
             params={"group_id": group["id"]},
         )
         assert empty_list_response.status_code == 200
-        assert empty_list_response.json() == []
+        assert empty_list_response.json()["items"] == []
+        assert empty_list_response.json()["total"] == 0
+
+        invalid_query_response = client.get(
+            "/api/v1/attachments/bo-cards",
+            params={"group_id": 0},
+        )
+        assert invalid_query_response.status_code == 422
+
+        invalid_upload_response = client.post(
+            "/api/v1/attachments/bo-cards",
+            data={
+                "group_id": group["id"],
+                "beneficiary_id": beneficiary.id,
+                "volunteer_id": volunteer.id,
+                "period": "06-2026",
+            },
+            files={"content": ("karta.txt", b"text", "text/plain")},
+        )
+        assert invalid_upload_response.status_code == 422
 
     app.dependency_overrides.clear()

@@ -1,15 +1,19 @@
 """Attachment API endpoints."""
 
-from typing import Literal
+from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, Query, Request
+from fastapi import APIRouter, Depends, Form, Query, status
 from fastapi.responses import FileResponse, StreamingResponse
 
+from app.core.constants import ATTACHMENT_MAX_SIZE_BYTES
 from app.modules.attachments.dependencies import get_attachment_service
 from app.modules.attachments.schemas import (
     AttachmentResponse,
     AttachmentUpdateRequest,
+    BOCardArchiveQuery,
+    BOCardAttachmentListQuery,
     BOCardAttachmentListResponse,
+    CreateAttachmentRequest,
 )
 from app.modules.attachments.services import AttachmentService
 from app.modules.core_data.models import User
@@ -18,70 +22,30 @@ from app.modules.security.dependencies import get_current_user
 router = APIRouter(prefix="/attachments", tags=["attachments"])
 
 
-@router.get("/bo-cards/all", response_model=BOCardAttachmentListResponse)
-def list_all_bo_card_attachments(
-    group_id: int | None = Query(None),
-    beneficiary_id: int | None = Query(None),
-    volunteer_id: int | None = Query(None),
-    period_from: str | None = Query(None),
-    period_to: str | None = Query(None),
-    search: str | None = Query(None),
-    has_comment: bool | None = Query(None),
-    sort_by: Literal[
-        "created_at",
-        "updated_at",
-        "period",
-        "display_name",
-        "group_name",
-        "beneficiary_name",
-        "volunteer_name",
-        "size_bytes",
-    ] = Query("created_at"),
-    sort_direction: Literal["asc", "desc"] = Query("desc"),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(25, ge=1, le=100),
+@router.get("/bo-cards", response_model=BOCardAttachmentListResponse)
+def list_bo_card_attachments(
+    filters: Annotated[BOCardAttachmentListQuery, Query()],
     service: AttachmentService = Depends(get_attachment_service),
     _user: User = Depends(get_current_user),
 ):
-    """List all BO-card metadata without file contents."""
-    items, total = service.list_bo_cards_overview(
-        group_id=group_id,
-        beneficiary_id=beneficiary_id,
-        volunteer_id=volunteer_id,
-        period_from=period_from,
-        period_to=period_to,
-        search=search,
-        has_comment=has_comment,
-        sort_by=sort_by,
-        sort_direction=sort_direction,
-        skip=skip,
-        limit=limit,
-    )
-    return {"items": items, "total": total, "skip": skip, "limit": limit}
+    """List BO-card metadata with optional filters, sorting, and paging."""
+    items, total = service.list_bo_cards(**filters.model_dump())
+    return {
+        "items": items,
+        "total": total,
+        "skip": filters.skip,
+        "limit": filters.limit,
+    }
 
 
-@router.get("/bo-cards/all/download")
-def download_all_bo_card_attachments(
-    group_id: int | None = Query(None),
-    beneficiary_id: int | None = Query(None),
-    volunteer_id: int | None = Query(None),
-    period_from: str | None = Query(None),
-    period_to: str | None = Query(None),
-    search: str | None = Query(None),
-    has_comment: bool | None = Query(None),
+@router.get("/bo-cards/download")
+def download_bo_card_attachments(
+    filters: Annotated[BOCardArchiveQuery, Query()],
     service: AttachmentService = Depends(get_attachment_service),
     _user: User = Depends(get_current_user),
 ):
     """Download a ZIP archive with all BO cards matching filters."""
-    archive, included_count = service.build_bo_cards_archive(
-        group_id=group_id,
-        beneficiary_id=beneficiary_id,
-        volunteer_id=volunteer_id,
-        period_from=period_from,
-        period_to=period_to,
-        search=search,
-        has_comment=has_comment,
-    )
+    archive, included_count = service.build_bo_cards_archive(**filters.model_dump())
     filename = service.archive_filename()
     return StreamingResponse(
         iter([archive]),
@@ -93,55 +57,26 @@ def download_all_bo_card_attachments(
     )
 
 
-@router.get("/bo-cards", response_model=list[AttachmentResponse])
-def list_bo_card_attachments(
-    group_id: int = Query(...),
-    beneficiary_id: int | None = Query(None),
-    volunteer_id: int | None = Query(None),
-    period: str | None = Query(None),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
-    service: AttachmentService = Depends(get_attachment_service),
-    _user: User = Depends(get_current_user),
-):
-    """List BO-card attachment metadata without file contents."""
-    return service.list_bo_cards(
-        group_id=group_id,
-        beneficiary_id=beneficiary_id,
-        volunteer_id=volunteer_id,
-        period=period,
-        skip=skip,
-        limit=limit,
-    )
-
-
-@router.post("/bo-cards", response_model=AttachmentResponse)
+@router.post(
+    "/bo-cards",
+    response_model=AttachmentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_bo_card_attachment(
-    request: Request,
-    content: bytes = Body(..., media_type="application/octet-stream"),
-    group_id: int = Query(...),
-    beneficiary_id: int = Query(...),
-    volunteer_id: int = Query(...),
-    period: str = Query(...),
-    filename: str = Query(...),
-    display_name: str | None = Query(None),
-    description: str = Query(""),
+    request: Annotated[CreateAttachmentRequest, Form()],
     service: AttachmentService = Depends(get_attachment_service),
     user: User = Depends(get_current_user),
 ):
-    """Upload a BO-card file as raw request body."""
-    content_type = request.headers.get("content-type", "application/octet-stream")
+    """Upload a BO-card file and metadata as multipart form data."""
+    content = await request.content.read(ATTACHMENT_MAX_SIZE_BYTES + 1)
+    await request.content.close()
+    payload = request.model_dump(exclude={"content"})
     return service.create_bo_card(
-        group_id=group_id,
-        beneficiary_id=beneficiary_id,
-        volunteer_id=volunteer_id,
-        period=period,
-        filename=filename,
-        content_type=content_type,
-        content=content,
         actor=user,
-        display_name=display_name,
-        description=description,
+        content=content,
+        filename=request.filename,
+        content_type=request.content_type,
+        **payload,
     )
 
 

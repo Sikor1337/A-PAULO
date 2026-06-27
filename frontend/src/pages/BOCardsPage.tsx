@@ -46,10 +46,6 @@ interface CommentEditorProps {
 const CommentEditor = ({ attachment, disabled, onSave }: CommentEditorProps) => {
   const [value, setValue] = useState(attachment.description);
 
-  useEffect(() => {
-    setValue(attachment.description);
-  }, [attachment.id, attachment.description]);
-
   const normalizedValue = value.trim();
   const isDirty = normalizedValue !== attachment.description;
 
@@ -122,10 +118,6 @@ const BOCardsPage: React.FC = () => {
   const start = total === 0 ? 0 : (page - 1) * limit + 1;
   const end = Math.min(page * limit, total);
 
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
-
   const setFirstPage = () => setPage(1);
 
   const resetFilters = () => {
@@ -154,7 +146,11 @@ const BOCardsPage: React.FC = () => {
 
   const removeAttachment = (attachment: BOCardOverviewAttachment) => {
     if (!confirm(`Usunąć plik „${attachment.display_name}”?`)) return;
-    deleteAttachment.mutate(attachment.id);
+    deleteAttachment.mutate(attachment.id, {
+      onSuccess: () => {
+        if (items.length === 1 && page > 1) setPage((current) => current - 1);
+      },
+    });
   };
 
   const actionDisabled = updateAttachment.isPending || deleteAttachment.isPending;
@@ -311,7 +307,12 @@ const BOCardsPage: React.FC = () => {
               </dl>
 
               <div className="mt-4">
-                <CommentEditor attachment={attachment} disabled={actionDisabled} onSave={saveComment} />
+                <CommentEditor
+                  key={`${attachment.id}-${attachment.description}`}
+                  attachment={attachment}
+                  disabled={actionDisabled}
+                  onSave={saveComment}
+                />
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-2">
@@ -373,7 +374,12 @@ const BOCardsPage: React.FC = () => {
                   <td className="border-r border-gray-100 px-3 py-3 font-semibold text-gray-700">{displayValue(attachment.volunteer_name)}</td>
                   <td className="border-r border-gray-100 px-3 py-3 font-bold text-gray-600">{displayValue(attachment.period)}</td>
                   <td className="border-r border-gray-100 px-3 py-3">
-                    <CommentEditor attachment={attachment} disabled={actionDisabled} onSave={saveComment} />
+                    <CommentEditor
+                      key={`${attachment.id}-${attachment.description}`}
+                      attachment={attachment}
+                      disabled={actionDisabled}
+                      onSave={saveComment}
+                    />
                   </td>
                   <td className="px-3 py-3">
                     <div className="flex flex-col gap-2">

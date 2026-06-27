@@ -39,32 +39,28 @@ const filenameFromDisposition = (disposition: string | undefined) => {
 
 export const attachmentService = {
   listBOCards: async (groupId: number): Promise<BOCardAttachment[]> => {
-    const response = await apiClient.get<BOCardAttachment[]>('v1/attachments/bo-cards', {
+    const response = await apiClient.get<BOCardOverviewResponse>('v1/attachments/bo-cards', {
       params: { group_id: groupId, limit: 1000 },
     });
-    return response.data;
+    return response.data.items;
   },
 
   listBOCardsOverview: async (filters: BOCardOverviewFilters): Promise<BOCardOverviewResponse> => {
-    const response = await apiClient.get<BOCardOverviewResponse>('v1/attachments/bo-cards/all', {
+    const response = await apiClient.get<BOCardOverviewResponse>('v1/attachments/bo-cards', {
       params: overviewParams(filters),
     });
     return response.data;
   },
 
   uploadBOCard: async ({ groupId, beneficiaryId, volunteerId, period, file }: BOCardUploadInput): Promise<BOCardAttachment> => {
-    const response = await apiClient.post<BOCardAttachment>('v1/attachments/bo-cards', file, {
-      params: {
-        group_id: groupId,
-        beneficiary_id: beneficiaryId,
-        volunteer_id: volunteerId,
-        period,
-        filename: file.name,
-      },
-      headers: {
-        'Content-Type': file.type || 'application/octet-stream',
-      },
-    });
+    const form = new FormData();
+    form.append('content', file);
+    form.append('group_id', String(groupId));
+    form.append('beneficiary_id', String(beneficiaryId));
+    form.append('volunteer_id', String(volunteerId));
+    form.append('period', period);
+
+    const response = await apiClient.post<BOCardAttachment>('v1/attachments/bo-cards', form);
     return response.data;
   },
 
@@ -78,7 +74,7 @@ export const attachmentService = {
   },
 
   downloadBOCardsArchive: async (filters: BOCardOverviewFilters): Promise<void> => {
-    const response = await apiClient.get<Blob>('v1/attachments/bo-cards/all/download', {
+    const response = await apiClient.get<Blob>('v1/attachments/bo-cards/download', {
       params: overviewParams(filters, false),
       responseType: 'blob',
     });

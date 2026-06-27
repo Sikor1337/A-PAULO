@@ -1,2 +1,1 @@
 """Attachment integration tests."""
-

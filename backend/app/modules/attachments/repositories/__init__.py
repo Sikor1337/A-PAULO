@@ -1,9 +1,8 @@
 """Attachment repositories."""
 
 from app.modules.attachments.repositories.attachments import (
-    BOCardOverviewRow,
-    BOCardSortKey,
     AttachmentRepository,
+    BOCardOverviewRow,
 )
 
-__all__ = ["AttachmentRepository", "BOCardOverviewRow", "BOCardSortKey"]
+__all__ = ["AttachmentRepository", "BOCardOverviewRow"]
