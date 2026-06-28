@@ -1,4 +1,8 @@
-import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import type {
+  AxiosInstance,
+  AxiosProgressEvent,
+  InternalAxiosRequestConfig,
+} from 'axios';
 
 export const BACKEND_WAKEUP_DELAY_MS = 5_000;
 
@@ -9,6 +13,7 @@ const listeners = new Set<Listener>();
 const pendingTimers = new Map<symbol, ReturnType<typeof setTimeout>>();
 const slowRequests = new Set<symbol>();
 let isBackendWakeupVisible = false;
+let trackingRevision = 0;
 
 const notifyIfChanged = () => {
   const nextValue = slowRequests.size > 0;
@@ -51,6 +56,7 @@ export const startBackendRequest = (): RequestCleanup => {
 };
 
 export const resetBackendWakeupNotice = () => {
+  trackingRevision += 1;
   pendingTimers.forEach((timer) => clearTimeout(timer));
   pendingTimers.clear();
   slowRequests.clear();
@@ -59,25 +65,63 @@ export const resetBackendWakeupNotice = () => {
 
 export const attachBackendWakeupInterceptors = (client: AxiosInstance) => {
   const cleanups = new WeakMap<InternalAxiosRequestConfig, RequestCleanup>();
+  const settledRequests = new WeakSet<InternalAxiosRequestConfig>();
 
-  const finishRequest = (config?: InternalAxiosRequestConfig) => {
+  const finishRequest = (
+    config?: InternalAxiosRequestConfig,
+    settled = false,
+  ) => {
     if (!config) return;
+    if (settled) settledRequests.add(config);
     cleanups.get(config)?.();
     cleanups.delete(config);
   };
 
   client.interceptors.request.use((config) => {
-    cleanups.set(config, startBackendRequest());
+    const requestRevision = trackingRevision;
+    const originalDownloadProgress = config.onDownloadProgress;
+    const originalUploadProgress = config.onUploadProgress;
+    const isMultipartUpload =
+      typeof FormData !== 'undefined' && config.data instanceof FormData;
+
+    const startTracking = () => {
+      if (
+        settledRequests.has(config) ||
+        requestRevision !== trackingRevision
+      ) {
+        return;
+      }
+      finishRequest(config);
+      cleanups.set(config, startBackendRequest());
+    };
+
+    if (isMultipartUpload) {
+      config.onUploadProgress = (event: AxiosProgressEvent) => {
+        const uploadComplete =
+          (event.total !== undefined && event.loaded >= event.total) ||
+          event.progress === 1;
+        if (uploadComplete) startTracking();
+        originalUploadProgress?.(event);
+      };
+    } else {
+      startTracking();
+    }
+
+    config.onDownloadProgress = (event: AxiosProgressEvent) => {
+      finishRequest(config, true);
+      originalDownloadProgress?.(event);
+    };
+
     return config;
   });
 
   client.interceptors.response.use(
     (response) => {
-      finishRequest(response.config);
+      finishRequest(response.config, true);
       return response;
     },
     (error) => {
-      finishRequest(error.config);
+      finishRequest(error.config, true);
       return Promise.reject(error);
     },
   );

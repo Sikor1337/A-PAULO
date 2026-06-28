@@ -1,11 +1,16 @@
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
 import { attachBackendWakeupInterceptors } from '@/lib/backendWakeup';
+import {
+  assertSessionUnchanged,
+  captureSessionRevision,
+  isSessionChangedError,
+} from '@/lib/sessionLifecycle';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 const API_ROOT = API_URL.replace(/\/api\/?$/, '');
 
-const refreshClient = axios.create();
+export const refreshClient = axios.create();
 attachBackendWakeupInterceptors(refreshClient);
 
 export const clearSessionAndRedirect = () => {
@@ -22,10 +27,12 @@ export const refreshSession = async () => {
     throw new Error('No refresh token available');
   }
 
+  const sessionRevision = captureSessionRevision();
   const response = await refreshClient.post(`${API_ROOT}/auth/token/refresh`, {
     refresh: refreshToken,
   });
 
+  assertSessionUnchanged(sessionRevision);
   const { access, refresh } = response.data;
   localStorage.setItem('access_token', access);
   if (refresh) {
@@ -72,6 +79,9 @@ apiClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
+        if (isSessionChangedError(refreshError)) {
+          return Promise.reject(refreshError);
+        }
         // Refresh failed - clear tokens and redirect to login
         clearSessionAndRedirect();
         return Promise.reject(refreshError);

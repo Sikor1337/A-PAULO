@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { clearSessionAndRedirect, refreshSession } from '@/lib/api';
 import { attachBackendWakeupInterceptors } from '@/lib/backendWakeup';
+import { isSessionChangedError } from '@/lib/sessionLifecycle';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 const API_ROOT = API_URL.replace(/\/api\/?$/, '');
@@ -42,6 +43,9 @@ authClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return authClient(originalRequest);
       } catch (refreshError) {
+        if (isSessionChangedError(refreshError)) {
+          return Promise.reject(refreshError);
+        }
         clearSessionAndRedirect();
         return Promise.reject(refreshError);
       }
