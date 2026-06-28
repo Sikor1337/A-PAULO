@@ -58,7 +58,7 @@ Taki link działa jak hasło:
 
 ### 2.3. Czy po zalogowaniu można wyświetlać i zapisywać wydarzenia Google?
 
-Tak. Google Calendar API obsługuje odczyt listy wydarzeń oraz ich tworzenie. Odczyt może używać ograniczonych zakresów, np. `calendar.events.readonly`, a zapis wymaga zakresu takiego jak `calendar.events` ([Events: list](https://developers.google.com/workspace/calendar/api/v3/reference/events/list), [Events: insert](https://developers.google.com/workspace/calendar/api/v3/reference/events/insert)).
+Tak. Google Calendar API obsługuje odczyt listy wydarzeń oraz ich tworzenie. Odczyt może używać ograniczonych zakresów, np. `calendar.events.owned.readonly`, a zapis do kalendarzy należących do autoryzowanego konta — `calendar.events.owned`. Jeżeli aplikacja sama tworzy dodatkowy kalendarz Google, jeszcze węższym wariantem jest `calendar.app.created`. Szeroki zakres `calendar.events`, obejmujący wydarzenia ze wszystkich dostępnych kalendarzy, powinien być ostatecznością ([Events: list](https://developers.google.com/workspace/calendar/api/v3/reference/events/list), [Events: insert](https://developers.google.com/workspace/calendar/api/v3/reference/events/insert)).
 
 Nie należy jednak zbierać ani przechowywać loginu i hasła Gmail. Poprawnym mechanizmem jest OAuth 2.0:
 
@@ -67,7 +67,7 @@ Nie należy jednak zbierać ani przechowywać loginu i hasła Gmail. Poprawnym m
 3. backend A-PAULO otrzymuje tokeny, a nie hasło;
 4. przy dostępie działającym bez obecności użytkownika backend przechowuje bezpiecznie token odświeżania uzyskany w trybie `offline` ([OAuth 2.0 dla aplikacji serwerowych](https://developers.google.com/identity/protocols/oauth2/web-server)).
 
-Zakresy trzeba ograniczyć do minimum zgodnie z zasadą least privilege ([zakresy Google Calendar API](https://developers.google.com/workspace/calendar/api/auth)). Tokeny muszą być szyfrowane w spoczynku, niedostępne dla frontendu i możliwe do unieważnienia.
+Zakresy trzeba ograniczyć do minimum zgodnie z zasadą least privilege ([zakresy Google Calendar API](https://developers.google.com/workspace/calendar/api/auth)). Dla rekomendowanego, dedykowanego konta PaP punktem wyjścia powinien być `calendar.events.owned`; szerszy zakres wymaga osobnego uzasadnienia. Tokeny muszą być szyfrowane w spoczynku, niedostępne dla frontendu i możliwe do unieważnienia.
 
 Integracja OAuth wiąże się z dodatkową konfiguracją projektu Google Cloud, ekranu zgody oraz — zależnie od rodzaju konta, odbiorców i żądanych zakresów — procesem weryfikacji aplikacji. Jest to rozwiązanie o większym koszcie implementacji i utrzymania.
 
@@ -85,7 +85,8 @@ Ograniczenia subskrypcji:
 - jest jednokierunkowa; edycja kopii po stronie Google nie aktualizuje A-PAULO;
 - Google decyduje, kiedy ponownie pobrać feed, więc zmiany nie muszą pojawić się natychmiast;
 - oficjalna instrukcja Google gwarantuje dodawanie z URL dla kalendarzy publicznych. Adres z trudnym do odgadnięcia tokenem jest popularnym sposobem ochrony feedu, ale należy potwierdzić jego działanie w krótkim PoC na docelowych kontach Google;
-- URL subskrypcji jest sekretem typu bearer: każdy, kto go pozna, może odczytać feed. Powinien być losowy, odwoływalny i możliwy do wygenerowania ponownie.
+- URL subskrypcji jest sekretem typu bearer: każdy, kto go pozna, może odczytać feed. Powinien być losowy, odwoływalny i możliwy do wygenerowania ponownie;
+- unieważnienie URL zatrzymuje kolejne pobrania, ale nie usuwa wydarzeń ani ich kopii zapisanych wcześniej po stronie Google lub użytkownika. Feed nie może więc zawierać danych wrażliwych.
 
 ## 3. Porównanie wariantów
 
@@ -96,7 +97,7 @@ Ograniczenia subskrypcji:
 | Tajny Google iCal | Tak, po podaniu linku | Tylko przez tajność URL | Tak | Nie | Google → A-PAULO | Niska/średnia |
 | Google Calendar API + OAuth | Jednorazowa zgoda Google wymagana | Tak | Tak | Tak | Jedno- lub dwukierunkowo | Średnia/wysoka |
 | Service account + delegacja domenowa | Tak dla użytkownika końcowego | Tak | Tak | Tak | Jedno- lub dwukierunkowo | Wysoka; wymaga Google Workspace |
-| **Moduł A-PAULO + feed iCalendar** | **Tak** | **Tak w aplikacji; feed chroniony tokenem** | **Tak** | **Nie, Google subskrybuje tylko do odczytu** | **A-PAULO → Google** | **Średnia** |
+| **Moduł A-PAULO + feed iCalendar** | **Tak** | **W aplikacji: tak; w eksporcie: tylko zminimalizowane, niewrażliwe dane** | **Tak** | **Nie, Google subskrybuje tylko do odczytu** | **A-PAULO → Google** | **Średnia** |
 
 ## 4. Rekomendowana architektura
 
@@ -126,9 +127,11 @@ Feed powinien:
 - być dostępny wyłącznie przez HTTPS;
 - korzystać z kryptograficznie losowego tokenu zapisanego w postaci hasha;
 - umożliwiać unieważnienie i wygenerowanie nowego adresu;
+- maskować token i pełny URL w logach aplikacji, Rendera, reverse proxy, monitoringu błędów i analityce;
+- wyłączyć przechowywanie odpowiedzi przez współdzielone cache (`Cache-Control: private, no-store`);
 - publikować tylko pola potrzebne odbiorcy.
 
-Nie należy umieszczać w feedzie publicznym ani możliwym do przekazania dalej: nazwisk podopiecznych, adresów domowych, numerów telefonów, danych zdrowotnych, prywatnych notatek ani szczegółów opieki. Bezpieczniejsze są neutralne tytuły oraz link prowadzący po zalogowaniu do szczegółów w A-PAULO.
+Nie należy umieszczać w feedzie publicznym ani możliwym do przekazania dalej: nazwisk podopiecznych, adresów domowych, numerów telefonów, danych zdrowotnych, prywatnych notatek ani szczegółów opieki. Bezpieczniejsze są neutralne tytuły oraz link prowadzący po zalogowaniu do szczegółów w A-PAULO. Rotacja tokenu ogranicza przyszły dostęp, ale nie wycofuje danych już pobranych przez zewnętrzny kalendarz.
 
 ### Etap 2 — opcjonalny Google Calendar API
 
@@ -157,12 +160,27 @@ Należy go rozważyć tylko wtedy, gdy PaP posiada zarządzaną domenę Google W
 Krótki PoC powinien potwierdzić ryzyka, których nie rozstrzyga sama dokumentacja:
 
 1. utworzyć przykładowy feed `.ics` z trzema wydarzeniami: jednorazowym, całodniowym i cyklicznym;
-2. dodać feed przez URL do zwykłego konta Gmail oraz — jeżeli organizacja używa — konta Google Workspace;
-3. potwierdzić, że Google pobiera adres zawierający losowy token i poprawnie aktualizuje zmienione wydarzenie;
-4. sprawdzić kodowanie polskich znaków, strefę `Europe/Warsaw`, zmianę czasu oraz wydarzenia całodniowe;
-5. zmierzyć rzeczywiste opóźnienie od zmiany w feedzie do jej pojawienia się w Google;
-6. zresetować token i potwierdzić, że poprzedni URL przestaje zwracać dane;
-7. potwierdzić minimalny bezpieczny zestaw pól z osobą odpowiedzialną za ochronę danych.
+2. sprawdzić odpowiedź przez `curl`: status `200`, `Content-Type: text/calendar; charset=utf-8` i `Cache-Control: private, no-store`;
+3. dodać feed przez URL do zwykłego konta Gmail oraz — jeżeli organizacja używa — konta Google Workspace;
+4. potwierdzić, że Google pobiera adres zawierający losowy token i poprawnie aktualizuje zmienione wydarzenie;
+5. sprawdzić kodowanie polskich znaków, strefę `Europe/Warsaw`, zmianę czasu oraz wydarzenia całodniowe;
+6. zmierzyć rzeczywiste opóźnienie od zmiany w feedzie do jej pojawienia się w Google;
+7. przejrzeć logi aplikacji, hostingu i monitoringu oraz potwierdzić, że nie zawierają tokenu ani pełnego URL feedu;
+8. zresetować token i potwierdzić, że poprzedni URL przestaje zwracać dane;
+9. potwierdzić, że rotacja tokenu nie usuwa kopii wydarzeń już pobranych przez Google, i uwzględnić to w komunikacie dla użytkownika;
+10. potwierdzić minimalny bezpieczny zestaw pól z osobą odpowiedzialną za ochronę danych.
+
+### Jak właściciel zadania może zweryfikować wnioski
+
+Bez implementowania modułu Wydarzeń można ręcznie potwierdzić dwa warianty Google:
+
+1. Utworzyć testowy kalendarz bez danych prawdziwych osób i dodać dwa fikcyjne wydarzenia.
+2. Ustawić go jako publiczny, skopiować kod osadzenia i otworzyć podgląd w oknie incognito. Kalendarz powinien być widoczny bez logowania.
+3. Skopiować publiczny adres iCal i w Google Calendar na komputerze wybrać **Inne kalendarze → + → Z adresu URL**. Wydarzenia powinny pojawić się jako kalendarz tylko do odczytu.
+4. Cofnąć publiczne udostępnienie i potwierdzić w incognito, że publiczny dostęp przestał działać. Google zaznacza, że propagacja zmiany ustawień może potrwać kilka godzin.
+5. Dla prywatnego kalendarza skopiować „Secret address in iCal format”, pobrać go testowo, następnie użyć opcji resetowania adresu i potwierdzić, że stary URL przestał działać. Nie wykonywać tego testu na kalendarzu zawierającym prawdziwe dane.
+
+Rekomendowanego wariantu A-PAULO → Google nie da się w pełni zweryfikować samym dokumentem, ponieważ endpoint `.ics` jeszcze nie istnieje. Kryterium zakończenia osobnego PoC stanowi zaliczenie wszystkich dziesięciu punktów powyżej na zwykłym Gmailu i — jeśli jest używany przez PaP — Google Workspace.
 
 ## 6. Decyzja dla PAP-57
 
