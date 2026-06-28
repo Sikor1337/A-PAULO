@@ -15,6 +15,7 @@ from app.modules.pi.api.volunteers import router as volunteers_router
 from app.modules.pi.api.functions import router as functions_router
 from app.modules.pi.api.beneficiaries import router as beneficiaries_router
 from app.modules.pi.api.groups import router as groups_router
+from app.modules.recruitment.api import router as recruitment_router
 
 
 @asynccontextmanager
@@ -53,4 +54,5 @@ app.include_router(functions_router, prefix="/api/v1")
 app.include_router(beneficiaries_router, prefix="/api/v1")
 app.include_router(groups_router, prefix="/api/v1")
 app.include_router(attachments_router, prefix="/api/v1")
+app.include_router(recruitment_router, prefix="/api/v1")
 

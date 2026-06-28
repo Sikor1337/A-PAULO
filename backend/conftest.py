@@ -27,6 +27,7 @@ from app.modules.pi.api.beneficiaries import router as beneficiaries_router  # n
 from app.modules.pi.api.functions import router as functions_router  # noqa: E402
 from app.modules.pi.api.groups import router as groups_router  # noqa: E402
 from app.modules.pi.api.volunteers import router as volunteers_router  # noqa: E402
+from app.modules.recruitment.api import router as recruitment_router  # noqa: E402
 from app.modules.security.api import router as security_router  # noqa: E402
 from app.modules.security.dependencies import (  # noqa: E402
     get_current_user,
@@ -96,6 +97,7 @@ def api_client(
     app.include_router(beneficiaries_router, prefix="/api/v1")
     app.include_router(groups_router, prefix="/api/v1")
     app.include_router(attachments_router, prefix="/api/v1")
+    app.include_router(recruitment_router, prefix="/api/v1")
 
     def override_get_db() -> Generator[Session, None, None]:
         yield db_session

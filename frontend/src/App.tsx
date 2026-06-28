@@ -11,6 +11,11 @@ import GroupsPage from './pages/GroupsPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import EventsPage from './pages/EventsPage';
+import RecruitmentLayout from './pages/recruitment/RecruitmentLayout';
+import RecruitmentFormBuilderPage from './pages/recruitment/RecruitmentFormBuilderPage';
+import RecruitmentResponsesPage from './pages/recruitment/RecruitmentResponsesPage';
+import RecruitmentOnboardingPage from './pages/recruitment/RecruitmentOnboardingPage';
+import RecruitmentApplicationPage from './pages/recruitment/RecruitmentApplicationPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +33,8 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/recruitment/apply" element={<RecruitmentApplicationPage />} />
+          <Route path="/recruitment/apply/:invitationToken" element={<RecruitmentApplicationPage />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<DashboardPage />} />
@@ -39,6 +46,12 @@ function App() {
             <Route path="/events" element={<EventsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/recruitment" element={<RecruitmentLayout />}>
+              <Route index element={<Navigate to="form" replace />} />
+              <Route path="form" element={<RecruitmentFormBuilderPage />} />
+              <Route path="responses" element={<RecruitmentResponsesPage />} />
+              <Route path="onboarding" element={<RecruitmentOnboardingPage />} />
+            </Route>
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
