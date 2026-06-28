@@ -1,4 +1,4 @@
-# Backend 2
+# Backend
 
 FastAPI backend z SQLAlchemy ORM i Alembic do migracji.
 
@@ -27,7 +27,7 @@ source venv/bin/activate
 
 ```bash
 cd backend
-pip install -r ../requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 3. Konfiguracja bazy danych
@@ -43,8 +43,8 @@ SECRET_KEY=your-super-secret-key-here-at-least-32-chars
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=120
 
-# Environment
-DEBUG=True
+# Attachments
+ATTACHMENT_STORAGE_PATH=storage/attachments
 ```
 
 ### 4. Migracje (Alembic)
@@ -102,6 +102,14 @@ backend/
 │   │       ├── models_registry.py  # Rejestr wszystkich modeli
 │   │       └── tests/         # SQL testy
 │   └── modules/               # Moduły biznesowe
+│       ├── attachments/       # Załączniki
+│       │   ├── api/
+│       │   ├── schemas/
+│       │   ├── services/
+│       │   ├── repositories/
+│       │   ├── models/
+│       │   ├── storage.py     # Adapter lokalnego przechowywania
+│       │   └── tests/
 │       ├── security/          # Uwierzytelnianie & tokeny
 │       │   ├── api/
 │       │   │   └── auth.py    # Endpoints
@@ -123,7 +131,7 @@ backend/
 │       │   ├── models/
 │       │   ├── dependencies.py# DI
 │       │   └── tests/
-│       └── pi/                # Podopieczni & Wolontariusze
+│       └── pi/                # Podopieczni, Wolontariusze & Grupy
 │           ├── api/
 │           │   ├── volunteers.py
 │           │   ├── beneficiaries.py
@@ -141,7 +149,8 @@ backend/
 
 ## 🏗️ Architektura Modułów
 
-Każdy moduł (`security`, `core_data`, `pi`) ma strukturę:
+Każdy moduł biznesowy (`security`, `core_data`, `pi`, `attachments`) trzyma własne endpointy,
+schematy, serwisy, repozytoria, modele i testy:
 
 ```
 module/
@@ -175,12 +184,31 @@ module/
 | fastapi | 0.115+ | Web framework |
 | sqlalchemy | 2.0+ | ORM |
 | alembic | 1.13+ | Database migrations |
-| psycopg | 3.2+ | PostgreSQL adapter |
+| psycopg2-binary | 2.9+ | PostgreSQL adapter |
 | pydantic | 2.0+ | Data validation |
 | python-jose | 3.3+ | JWT tokens |
 | passlib | 1.7+ | Password hashing |
 | bcrypt | 4.0+ | Bcrypt password hashing |
-| python-multipart | 0.0.6+ | Form data support |
+
+## 📎 Załączniki
+
+Moduł `app/modules/attachments` obsługuje metadane i pliki załączników.
+
+- Endpointy: `/api/v1/attachments`.
+- Upload Kart BO: `POST /api/v1/attachments/bo-cards`.
+- Upload wykorzystuje `multipart/form-data`: pole `content` zawiera plik, a pola
+  `group_id`, `beneficiary_id`, `volunteer_id` i `period` zawierają metadane.
+- Lista metadanych: `GET /api/v1/attachments/bo-cards?group_id=...`.
+- Podgląd/treść pliku: `GET /api/v1/attachments/{attachment_id}/content`.
+- Edycja nazwy/opisu: `PATCH /api/v1/attachments/{attachment_id}`.
+- Usuwanie: `DELETE /api/v1/attachments/{attachment_id}`.
+- Lokalny storage: `storage/attachments` względem folderu `backend/`.
+- Obsługiwane pliki: PDF, JPG, PNG, WEBP, HEIC/HEIF do 10 MB.
+
+Pliki są przechowywane poza bazą, a tabela `attachments` trzyma metadane:
+kontekst, grupa, podopieczny, wolontariusz, okres, nazwa, typ MIME, rozmiar,
+checksum oraz informacje kto i kiedy dodał lub zmienił plik. Dzięki temu podmiana
+lokalnego storage na usługę chmurową wymaga głównie nowego adaptera storage.
 
 
 ```bash
