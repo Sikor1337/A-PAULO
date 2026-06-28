@@ -16,9 +16,9 @@ from app.core.constants import (
     BO_CARD_CONTEXT,
 )
 from app.core.errors import NotFoundError, ValidationException
+from app.infrastructure.storage.attachments import AttachmentStorage
 from app.modules.attachments.models import Attachment
 from app.modules.attachments.repositories import AttachmentRepository
-from app.modules.attachments.storage import AttachmentStorage
 from app.modules.core_data.models import User
 from app.modules.pi.repositories import (
     BeneficiaryAssignmentRepository,

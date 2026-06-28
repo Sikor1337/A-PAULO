@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.core.constants import ATTACHMENT_MAX_SIZE_BYTES
 from app.core.dependencies import get_attachment_storage, get_db
+from app.infrastructure.storage.attachments import AttachmentStorage
 from app.modules.attachments.services import AttachmentService
-from app.modules.attachments.storage import AttachmentStorage
 
 
 def get_attachment_service(

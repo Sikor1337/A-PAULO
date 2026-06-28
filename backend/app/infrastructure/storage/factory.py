@@ -2,7 +2,10 @@
 
 from pathlib import Path
 
-from app.modules.attachments.storage import AttachmentStorage, LocalAttachmentStorage
+from app.infrastructure.storage.attachments import (
+    AttachmentStorage,
+    LocalAttachmentStorage,
+)
 
 
 class AttachmentStorageFactory:
