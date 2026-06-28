@@ -182,6 +182,21 @@ Bez implementowania modułu Wydarzeń można ręcznie potwierdzić dwa warianty 
 
 Rekomendowanego wariantu A-PAULO → Google nie da się w pełni zweryfikować samym dokumentem, ponieważ endpoint `.ics` jeszcze nie istnieje. Kryterium zakończenia osobnego PoC stanowi zaliczenie wszystkich dziesięciu punktów powyżej na zwykłym Gmailu i — jeśli jest używany przez PaP — Google Workspace.
 
+### Zaimplementowany PoC osadzenia
+
+Na branchu `pap-57` dodano chroniony widok `/events`, dostępny z pozycji **Wydarzenia** w menu aplikacji. Widok osadza publiczny kalendarz `projektapaulo@gmail.com` przez oficjalny `iframe` Google.
+
+Aby zweryfikować PoC:
+
+1. uruchomić frontend poleceniem `npm run dev` w katalogu `frontend`;
+2. zalogować się do A-PAULO;
+3. wybrać **Wydarzenia** w bocznym menu;
+4. potwierdzić, że kalendarz i utworzone w nim wydarzenia testowe są widoczne;
+5. powtórzyć test w wąskim widoku mobilnym i sprawdzić, czy iframe nie wychodzi poza kartę;
+6. wylogować się i potwierdzić, że bez sesji wejście na `/events` przekierowuje do `/login`.
+
+Ten PoC potwierdza jedynie możliwość osadzenia publicznego kalendarza. Nie potwierdza prywatnej subskrypcji `.ics`, zapisu przez OAuth ani synchronizacji dwukierunkowej i nie zmienia docelowej rekomendacji architektonicznej.
+
 ## 6. Decyzja dla PAP-57
 
 1. **Nie używać publicznego `iframe` jako docelowego modułu Wydarzeń.** Można go użyć jedynie do kalendarza całkowicie publicznych wydarzeń PaP.
