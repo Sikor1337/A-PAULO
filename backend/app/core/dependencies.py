@@ -2,8 +2,8 @@ from sqlalchemy import Engine
 
 from app.core.config import get_settings
 from app.infrastructure.sql.factory import SQLConnectionFactory
+from app.infrastructure.storage.attachments import AttachmentStorage
 from app.infrastructure.storage.factory import AttachmentStorageFactory
-from app.modules.attachments.storage import AttachmentStorage
 
 # =============================================================================
 # Factory Instances (Singletons)

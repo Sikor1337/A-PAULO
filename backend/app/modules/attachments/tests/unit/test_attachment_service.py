@@ -5,8 +5,8 @@ from zipfile import ZipFile
 import pytest
 
 from app.core.errors import NotFoundError, ValidationException
+from app.infrastructure.storage import StoredFile
 from app.modules.attachments.services.attachments import AttachmentService
-from app.modules.attachments.storage import StoredFile
 
 
 class FakeStorage:

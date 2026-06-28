@@ -9,10 +9,10 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db
 from app.core.errors import register_error_handlers
+from app.infrastructure.storage import LocalAttachmentStorage
 from app.modules.attachments.api import router as attachments_router
 from app.modules.attachments.dependencies import get_attachment_service
 from app.modules.attachments.services import AttachmentService
-from app.modules.attachments.storage import LocalAttachmentStorage
 from app.modules.core_data.models import User
 from app.modules.pi.services.beneficiaries import BeneficiaryService
 from app.modules.pi.services.functions import FunctionService
