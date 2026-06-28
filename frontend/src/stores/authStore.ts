@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { resetBackendWakeupNotice } from '@/lib/backendWakeup';
+import { queryClient } from '@/lib/queryClient';
 
 interface User {
   id: number;
@@ -30,6 +32,8 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        queryClient.clear();
+        resetBackendWakeupNotice();
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         set({ user: null, isAuthenticated: false });

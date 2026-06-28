@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { queryClient } from '@/lib/queryClient';
 import { useAuthStore } from './authStore';
 
 const user = {
@@ -10,6 +11,7 @@ const user = {
 };
 
 const resetAuthStore = () => {
+  queryClient.clear();
   useAuthStore.setState({ user: null, isAuthenticated: false });
 };
 
@@ -39,6 +41,16 @@ describe('auth store', () => {
       user: null,
       isAuthenticated: false,
     });
+  });
+
+  it('clears all server cache on logout', () => {
+    useAuthStore.getState().login('access-token', 'refresh-token', user);
+    queryClient.setQueryData(['beneficiaries'], [{ id: 7, name: 'Jan' }]);
+    queryClient.setQueryData(['volunteers'], [{ id: 9, name: 'Anna' }]);
+
+    useAuthStore.getState().logout();
+
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
   });
 
   it('updates only the current user profile', () => {

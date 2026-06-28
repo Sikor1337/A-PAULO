@@ -1,8 +1,12 @@
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
+import { attachBackendWakeupInterceptors } from '@/lib/backendWakeup';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 const API_ROOT = API_URL.replace(/\/api\/?$/, '');
+
+const refreshClient = axios.create();
+attachBackendWakeupInterceptors(refreshClient);
 
 export const clearSessionAndRedirect = () => {
   useAuthStore.getState().logout();
@@ -18,7 +22,7 @@ export const refreshSession = async () => {
     throw new Error('No refresh token available');
   }
 
-  const response = await axios.post(`${API_ROOT}/auth/token/refresh`, {
+  const response = await refreshClient.post(`${API_ROOT}/auth/token/refresh`, {
     refresh: refreshToken,
   });
 
@@ -35,6 +39,7 @@ export const refreshSession = async () => {
 const apiClient = axios.create({
   baseURL: API_URL,
 });
+attachBackendWakeupInterceptors(apiClient);
 
 // Request interceptor - Add JWT token to requests
 apiClient.interceptors.request.use(
