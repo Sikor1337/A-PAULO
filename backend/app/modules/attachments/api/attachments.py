@@ -1,16 +1,20 @@
 """Attachment API endpoints."""
 
-from typing import Annotated
+from collections.abc import Iterator
+from typing import Annotated, BinaryIO
 
 from fastapi import APIRouter, Depends, Form, Query, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
+from starlette.background import BackgroundTask
 
 from app.core.constants import ATTACHMENT_MAX_SIZE_BYTES
 from app.modules.attachments.dependencies import get_attachment_service
 from app.modules.attachments.schemas import (
     AttachmentResponse,
     AttachmentUpdateRequest,
+    BOCardArchiveQuery,
     BOCardAttachmentListQuery,
+    BOCardAttachmentListResponse,
     CreateAttachmentRequest,
 )
 from app.modules.attachments.services import AttachmentService
@@ -20,14 +24,46 @@ from app.modules.security.dependencies import get_current_user
 router = APIRouter(prefix="/attachments", tags=["attachments"])
 
 
-@router.get("/bo-cards", response_model=list[AttachmentResponse])
+def _iter_file(file: BinaryIO, chunk_size: int = 64 * 1024) -> Iterator[bytes]:
+    """Stream a binary file-like object in bounded chunks."""
+    while chunk := file.read(chunk_size):
+        yield chunk
+
+
+@router.get("/bo-cards", response_model=BOCardAttachmentListResponse)
 def list_bo_card_attachments(
     filters: Annotated[BOCardAttachmentListQuery, Query()],
     service: AttachmentService = Depends(get_attachment_service),
     _user: User = Depends(get_current_user),
 ):
-    """List BO-card attachment metadata without file contents."""
-    return service.list_bo_cards(**filters.model_dump())
+    """List BO-card metadata with optional filters, sorting, and paging."""
+    items, total = service.list_bo_cards(**filters.model_dump())
+    return {
+        "items": items,
+        "total": total,
+        "skip": filters.skip,
+        "limit": filters.limit,
+    }
+
+
+@router.get("/bo-cards/download")
+def download_bo_card_attachments(
+    filters: Annotated[BOCardArchiveQuery, Query()],
+    service: AttachmentService = Depends(get_attachment_service),
+    _user: User = Depends(get_current_user),
+):
+    """Download a ZIP archive with all BO cards matching filters."""
+    archive, included_count = service.build_bo_cards_archive(**filters.model_dump())
+    filename = service.archive_filename()
+    return StreamingResponse(
+        _iter_file(archive),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-BO-Cards-Included": str(included_count),
+        },
+        background=BackgroundTask(archive.close),
+    )
 
 
 @router.post(

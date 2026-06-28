@@ -1,8 +1,11 @@
 """Application-wide constants."""
 
-from typing import Final
+from typing import Final, Literal, get_args
 
 ATTACHMENT_MAX_SIZE_BYTES: Final = 10 * 1024 * 1024
+BO_CARD_ARCHIVE_MEMORY_THRESHOLD_BYTES: Final = 16 * 1024 * 1024
+BO_CARD_ARCHIVE_MAX_UNCOMPRESSED_BYTES: Final = 1024 * 1024 * 1024
+BO_CARD_ARCHIVE_MAX_FILES: Final = 5000
 ATTACHMENT_ALLOWED_EXTENSIONS: Final = frozenset(
     {".pdf", ".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
 )
@@ -22,3 +25,16 @@ ATTACHMENT_SUPPORTED_FILES_MESSAGE: Final = (
 )
 BO_CARD_CONTEXT: Final = "bo_card"
 BO_CARD_PERIOD_PATTERN: Final = r"^\d{4}-(0[1-9]|1[0-2])$"
+
+BOCardSortKey = Literal[
+    "created_at",
+    "updated_at",
+    "period",
+    "display_name",
+    "group_name",
+    "beneficiary_name",
+    "volunteer_name",
+    "size_bytes",
+]
+SortDirection = Literal["asc", "desc"]
+BO_CARD_SORT_KEYS: Final = frozenset(get_args(BOCardSortKey))

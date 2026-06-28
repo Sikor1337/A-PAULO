@@ -53,7 +53,7 @@ flowchart TB
     INFRASTRUCTURE -.-> ERRORS
 :::
 
-**Dlaczego architektura warstwowa, a nie Clean Architecture?**  
+**Dlaczego architektura warstwowa, a nie Clean Architecture?**
 Skupia się na praktycznym, poziomym podziale odpowiedzialności — bardziej czytelnym i dopasowanym do typowego workflow zespołu.
 
 **Korzyści:**

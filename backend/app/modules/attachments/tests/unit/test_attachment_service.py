@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
+from zipfile import ZipFile
 
 import pytest
 
@@ -167,3 +168,37 @@ def test_delete_attachment_removes_metadata_when_file_is_already_missing() -> No
 
     repo.delete.assert_called_once_with(repo.get_by_id.return_value)
     service.session.commit.assert_called_once()
+
+
+def test_archive_skips_missing_files_and_returns_seeked_stream(tmp_path) -> None:
+    existing_path = tmp_path / "existing.pdf"
+    existing_path.write_bytes(b"pdf")
+    missing = SimpleNamespace(storage_key="missing.pdf", size_bytes=3)
+    existing = SimpleNamespace(
+        storage_key="existing.pdf",
+        size_bytes=3,
+        period="2026-06",
+        display_name="Karta.pdf",
+        original_filename="Karta.pdf",
+    )
+    storage = MagicMock()
+    storage.get_path.side_effect = [
+        NotFoundError("Attachment file not found"),
+        existing_path,
+    ]
+    service = build_service(MagicMock(), storage)
+
+    archive_file, included_count = service._create_bo_cards_archive(
+        [
+            (missing, "Grupa", "Jan", "Anna"),
+            (existing, "Grupa", "Jan", "Anna"),
+        ]
+    )
+    try:
+        assert included_count == 1
+        assert archive_file.tell() == 0
+        with ZipFile(archive_file) as archive:
+            assert len(archive.namelist()) == 1
+            assert archive.read(archive.namelist()[0]) == b"pdf"
+    finally:
+        archive_file.close()

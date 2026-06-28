@@ -321,7 +321,7 @@ const GroupsPage: React.FC = () => {
                   onClick={() => handleRenameAttachment(attachment)}
                   className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-600 hover:bg-gray-200 disabled:opacity-50"
                 >
-                  Zmień
+                  Zmień nazwę
                 </button>
                 <button
                   type="button"

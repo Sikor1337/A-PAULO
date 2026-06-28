@@ -29,6 +29,7 @@ const sections: SidebarSection[] = [
       { name: 'Podopieczni', icon: '📄', path: '/beneficiaries' },
       { name: 'Wolontariusze', icon: '🙋', path: '/volunteers' },
       { name: 'Grupy', icon: '👥', path: '/groups' },
+      { name: 'Karty BO', icon: 'BO', path: '/bo-cards' },
       { name: 'Wdrażanie', icon: '🚀', path: '/onboarding' },
     ],
   },

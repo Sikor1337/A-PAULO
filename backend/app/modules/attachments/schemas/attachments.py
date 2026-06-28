@@ -15,20 +15,51 @@ from app.core.constants import (
     ATTACHMENT_MAX_SIZE_BYTES,
     ATTACHMENT_SUPPORTED_FILES_MESSAGE,
     BO_CARD_PERIOD_PATTERN,
+    BOCardSortKey,
+    SortDirection,
 )
 
 
-class BOCardAttachmentListQuery(BaseModel):
-    """Validated filters for listing BO-card attachments."""
+class BOCardFilters(BaseModel):
+    """Validated filters shared by BO-card listing and archive endpoints."""
 
-    group_id: int = Field(ge=1)
+    group_id: int | None = Field(None, ge=1)
     beneficiary_id: int | None = Field(None, ge=1)
     volunteer_id: int | None = Field(None, ge=1)
     period: str | None = Field(None, pattern=BO_CARD_PERIOD_PATTERN)
+    period_from: str | None = Field(None, pattern=BO_CARD_PERIOD_PATTERN)
+    period_to: str | None = Field(None, pattern=BO_CARD_PERIOD_PATTERN)
+    search: str | None = Field(None, max_length=255)
+    has_comment: bool | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("search", mode="before")
+    @classmethod
+    def normalize_search(cls, value: str | None) -> str | None:
+        """Normalize blank searches to an omitted filter."""
+        normalized = (value or "").strip()
+        return normalized or None
+
+    @model_validator(mode="after")
+    def validate_period_range(self) -> Self:
+        """Reject an inverted inclusive period range."""
+        if self.period_from and self.period_to and self.period_from > self.period_to:
+            raise ValueError("Period from cannot be later than period to")
+        return self
+
+
+class BOCardAttachmentListQuery(BOCardFilters):
+    """Validated filters, sorting, and paging for BO-card metadata."""
+
+    sort_by: BOCardSortKey = "created_at"
+    sort_direction: SortDirection = "desc"
     skip: int = Field(0, ge=0)
     limit: int = Field(100, ge=1, le=1000)
 
-    model_config = ConfigDict(extra="forbid")
+
+class BOCardArchiveQuery(BOCardFilters):
+    """Validated filters for downloading BO-card files as an archive."""
 
 
 class CreateAttachmentRequest(BaseModel):
@@ -136,3 +167,20 @@ class AttachmentResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class BOCardAttachmentOverview(AttachmentResponse):
+    """BO-card metadata enriched for the cross-group management panel."""
+
+    group_name: str | None
+    beneficiary_name: str | None
+    volunteer_name: str | None
+
+
+class BOCardAttachmentListResponse(BaseModel):
+    """Paginated BO-card overview response."""
+
+    items: list[BOCardAttachmentOverview]
+    total: int
+    skip: int
+    limit: int

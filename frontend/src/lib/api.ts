@@ -34,9 +34,6 @@ export const refreshSession = async () => {
 // Create axios instance with default config
 const apiClient = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // Request interceptor - Add JWT token to requests
