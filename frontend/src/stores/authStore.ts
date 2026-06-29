@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { resetBackendWakeupNotice } from '@/lib/backendWakeup';
+import { queryClient } from '@/lib/queryClient';
+import { markSessionChanged } from '@/lib/sessionLifecycle';
 
 interface User {
   id: number;
@@ -24,12 +27,16 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: !!localStorage.getItem('access_token'),
 
       login: (accessToken: string, refreshToken: string, user: User) => {
+        markSessionChanged();
         localStorage.setItem('access_token', accessToken);
         localStorage.setItem('refresh_token', refreshToken);
         set({ user, isAuthenticated: true });
       },
 
       logout: () => {
+        markSessionChanged();
+        queryClient.clear();
+        resetBackendWakeupNotice();
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         set({ user: null, isAuthenticated: false });
