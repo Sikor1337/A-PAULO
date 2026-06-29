@@ -79,6 +79,7 @@ Frontend działa pod adresem `http://localhost:5173`.
 
 - [Wymagania biznesowe](docs/business-requirements.md)
 - [Architektura backendu](docs/backend-architecture.md)
+- [Architektura frontendu](docs/frontend-architecture.md)
 - [Plan hostingu](docs/hosting-PLAN.md)
 - [Responsywny layout frontendu](docs/frontend-responsive-layout.md)
 
