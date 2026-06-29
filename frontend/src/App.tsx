@@ -11,7 +11,16 @@ import VolunteersPage from './pages/VolunteersPage';
 import GroupsPage from './pages/GroupsPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
-import { queryClient } from './lib/queryClient';
+import EventsPage from './pages/EventsPage';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   return (
@@ -29,6 +38,7 @@ function App() {
             <Route path="/bo-cards" element={<BOCardsPage />} />
             <Route path="/volunteers" element={<VolunteersPage />} />
             <Route path="/groups" element={<GroupsPage />} />
+            <Route path="/events" element={<EventsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
