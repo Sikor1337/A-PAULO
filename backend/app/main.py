@@ -7,6 +7,8 @@ from fastapi.responses import RedirectResponse
 from app.core.errors import register_error_handlers
 from app.infrastructure.sql import models_registry  # noqa: F401 - Register all models
 from app.modules.attachments.api import router as attachments_router
+from app.modules.calendar.api import router as calendar_router
+from app.modules.calendar.services import install_calendar_access_log_filter
 from app.modules.core_data.api.users import router as users_router
 from app.modules.pi.api.beneficiaries import router as beneficiaries_router
 from app.modules.pi.api.functions import router as functions_router
@@ -36,6 +38,7 @@ app.add_middleware(
 )
 
 register_error_handlers(app)
+install_calendar_access_log_filter()
 
 @app.get("/", include_in_schema=False)
 def root_redirect():
@@ -53,4 +56,5 @@ app.include_router(beneficiaries_router, prefix="/api/v1")
 app.include_router(groups_router, prefix="/api/v1")
 app.include_router(attachments_router, prefix="/api/v1")
 app.include_router(recruitment_router, prefix="/api/v1")
+app.include_router(calendar_router, prefix="/api/v1")
 
