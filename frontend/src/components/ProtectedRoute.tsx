@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import type { UserStatus } from '@/types';
+import { destinationForUser } from '@/lib/recruitmentAccess';
 
 interface Props {
   allowedStatuses?: UserStatus[];
@@ -13,7 +14,7 @@ const ProtectedRoute = ({ allowedStatuses }: Props) => {
     return <Navigate to="/login" replace />;
   }
   if (allowedStatuses && !allowedStatuses.includes(user.status)) {
-    return <Navigate to={user.status === 'new_volunteer' ? '/recruitment/apply' : '/dashboard'} replace />;
+    return <Navigate to={destinationForUser(user.status)} replace />;
   }
 
   return <Outlet />;

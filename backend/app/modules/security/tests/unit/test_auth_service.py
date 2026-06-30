@@ -66,12 +66,39 @@ def test_register_normalizes_fields_hashes_password_and_commits(
         hashed_password="hashed:StrongPass123",
         first_name="Jan",
         last_name="Kowalski",
-        status="new_volunteer",
+        status="regular",
     )
     session.flush.assert_called_once()
     session.refresh.assert_called_once_with(user)
     session.commit.assert_called_once()
     session.rollback.assert_not_called()
+
+
+def test_register_with_valid_recruitment_token_creates_candidate(
+    service: AuthService,
+    repo: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = SimpleNamespace(id=2)
+    repo.get_by_username.return_value = None
+    repo.get_by_email.return_value = None
+    repo.create.return_value = user
+    monkeypatch.setattr(
+        "app.modules.security.services.auth.is_valid_recruitment_access_token",
+        lambda token: token == "valid-token",
+    )
+    monkeypatch.setattr(
+        "app.modules.security.services.auth.hash_password", lambda password: "hash"
+    )
+
+    service.register(
+        username="candidate",
+        email="candidate@example.com",
+        password="StrongPass123",
+        recruitment_token="valid-token",
+    )
+
+    assert repo.create.call_args.kwargs["status"] == "new_volunteer"
 
 
 def test_register_rolls_back_when_username_exists(

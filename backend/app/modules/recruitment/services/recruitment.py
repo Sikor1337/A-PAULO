@@ -9,12 +9,12 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import ConflictError, NotFoundError, ValidationException
 from app.modules.core_data.models import User
-from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
-from app.modules.recruitment.models.constants import (
+from app.modules.recruitment.constants import (
     DEFAULT_FIELDS,
     NEW_VOLUNTEER_STATUS,
     SUBMISSION_STATUSES,
 )
+from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
 from app.modules.recruitment.repositories import RecruitmentRepository
 from app.modules.recruitment.schemas import (
     RecruitmentFieldDraft,

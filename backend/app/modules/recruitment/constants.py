@@ -67,8 +67,12 @@ SUBMISSION_STATUSES = {
 }
 
 NEW_VOLUNTEER_STATUS = "new_volunteer"
+REGULAR_USER_STATUS = "regular"
 MIGRATED_RECRUITMENT_PASSWORD = "!migration-unusable!"
 STAFF_STATUSES = {"regular", "admin"}
+
+RECRUITMENT_ROUTE_PREFIX = "/recrutation"
+RECRUITMENT_TOKEN_HEADER = "X-Recruitment-Token"
 
 ANSWER_MAX_LENGTHS = {
     "full_name": 200,

@@ -4,6 +4,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../stores/authStore';
 import { authService } from '../services/authService';
+import {
+  destinationForUser,
+  getStoredRecruitmentAccessToken,
+} from '../lib/recruitmentAccess';
 
 interface RegisterFormData {
   username: string;
@@ -16,7 +20,7 @@ interface RegisterFormData {
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -31,10 +35,10 @@ const RegisterPage = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
+    if (isAuthenticated && user) {
+      navigate(destinationForUser(user.status));
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, user]);
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
@@ -48,6 +52,7 @@ const RegisterPage = () => {
         password: data.password,
         first_name: data.first_name,
         last_name: data.last_name,
+        recruitment_token: getStoredRecruitmentAccessToken(),
       });
 
       // Redirect to login after successful registration
