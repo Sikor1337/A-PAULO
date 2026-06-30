@@ -1,11 +1,15 @@
 """Database models for the volunteer recruitment workflow."""
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.sql.base import Base
+
+if TYPE_CHECKING:
+    from app.modules.core_data.models import User
 
 
 class RecruitmentField(Base):
@@ -34,48 +38,14 @@ class RecruitmentField(Base):
     )
 
 
-class RecruitmentInvitation(Base):
-    """A private, single-use link issued to one prospective volunteer."""
-
-    __tablename__ = "recruitment_invitations"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    token: Mapped[str] = mapped_column(String(128), unique=True, index=True)
-    recipient_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    recipient_email: Mapped[str | None] = mapped_column(
-        String(255), nullable=True, index=True
-    )
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-        onupdate=func.now(),
-    )
-    submission: Mapped["RecruitmentSubmission | None"] = relationship(
-        back_populates="invitation", uselist=False
-    )
-
-    @property
-    def submission_id(self) -> int | None:
-        return self.submission.id if self.submission else None
-
-    @property
-    def submission_status(self) -> str | None:
-        return self.submission.status if self.submission else None
-
-
 class RecruitmentSubmission(Base):
     """One candidate application, reopened only after an explicit return."""
 
     __tablename__ = "recruitment_submissions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    invitation_id: Mapped[int] = mapped_column(
-        ForeignKey("recruitment_invitations.id", ondelete="RESTRICT"),
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
         unique=True,
         index=True,
@@ -88,6 +58,7 @@ class RecruitmentSubmission(Base):
     answers: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(30), default="SUBMITTED", index=True)
     return_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    decision_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     volunteer_id: Mapped[int | None] = mapped_column(
         ForeignKey("volunteers.id", ondelete="SET NULL"), nullable=True, unique=True
     )
@@ -106,6 +77,4 @@ class RecruitmentSubmission(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
-    invitation: Mapped[RecruitmentInvitation] = relationship(
-        back_populates="submission"
-    )
+    user: Mapped["User"] = relationship()

@@ -25,12 +25,9 @@ export type {
 export type {
   RecruitmentAnswer,
   RecruitmentField,
-  RecruitmentFieldInput,
+  RecruitmentFieldDraft,
   RecruitmentFieldType,
   RecruitmentForm,
-  RecruitmentInvitation,
-  RecruitmentInvitationInput,
-  RecruitmentPublicForm,
   RecruitmentStatus,
   RecruitmentSubmission,
 } from './recruitment';

@@ -40,6 +40,7 @@ def test_register_login_refresh_and_current_user(auth_client: TestClient) -> Non
     assert register_response.status_code == 200
     assert register_response.json()["username"] == "newuser"
     assert register_response.json()["email"] == "newuser@example.com"
+    assert register_response.json()["status"] == "new_volunteer"
 
     login_response = auth_client.post(
         "/auth/token",

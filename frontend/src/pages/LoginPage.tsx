@@ -12,7 +12,7 @@ interface LoginFormData {
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuthStore();
+  const { login, isAuthenticated, user: currentUser } = useAuthStore();
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -24,10 +24,10 @@ const LoginPage = () => {
 
   // Przekieruj jeśli już zalogowany
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
+    if (isAuthenticated && currentUser) {
+      navigate(currentUser?.status === 'new_volunteer' ? '/recruitment/apply' : '/dashboard');
     }
-  }, [isAuthenticated, navigate]);
+  }, [currentUser, isAuthenticated, navigate]);
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -51,11 +51,12 @@ const LoginPage = () => {
           email: userProfile.email,
           first_name: userProfile.first_name || '',
           last_name: userProfile.last_name || '',
-          role: userProfile.status === 'admin' ? 'admin' as const : 'volunteer' as const,
+          status: userProfile.status,
         };
 
         // Update store with user data
         login(access, refresh, user);
+        navigate(user.status === 'new_volunteer' ? '/recruitment/apply' : '/dashboard');
       } catch (profileError) {
         // Clear tokens if profile fetch fails
         localStorage.removeItem('access_token');
@@ -63,8 +64,6 @@ const LoginPage = () => {
         throw profileError;
       }
 
-      // Redirect to dashboard
-      navigate('/dashboard');
     } catch (err) {
       console.error('Login error:', err);
       const axiosErr = err as AxiosError<{ detail?: string }>;

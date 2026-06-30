@@ -3,11 +3,8 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
-from app.modules.recruitment.models import (
-    RecruitmentField,
-    RecruitmentInvitation,
-    RecruitmentSubmission,
-)
+from app.modules.pi.models.volunteer import Volunteer
+from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
 
 
 class RecruitmentRepository:
@@ -31,48 +28,23 @@ class RecruitmentRepository:
     def delete_field(self, field: RecruitmentField) -> None:
         self.session.delete(field)
 
-    def get_invitation(self, invitation_id: int) -> RecruitmentInvitation | None:
-        return self.session.get(RecruitmentInvitation, invitation_id)
-
-    def get_invitation_by_token(self, token: str) -> RecruitmentInvitation | None:
-        return (
-            self.session.query(RecruitmentInvitation)
-            .options(joinedload(RecruitmentInvitation.submission))
-            .filter(RecruitmentInvitation.token == token)
-            .one_or_none()
-        )
-
-    def get_active_invitation_by_email(
-        self, email: str
-    ) -> RecruitmentInvitation | None:
-        return (
-            self.session.query(RecruitmentInvitation)
-            .filter(
-                func.lower(RecruitmentInvitation.recipient_email) == email.lower(),
-                RecruitmentInvitation.is_active.is_(True),
-            )
-            .one_or_none()
-        )
-
-    def list_invitations(
-        self, *, skip: int = 0, limit: int = 100
-    ) -> list[RecruitmentInvitation]:
-        return (
-            self.session.query(RecruitmentInvitation)
-            .options(joinedload(RecruitmentInvitation.submission))
-            .order_by(RecruitmentInvitation.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
-
-    def create_invitation(self, **values) -> RecruitmentInvitation:
-        invitation = RecruitmentInvitation(**values)
-        self.session.add(invitation)
-        return invitation
-
     def get_submission(self, submission_id: int) -> RecruitmentSubmission | None:
-        return self.session.get(RecruitmentSubmission, submission_id)
+        return (
+            self.session.query(RecruitmentSubmission)
+            .options(joinedload(RecruitmentSubmission.user))
+            .filter(RecruitmentSubmission.id == submission_id)
+            .one_or_none()
+        )
+
+    def get_submission_by_user_id(
+        self, user_id: int
+    ) -> RecruitmentSubmission | None:
+        return (
+            self.session.query(RecruitmentSubmission)
+            .options(joinedload(RecruitmentSubmission.user))
+            .filter(RecruitmentSubmission.user_id == user_id)
+            .one_or_none()
+        )
 
     def get_submission_by_email(self, email: str) -> RecruitmentSubmission | None:
         return (
@@ -110,3 +82,19 @@ class RecruitmentRepository:
         submission = RecruitmentSubmission(**values)
         self.session.add(submission)
         return submission
+
+    def get_volunteer_by_email(self, email: str) -> Volunteer | None:
+        return (
+            self.session.query(Volunteer)
+            .filter(func.lower(Volunteer.email) == email.lower())
+            .one_or_none()
+        )
+
+    def get_volunteer(self, volunteer_id: int) -> Volunteer | None:
+        return self.session.get(Volunteer, volunteer_id)
+
+    def create_volunteer(self, **values) -> Volunteer:
+        volunteer = Volunteer(**values)
+        self.session.add(volunteer)
+        self.session.flush()
+        return volunteer

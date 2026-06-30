@@ -1,11 +1,8 @@
 import apiClient from '@/lib/api';
 import type {
   RecruitmentField,
-  RecruitmentFieldInput,
+  RecruitmentFieldDraft,
   RecruitmentForm,
-  RecruitmentInvitation,
-  RecruitmentInvitationInput,
-  RecruitmentPublicForm,
   RecruitmentStatus,
   RecruitmentSubmission,
 } from '@/types';
@@ -30,13 +27,8 @@ export const recruitmentService = {
     return response.data;
   },
 
-  getInvitedForm: async (token: string): Promise<RecruitmentPublicForm> => {
-    const response = await apiClient.get<RecruitmentPublicForm>(`${path}/form/${token}`);
-    return response.data;
-  },
-
-  submit: async (token: string, answers: Record<string, unknown>): Promise<RecruitmentSubmission> => {
-    const response = await apiClient.post<RecruitmentSubmission>(`${path}/submissions/${token}`, { answers });
+  submit: async (answers: Record<string, unknown>): Promise<RecruitmentSubmission> => {
+    const response = await apiClient.post<RecruitmentSubmission>(`${path}/submissions`, { answers });
     return response.data;
   },
 
@@ -45,34 +37,9 @@ export const recruitmentService = {
     return response.data;
   },
 
-  createField: async (data: RecruitmentFieldInput): Promise<RecruitmentField> => {
-    const response = await apiClient.post<RecruitmentField>(`${path}/fields`, data);
+  saveFields: async (fields: RecruitmentFieldDraft[]): Promise<RecruitmentField[]> => {
+    const response = await apiClient.put<RecruitmentField[]>(`${path}/fields`, { fields });
     return response.data;
-  },
-
-  updateField: async (id: number, data: Partial<RecruitmentFieldInput>): Promise<RecruitmentField> => {
-    const response = await apiClient.patch<RecruitmentField>(`${path}/fields/${id}`, data);
-    return response.data;
-  },
-
-  deleteField: async (id: number): Promise<void> => {
-    await apiClient.delete(`${path}/fields/${id}`);
-  },
-
-  reorderFields: async (fieldIds: number[]): Promise<RecruitmentField[]> => {
-    const response = await apiClient.put<RecruitmentField[]>(`${path}/fields/order`, { field_ids: fieldIds });
-    return response.data;
-  },
-
-  getInvitations: async (): Promise<RecruitmentInvitation[]> => fetchAll(`${path}/invitations`),
-
-  createInvitation: async (data: RecruitmentInvitationInput): Promise<RecruitmentInvitation> => {
-    const response = await apiClient.post<RecruitmentInvitation>(`${path}/invitations`, data);
-    return response.data;
-  },
-
-  revokeInvitation: async (id: number): Promise<void> => {
-    await apiClient.delete(`${path}/invitations/${id}`);
   },
 
   getSubmissions: async (status?: RecruitmentStatus): Promise<RecruitmentSubmission[]> => {
@@ -81,12 +48,17 @@ export const recruitmentService = {
 
   transition: async (
     id: number,
-    action: 'start-onboarding' | 'return' | 'accept' | 'reject',
-    reason?: string,
+    action: 'start-onboarding' | 'return' | 'accept' | 'reject' | 'restore-onboarding',
+    note?: string,
   ): Promise<RecruitmentSubmission> => {
+    const body = action === 'return'
+      ? { reason: note || null }
+      : action === 'accept' || action === 'reject'
+        ? { comment: note || null }
+        : undefined;
     const response = await apiClient.post<RecruitmentSubmission>(
       `${path}/submissions/${id}/${action}`,
-      action === 'return' ? { reason: reason || null } : undefined,
+      body,
     );
     return response.data;
   },

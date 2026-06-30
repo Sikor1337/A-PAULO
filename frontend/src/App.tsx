@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -16,6 +17,8 @@ import RecruitmentFormBuilderPage from './pages/recruitment/RecruitmentFormBuild
 import RecruitmentResponsesPage from './pages/recruitment/RecruitmentResponsesPage';
 import RecruitmentOnboardingPage from './pages/recruitment/RecruitmentOnboardingPage';
 import RecruitmentApplicationPage from './pages/recruitment/RecruitmentApplicationPage';
+import { authService } from './services/authService';
+import { useAuthStore } from './stores/authStore';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,17 +29,45 @@ const queryClient = new QueryClient({
   },
 });
 
+const SessionProfileSync = () => {
+  const { isAuthenticated, updateUser } = useAuthStore();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let active = true;
+    authService.getUserProfile()
+      .then((profile) => {
+        if (!active) return;
+        updateUser({
+          id: profile.id,
+          email: profile.email,
+          first_name: profile.first_name || '',
+          last_name: profile.last_name || '',
+          status: profile.status,
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, updateUser]);
+
+  return null;
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <SessionProfileSync />
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/recruitment/apply" element={<RecruitmentApplicationPage />} />
-          <Route path="/recruitment/apply/:invitationToken" element={<RecruitmentApplicationPage />} />
+          <Route element={<ProtectedRoute allowedStatuses={['new_volunteer']} />}>
+            <Route path="/recruitment/apply" element={<RecruitmentApplicationPage />} />
+          </Route>
 
-          <Route element={<ProtectedRoute />}>
+          <Route element={<ProtectedRoute allowedStatuses={['regular', 'admin']} />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/beneficiaries" element={<BeneficiariesPage />} />

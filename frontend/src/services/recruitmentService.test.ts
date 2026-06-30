@@ -37,24 +37,31 @@ describe('recruitmentService', () => {
     });
   });
 
-  it('submits through the individual invitation token', async () => {
+  it('submits through the account-bound permanent form', async () => {
     mockedApiClient.post.mockResolvedValue({ data: { id: 7 } });
 
-    await recruitmentService.submit('private-token', { email: 'anna@example.com' });
+    await recruitmentService.submit({ email: 'anna@example.com' });
 
     expect(mockedApiClient.post).toHaveBeenCalledWith(
-      'v1/recruitment/submissions/private-token',
+      'v1/recruitment/submissions',
       { answers: { email: 'anna@example.com' } },
     );
   });
 
-  it('saves the complete field order in one request', async () => {
+  it('saves the complete form draft in one request', async () => {
     mockedApiClient.put.mockResolvedValue({ data: [] });
 
-    await recruitmentService.reorderFields([3, 1, 2]);
+    const fields = [{
+      id: 3,
+      label: 'Obszary',
+      field_type: 'multiselect' as const,
+      required: true,
+      placeholder: '',
+      options: ['Seniorzy', 'Dzieci'],
+      is_active: true,
+    }];
+    await recruitmentService.saveFields(fields);
 
-    expect(mockedApiClient.put).toHaveBeenCalledWith('v1/recruitment/fields/order', {
-      field_ids: [3, 1, 2],
-    });
+    expect(mockedApiClient.put).toHaveBeenCalledWith('v1/recruitment/fields', { fields });
   });
 });

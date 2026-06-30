@@ -6,61 +6,38 @@ export type RecruitmentFieldType =
   | 'date'
   | 'select'
   | 'radio'
+  | 'multiselect'
   | 'checkbox';
 
-export interface RecruitmentField {
-  id: number;
-  key: string;
+export interface RecruitmentFieldDraft {
+  id?: number;
+  is_system?: boolean;
   label: string;
   field_type: RecruitmentFieldType;
   required: boolean;
   placeholder: string;
   options: string[];
-  position: number;
   is_active: boolean;
+}
+
+export interface RecruitmentField extends RecruitmentFieldDraft {
+  id: number;
+  key: string;
+  position: number;
   is_system: boolean;
   created_at: string;
   updated_at: string;
-}
-
-export interface RecruitmentFieldInput {
-  label: string;
-  field_type: RecruitmentFieldType;
-  required: boolean;
-  placeholder: string;
-  options: string[];
-  position?: number;
-  is_active?: boolean;
 }
 
 export interface RecruitmentForm {
   title: string;
   description: string;
   fields: RecruitmentField[];
-}
-
-export interface RecruitmentPublicForm extends RecruitmentForm {
-  invitation_token: string;
-  recipient_name: string | null;
-  recipient_email: string | null;
-  return_reason: string | null;
-}
-
-export interface RecruitmentInvitationInput {
-  recipient_name?: string;
-  recipient_email?: string;
-}
-
-export interface RecruitmentInvitation {
-  id: number;
-  token: string;
-  recipient_name: string | null;
-  recipient_email: string | null;
-  is_active: boolean;
-  submission_id: number | null;
+  applicant_name: string;
+  applicant_email: string;
+  initial_answers: Record<string, unknown>;
   submission_status: RecruitmentStatus | null;
-  created_at: string;
-  updated_at: string;
+  return_reason: string | null;
 }
 
 export type RecruitmentStatus = 'SUBMITTED' | 'ONBOARDING' | 'ACCEPTED' | 'REJECTED' | 'RETURNED';
@@ -74,6 +51,7 @@ export interface RecruitmentAnswer {
 
 export interface RecruitmentSubmission {
   id: number;
+  user_id: number;
   full_name: string;
   email: string;
   phone: string;
@@ -82,6 +60,7 @@ export interface RecruitmentSubmission {
   answers: RecruitmentAnswer[];
   status: RecruitmentStatus;
   return_reason: string | null;
+  decision_comment: string | null;
   volunteer_id: number | null;
   submitted_at: string;
   status_changed_at: string;

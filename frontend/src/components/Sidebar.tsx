@@ -95,7 +95,7 @@ const Sidebar = ({ groupsSlot, isOpen = true, onClose }: SidebarProps) => {
             </h3>
             <nav className="space-y-0.5">
               {section.items
-                .filter((item) => !item.adminOnly || user?.role === 'admin')
+                .filter((item) => !item.adminOnly || user?.status === 'admin')
                 .map((item) => (
                   <div
                     key={item.name}

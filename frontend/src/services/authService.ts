@@ -77,7 +77,7 @@ export interface UserProfile {
   username: string;
   first_name: string;
   last_name: string;
-  status: 'regular' | 'admin';
+  status: 'new_volunteer' | 'regular' | 'admin';
   is_active?: boolean;
 }
 

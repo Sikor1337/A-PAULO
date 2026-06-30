@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
-import type { RecruitmentField, RecruitmentFieldInput, RecruitmentFieldType } from '@/types';
+import type { RecruitmentFieldDraft, RecruitmentFieldType } from '@/types';
 
 interface Props {
-  field: RecruitmentField | null;
-  nextPosition: number;
-  isPending: boolean;
+  field: RecruitmentFieldDraft | null;
   onClose: () => void;
-  onSave: (data: RecruitmentFieldInput) => void;
+  onSave: (data: RecruitmentFieldDraft) => void;
 }
 
 const fieldTypes: { value: RecruitmentFieldType; label: string }[] = [
@@ -18,16 +16,17 @@ const fieldTypes: { value: RecruitmentFieldType; label: string }[] = [
   { value: 'date', label: 'Data' },
   { value: 'select', label: 'Lista wyboru' },
   { value: 'radio', label: 'Jedna z opcji' },
+  { value: 'multiselect', label: 'Wiele z wielu' },
   { value: 'checkbox', label: 'Potwierdzenie' },
 ];
 
-const RecruitmentFieldModal = ({ field, nextPosition, isPending, onClose, onSave }: Props) => {
+const RecruitmentFieldModal = ({ field, onClose, onSave }: Props) => {
   const [label, setLabel] = useState(field?.label ?? '');
   const [fieldType, setFieldType] = useState<RecruitmentFieldType>(field?.field_type ?? 'text');
   const [required, setRequired] = useState(field?.required ?? false);
   const [placeholder, setPlaceholder] = useState(field?.placeholder ?? '');
   const [optionsText, setOptionsText] = useState(field?.options.join('\n') ?? '');
-  const hasOptions = fieldType === 'select' || fieldType === 'radio';
+  const hasOptions = fieldType === 'select' || fieldType === 'radio' || fieldType === 'multiselect';
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -39,8 +38,9 @@ const RecruitmentFieldModal = ({ field, nextPosition, isPending, onClose, onSave
       options: hasOptions
         ? optionsText.split('\n').map((option) => option.trim()).filter(Boolean)
         : [],
-      position: field?.position ?? nextPosition,
       is_active: field?.is_active ?? true,
+      ...(field?.id ? { id: field.id } : {}),
+      ...(field?.is_system ? { is_system: true } : {}),
     });
   };
 
@@ -115,8 +115,8 @@ const RecruitmentFieldModal = ({ field, nextPosition, isPending, onClose, onSave
 
         <div className="flex justify-end gap-3 border-t pt-4">
           <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 font-semibold text-gray-500">Anuluj</button>
-          <button disabled={isPending} className="rounded-lg bg-indigo-600 px-5 py-2 font-bold text-white disabled:opacity-50">
-            {isPending ? 'Zapisywanie…' : 'Zapisz pytanie'}
+          <button className="rounded-lg bg-indigo-600 px-5 py-2 font-bold text-white">
+            Zastosuj zmianę
           </button>
         </div>
       </form>

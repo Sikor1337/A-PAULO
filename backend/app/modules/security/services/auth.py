@@ -1,9 +1,12 @@
-from typing import Optional
-from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
 
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
+from app.modules.recruitment.models.constants import (
+    MIGRATED_RECRUITMENT_PASSWORD,
+    NEW_VOLUNTEER_STATUS,
+)
 from app.modules.security.schemas import LoginRequest, ProfileUpdateRequest, Token
 from app.modules.security.services.password import hash_password, verify_password
 
@@ -15,7 +18,7 @@ class AuthService:
         self,
         repo: UserRepository,
         token_service: TokenService,
-        session: Optional[Session] = None,
+        session: Session | None = None,
     ):
         self.repo = repo
         self.token_service = token_service
@@ -47,7 +50,14 @@ class AuthService:
                     status_code=status.HTTP_409_CONFLICT,
                     detail=f"Username '{username}' already exists",
                 )
-            if self.repo.get_by_email(normalized_email):
+            existing_email_user = self.repo.get_by_email(normalized_email)
+            is_migrated_candidate = bool(
+                existing_email_user
+                and not existing_email_user.is_active
+                and existing_email_user.hashed_password
+                == MIGRATED_RECRUITMENT_PASSWORD
+            )
+            if existing_email_user and not is_migrated_candidate:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail=f"Email '{email}' already exists",
@@ -56,14 +66,25 @@ class AuthService:
             # Hash password
             hashed_password = hash_password(password)
 
-            # Create user with normalized email, keep original username case
-            user = self.repo.create(
-                username=normalized_username,
-                email=normalized_email,
-                hashed_password=hashed_password,
-                first_name=first_name,
-                last_name=last_name,
-            )
+            if is_migrated_candidate:
+                user = self.repo.update(
+                    existing_email_user,
+                    username=normalized_username,
+                    hashed_password=hashed_password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    status=existing_email_user.status,
+                    is_active=True,
+                )
+            else:
+                user = self.repo.create(
+                    username=normalized_username,
+                    email=normalized_email,
+                    hashed_password=hashed_password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    status=NEW_VOLUNTEER_STATUS,
+                )
             self.session.flush()
             self.session.refresh(user)
             self.session.commit()

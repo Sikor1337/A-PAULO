@@ -11,7 +11,7 @@ const RecruitmentResponsesPage = () => {
   const returnSubmission = (submission: RecruitmentSubmission) => {
     const reason = window.prompt('Powód zwrotu formularza (opcjonalnie):');
     if (reason === null) return;
-    action.mutate({ id: submission.id, action: 'return', reason });
+    action.mutate({ id: submission.id, action: 'return', note: reason });
   };
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();

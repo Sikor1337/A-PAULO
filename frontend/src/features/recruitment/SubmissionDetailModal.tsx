@@ -32,6 +32,13 @@ const SubmissionDetailModal = ({ submission, onClose }: Props) => (
       </div>
     )}
 
+    {submission.decision_comment && (
+      <div className="mt-5 rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <p className="text-xs font-bold uppercase text-blue-700">Komentarz do decyzji</p>
+        <p className="mt-1 whitespace-pre-wrap text-sm text-blue-950">{submission.decision_comment}</p>
+      </div>
+    )}
+
     <dl className="mt-5 grid gap-3 sm:grid-cols-2">
       {submission.answers.map((answer) => (
         <div key={answer.key} className="rounded-lg border border-gray-200 bg-gray-50 p-4 sm:odd:col-span-1">

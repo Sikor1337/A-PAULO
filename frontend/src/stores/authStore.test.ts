@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { useAuthStore } from './authStore';
+import { migrateAuthState, useAuthStore } from './authStore';
 
 const user = {
   id: 1,
   email: 'anna@example.org',
   first_name: 'Anna',
   last_name: 'Nowak',
-  role: 'admin' as const,
+  status: 'admin' as const,
 };
 
 const resetAuthStore = () => {
@@ -51,5 +51,27 @@ describe('auth store', () => {
       isAuthenticated: true,
     });
     expect(localStorage.getItem('access_token')).toBe('access-token');
+  });
+
+  it('migrates the legacy role field to status', () => {
+    const migrated = migrateAuthState({
+      user: {
+        id: 7,
+        email: 'admin@example.org',
+        first_name: 'Ada',
+        last_name: 'Admin',
+        role: 'admin',
+      },
+    });
+
+    expect(migrated).toEqual({
+      user: {
+        id: 7,
+        email: 'admin@example.org',
+        first_name: 'Ada',
+        last_name: 'Admin',
+        status: 'admin',
+      },
+    });
   });
 });

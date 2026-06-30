@@ -1,4 +1,4 @@
-export type UserStatus = 'regular' | 'admin';
+export type UserStatus = 'new_volunteer' | 'regular' | 'admin';
 
 export interface AdminUser {
   id: number;
