@@ -25,7 +25,9 @@
   `frontend/src/lib/backendWakeup.ts`.
 - Po pięciu sekundach oczekiwania na pierwsze dane odpowiedzi pokazywany jest
   globalny popup informujący o zimnym starcie Rendera.
-- Dla multipart uploadu czas odpowiedzi jest liczony dopiero po wysłaniu pliku.
+- Czas jest liczony od wysłania żądania, również dla multipart uploadu i jego
+  zapytania CORS preflight. To ważne, ponieważ uśpiony Render może zatrzymać
+  preflight przed rozpoczęciem wysyłania pliku.
 - Pierwszy odebrany fragment odpowiedzi zamyka popup; czas pobierania całego
   pliku nie jest traktowany jako uruchamianie serwera.
 - Przy wielu równoległych wolnych requestach popup znika dopiero po odpowiedzi
