@@ -89,7 +89,7 @@ const ProfilePage = () => {
         email: updated.email,
         first_name: updated.first_name,
         last_name: updated.last_name,
-        role: updated.status === 'admin' ? 'admin' : 'volunteer',
+        status: updated.status,
       });
       setSuccessMsg('Zapisano zmiany.');
       setIsEditing(false);

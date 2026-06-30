@@ -26,6 +26,14 @@ describe('ProtectedRoute', () => {
     expect(screen.getByRole('heading', { name: 'Login page' })).toBeInTheDocument();
   });
 
+  it('redirects when a token exists but the user profile is missing', () => {
+    useAuthStore.setState({ user: null, isAuthenticated: true });
+
+    renderProtectedRoute();
+
+    expect(screen.getByRole('heading', { name: 'Login page' })).toBeInTheDocument();
+  });
+
   it('renders nested routes for authenticated users', () => {
     useAuthStore.setState({
       user: {
@@ -33,7 +41,7 @@ describe('ProtectedRoute', () => {
         email: 'anna@example.org',
         first_name: 'Anna',
         last_name: 'Nowak',
-        role: 'admin',
+        status: 'admin',
       },
       isAuthenticated: true,
     });

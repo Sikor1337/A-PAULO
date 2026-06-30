@@ -30,7 +30,7 @@ const sections: SidebarSection[] = [
       { name: 'Wolontariusze', icon: '🙋', path: '/volunteers' },
       { name: 'Grupy', icon: '👥', path: '/groups' },
       { name: 'Karty BO', icon: 'BO', path: '/bo-cards' },
-      { name: 'Wdrażanie', icon: '🚀', path: '/onboarding' },
+      { name: 'Rekrutacja', icon: 'R', path: '/recruitment' },
     ],
   },
   {
@@ -54,7 +54,7 @@ const Sidebar = ({ groupsSlot, isOpen = true, onClose }: SidebarProps) => {
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/' || location.pathname === '/dashboard';
-    return location.pathname === path;
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
   const goTo = (path: string) => {
@@ -95,7 +95,7 @@ const Sidebar = ({ groupsSlot, isOpen = true, onClose }: SidebarProps) => {
             </h3>
             <nav className="space-y-0.5">
               {section.items
-                .filter((item) => !item.adminOnly || user?.role === 'admin')
+                .filter((item) => !item.adminOnly || user?.status === 'admin')
                 .map((item) => (
                   <div
                     key={item.name}

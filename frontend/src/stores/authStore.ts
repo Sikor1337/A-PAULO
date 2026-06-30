@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { UserStatus } from '@/types';
 import { resetBackendWakeupNotice } from '@/lib/backendWakeup';
 import { queryClient } from '@/lib/queryClient';
 import { markSessionChanged } from '@/lib/sessionLifecycle';
@@ -9,7 +10,7 @@ interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'admin' | 'coordinator' | 'guide' | 'volunteer';
+  status: UserStatus;
 }
 
 interface AuthState {
@@ -19,6 +20,32 @@ interface AuthState {
   logout: () => void;
   updateUser: (user: User) => void;
 }
+
+interface LegacyPersistedUser {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  status?: UserStatus;
+  role?: string;
+}
+
+export const migrateAuthState = (persistedState: unknown): unknown => {
+  const state = persistedState as { user?: LegacyPersistedUser | null };
+  const user = state?.user;
+  if (!user || user.status) return persistedState;
+
+  return {
+    ...state,
+    user: {
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      status: user.role === 'admin' ? 'admin' : 'regular',
+    },
+  };
+};
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -48,6 +75,8 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-user',
+      version: 1,
+      migrate: (persistedState) => migrateAuthState(persistedState) as AuthState,
       // Persist only the user profile; auth status is derived from the token in localStorage.
       partialize: (state) => ({ user: state.user }),
     },

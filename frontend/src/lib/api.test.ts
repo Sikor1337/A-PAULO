@@ -32,7 +32,7 @@ describe('apiClient', () => {
       email: 'anna@example.org',
       first_name: 'Anna',
       last_name: 'Nowak',
-      role: 'admin',
+      status: 'admin',
     });
     queryClient.setQueryData(['groups'], [{ id: 1, name: 'Grupa A' }]);
 
@@ -58,7 +58,7 @@ describe('apiClient', () => {
       email: 'anna@example.org',
       first_name: 'Anna',
       last_name: 'Nowak',
-      role: 'admin',
+      status: 'admin',
     });
 
     const refreshPromise = refreshSession();

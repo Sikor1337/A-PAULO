@@ -9,7 +9,11 @@ import { useAuthStore } from '@/stores/authStore';
 import type { Column } from '@/components/ui/DataTable';
 import type { AdminUser, UserStatus } from '@/types';
 
-const roleLabel = (status: UserStatus) => (status === 'admin' ? 'Administrator' : 'Użytkownik');
+const roleLabel = (status: UserStatus) => {
+  if (status === 'admin') return 'Administrator';
+  if (status === 'new_volunteer') return 'Nowy wolontariusz';
+  return 'Użytkownik';
+};
 
 const SettingsAdminPanel = () => {
   const currentUser = useAuthStore((state) => state.user);
@@ -167,6 +171,7 @@ const SettingsAdminPanel = () => {
               <option value="">Wszystkie role</option>
               <option value="admin">Administratorzy</option>
               <option value="regular">Użytkownicy</option>
+              <option value="new_volunteer">Nowi wolontariusze</option>
             </select>
             <button
               type="button"
@@ -198,7 +203,7 @@ const SettingsAdminPanel = () => {
 const SettingsPage = () => {
   const currentUser = useAuthStore((state) => state.user);
 
-  if (currentUser?.role !== 'admin') {
+  if (currentUser?.status !== 'admin') {
     return (
       <PageShell>
         <div className="max-w-xl">

@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from typing import Optional
 
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
@@ -9,7 +8,6 @@ from app.core.dependencies import get_db
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
 from app.modules.security.services.auth import AuthService
-from app.modules.security.services.password import hash_password, verify_password
 from app.modules.security.services.token import TokenService
 
 
@@ -78,7 +76,7 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from None
 
     user = repo.get_by_id(user_id)
     if not user or not user.is_active:
@@ -106,4 +104,5 @@ def require_status(*allowed_statuses: str) -> Callable[[User], User]:
 
 
 require_admin = require_status("admin")
+require_staff = require_status("regular", "admin")
 

@@ -6,7 +6,9 @@ import { AxiosError } from 'axios';
  */
 export function parseApiError(error: unknown, fallback = 'Błąd zapisu.'): string {
   if (error instanceof AxiosError && error.response?.data) {
-    return JSON.stringify(error.response.data);
+    const data = error.response.data as { detail?: unknown };
+    if (typeof data.detail === 'string') return data.detail;
+    return JSON.stringify(data.detail ?? data);
   }
   return fallback;
 }

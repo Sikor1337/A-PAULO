@@ -66,6 +66,7 @@ def test_register_normalizes_fields_hashes_password_and_commits(
         hashed_password="hashed:StrongPass123",
         first_name="Jan",
         last_name="Kowalski",
+        status="new_volunteer",
     )
     session.flush.assert_called_once()
     session.refresh.assert_called_once_with(user)
@@ -91,6 +92,52 @@ def test_register_rolls_back_when_username_exists(
     repo.create.assert_not_called()
     session.commit.assert_not_called()
     session.rollback.assert_called_once()
+
+
+def test_register_claims_a_migrated_recruitment_account(
+    service: AuthService,
+    repo: MagicMock,
+    session: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    migrated_user = SimpleNamespace(
+        id=5,
+        username="legacy_recruitment_5_deadbeef",
+        email="candidate@example.com",
+        first_name="Candidate",
+        last_name="",
+        is_active=False,
+        status="regular",
+        hashed_password="!migration-unusable!",
+    )
+    repo.get_by_username.return_value = None
+    repo.get_by_email.return_value = migrated_user
+    repo.update.return_value = migrated_user
+    monkeypatch.setattr(
+        "app.modules.security.services.auth.hash_password",
+        lambda password: f"hashed:{password}",
+    )
+
+    result = service.register(
+        username="candidate",
+        email="candidate@example.com",
+        password="StrongPass123",
+        first_name="Anna",
+        last_name="Nowak",
+    )
+
+    assert result is migrated_user
+    repo.create.assert_not_called()
+    repo.update.assert_called_once_with(
+        migrated_user,
+        username="candidate",
+        hashed_password="hashed:StrongPass123",
+        first_name="Anna",
+        last_name="Nowak",
+        status="regular",
+        is_active=True,
+    )
+    session.commit.assert_called_once()
 
 
 def test_login_uses_username_then_email_and_issues_tokens(

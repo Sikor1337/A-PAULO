@@ -77,6 +77,7 @@ const UserFormModal = ({ user, onClose, onSave, isPending }: Props) => {
       <div className="grid grid-cols-2 gap-4">
         <SelectInput label="Rola" {...register('status')}>
           <option value="regular">Użytkownik</option>
+          <option value="new_volunteer">Nowy wolontariusz</option>
           <option value="admin">Administrator</option>
         </SelectInput>
         <div className="flex items-end pb-2">

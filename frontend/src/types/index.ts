@@ -22,3 +22,12 @@ export type {
   GroupSaveInput,
   BeneficiaryAssignment,
 } from './group';
+export type {
+  RecruitmentAnswer,
+  RecruitmentField,
+  RecruitmentFieldDraft,
+  RecruitmentFieldType,
+  RecruitmentForm,
+  RecruitmentStatus,
+  RecruitmentSubmission,
+} from './recruitment';
