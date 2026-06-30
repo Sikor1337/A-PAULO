@@ -1,10 +1,12 @@
 import os
+import re
 import sys
 from contextlib import suppress
 from functools import lru_cache
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool, text
+
 from alembic import context
 
 # Make backend/app importable when running alembic from backend/
@@ -34,13 +36,15 @@ def get_schema_name() -> str | None:
     """
     x_args = context.get_x_argument(as_dictionary=True)
 
-    if "db_schema" in x_args and x_args["db_schema"]:
+    if x_args.get("db_schema"):
         return x_args["db_schema"]
 
     return settings.database_schema or "public"
 
 
 _SCHEMA_NAME = get_schema_name()
+if _SCHEMA_NAME and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", _SCHEMA_NAME):
+    raise RuntimeError("Invalid database schema name")
 
 
 @lru_cache(maxsize=1)
@@ -98,15 +102,14 @@ def run_migrations_online() -> None:
         dialect_name = connection.dialect.name
 
         if dialect_name == "postgresql" and _SCHEMA_NAME:
+            schema_sql = connection.dialect.identifier_preparer.quote(_SCHEMA_NAME)
             with suppress(Exception):
-                connection.execute(
-                    text(f'CREATE SCHEMA IF NOT EXISTS "{_SCHEMA_NAME}"')
-                )
+                connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema_sql}"))
 
-            # Ustaw aktywny schema dla całej sesji migracyjnej
-            connection.execute(
-                text(f'SET search_path TO "{_SCHEMA_NAME}", public')
-            )
+            # Isolate reflection and DDL to the selected schema. Adding public
+            # here makes an empty test schema appear populated through
+            # PostgreSQL search_path fallback and corrupts autogenerate output.
+            connection.execute(text(f"SET search_path TO {schema_sql}"))
 
             # Ważne dla refleksji/autogenerate
             connection.dialect.default_schema_name = _SCHEMA_NAME
