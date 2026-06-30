@@ -8,6 +8,7 @@ from app.modules.recruitment.models import (
     RecruitmentField,
     RecruitmentSubmission,
 )
+from app.modules.security.models import Permission, UserGroup
 
 __all__ = [
     "Attachment",
@@ -17,7 +18,9 @@ __all__ = [
     "Group",
     "RecruitmentField",
     "RecruitmentSubmission",
+    "Permission",
     "User",
+    "UserGroup",
     "Volunteer",
 ]
 

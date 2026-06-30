@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import PageShell from '@/components/layout/PageShell';
 import { useBOCardOverview, useBOCardOverviewActions } from '@/hooks/useAttachments';
 import { useGroupList } from '@/hooks/useGroups';
+import { useHasPermission } from '@/hooks/usePermissions';
 import { formatDate } from '@/lib/date';
 import { parseApiError } from '@/lib/errors';
 import { attachmentService } from '@/services/attachmentService';
@@ -52,11 +53,12 @@ const CommentEditor = ({ attachment, disabled, onSave }: CommentEditorProps) => 
   return (
     <div className="min-w-[220px] space-y-2">
       <textarea
+        disabled={disabled}
         value={value}
         maxLength={1000}
         onChange={(event) => setValue(event.target.value)}
         placeholder="Komentarz"
-        className="min-h-16 w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm leading-snug text-gray-700 outline-none focus:border-indigo-500"
+        className="min-h-16 w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm leading-snug text-gray-700 outline-none focus:border-indigo-500 disabled:bg-gray-100"
       />
       <div className="flex items-center justify-between gap-2">
         <span className="text-[10px] font-bold text-gray-300">{value.length}/1000</span>
@@ -74,6 +76,7 @@ const CommentEditor = ({ attachment, disabled, onSave }: CommentEditorProps) => 
 };
 
 const BOCardsPage: React.FC = () => {
+  const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_ATTACHMENTS');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [groupId, setGroupId] = useState<number | ''>('');
@@ -153,7 +156,7 @@ const BOCardsPage: React.FC = () => {
     });
   };
 
-  const actionDisabled = updateAttachment.isPending || deleteAttachment.isPending;
+  const actionDisabled = !canManage || updateAttachment.isPending || deleteAttachment.isPending;
 
   return (
     <PageShell>

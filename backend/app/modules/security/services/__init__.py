@@ -4,4 +4,12 @@ from .auth import AuthService
 from .password import hash_password, verify_password
 from .token import TokenService
 
-__all__ = ["AuthService", "TokenService", "hash_password", "verify_password"]
+from .permissions import PermissionService
+
+__all__ = [
+    "AuthService",
+    "PermissionService",
+    "TokenService",
+    "hash_password",
+    "verify_password",
+]

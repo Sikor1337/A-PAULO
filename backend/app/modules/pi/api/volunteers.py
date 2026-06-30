@@ -11,7 +11,11 @@ from app.modules.pi.schemas.volunteers import (
     VolunteerResponse,
 )
 from app.modules.pi.services.volunteers import VolunteerService
-from app.modules.security.dependencies import get_current_user
+from app.modules.security.dependencies import require_permission
+from app.modules.security.models.constants import (
+    CAN_MANAGE_VOLUNTEERS,
+    CAN_VIEW_VOLUNTEERS,
+)
 
 router = APIRouter(prefix="/volunteers", tags=["volunteers"])
 
@@ -24,7 +28,7 @@ def list_volunteers(
     email: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_VIEW_VOLUNTEERS)),
 ):
     """List all volunteers with optional filters."""
     service = VolunteerService(session)
@@ -42,7 +46,7 @@ def list_volunteers(
 def create_volunteer(
     request: VolunteerCreateRequest,
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_MANAGE_VOLUNTEERS)),
 ):
     """Create new volunteer."""
     service = VolunteerService(session)
@@ -54,7 +58,7 @@ def create_volunteer(
 def get_volunteer(
     volunteer_id: int,
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_VIEW_VOLUNTEERS)),
 ):
     """Get volunteer by ID."""
     service = VolunteerService(session)
@@ -67,7 +71,7 @@ def update_volunteer(
     volunteer_id: int,
     request: VolunteerUpdateRequest,
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_MANAGE_VOLUNTEERS)),
 ):
     """Update volunteer."""
     service = VolunteerService(session)
@@ -81,7 +85,7 @@ def update_volunteer(
 def delete_volunteer(
     volunteer_id: int,
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_MANAGE_VOLUNTEERS)),
 ):
     """Delete volunteer."""
     service = VolunteerService(session)

@@ -12,7 +12,8 @@ from app.modules.core_data.schemas.users import (
     UserUpdateRequest,
 )
 from app.modules.core_data.services.users import UserService
-from app.modules.security.dependencies import require_admin
+from app.modules.security.dependencies import require_permission
+from app.modules.security.models.constants import CAN_MANAGE_USERS, CAN_VIEW_USERS
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -25,7 +26,7 @@ def list_users(
     status: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
     session: Session = Depends(get_db),
-    _admin: User = Depends(require_admin),
+    _user: User = Depends(require_permission(CAN_VIEW_USERS)),
 ):
     """List users with optional filters."""
     service = UserService(session)
@@ -43,7 +44,7 @@ def list_users(
 def create_user(
     request: UserCreateRequest,
     session: Session = Depends(get_db),
-    _admin: User = Depends(require_admin),
+    _user: User = Depends(require_permission(CAN_MANAGE_USERS)),
 ):
     """Create new user."""
     service = UserService(session)
@@ -54,7 +55,7 @@ def create_user(
 def get_user(
     user_id: int,
     session: Session = Depends(get_db),
-    _admin: User = Depends(require_admin),
+    _user: User = Depends(require_permission(CAN_VIEW_USERS)),
 ):
     """Get user by ID."""
     service = UserService(session)
@@ -66,7 +67,7 @@ def update_user(
     user_id: int,
     request: UserUpdateRequest,
     session: Session = Depends(get_db),
-    _admin: User = Depends(require_admin),
+    _user: User = Depends(require_permission(CAN_MANAGE_USERS)),
 ):
     """Update user."""
     service = UserService(session)
@@ -77,7 +78,7 @@ def update_user(
 def delete_user(
     user_id: int,
     session: Session = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission(CAN_MANAGE_USERS)),
 ):
     """Delete user."""
     service = UserService(session)

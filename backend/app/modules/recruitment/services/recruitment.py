@@ -20,6 +20,7 @@ from app.modules.recruitment.schemas import (
     RecruitmentFieldDraft,
     RecruitmentSubmissionCreate,
 )
+from app.modules.security.services.permissions import PermissionService
 
 
 def _slugify(value: str) -> str:
@@ -260,6 +261,7 @@ class RecruitmentService:
             submission.decision_comment = comment
             submission.status_changed_at = datetime.now(UTC)
             submission.user.status = "regular"
+            PermissionService(self.session).sync_system_groups(submission.user)
             self.session.commit()
             self.session.refresh(submission)
             return submission
@@ -282,6 +284,7 @@ class RecruitmentService:
                         f"{volunteer.history}\nCofnięto do etapu wdrażania."
                     ).strip()
             submission.user.status = NEW_VOLUNTEER_STATUS
+            PermissionService(self.session).sync_system_groups(submission.user)
             submission.status = "ONBOARDING"
             submission.decision_comment = None
             submission.status_changed_at = datetime.now(UTC)

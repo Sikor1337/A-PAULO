@@ -2,6 +2,7 @@ import { useState } from 'react';
 import SubmissionDetailModal from '@/features/recruitment/SubmissionDetailModal';
 import SubmissionList from '@/features/recruitment/SubmissionList';
 import { useRecruitmentSubmissions } from '@/hooks/useRecruitment';
+import { useHasPermission } from '@/hooks/usePermissions';
 import type { RecruitmentStatus, RecruitmentSubmission } from '@/types';
 
 const tabs: { status: RecruitmentStatus; label: string; empty: string }[] = [
@@ -11,6 +12,7 @@ const tabs: { status: RecruitmentStatus; label: string; empty: string }[] = [
 ];
 
 const RecruitmentOnboardingPage = () => {
+  const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_RECRUITMENT');
   const [status, setStatus] = useState<RecruitmentStatus>('ONBOARDING');
   const [selected, setSelected] = useState<RecruitmentSubmission | null>(null);
   const { data = [], isLoading, action } = useRecruitmentSubmissions(status);
@@ -47,7 +49,7 @@ const RecruitmentOnboardingPage = () => {
         isLoading={isLoading}
         emptyText={currentTab.empty}
         onSelect={setSelected}
-        actions={(submission) => status === 'ONBOARDING' ? (
+        actions={canManage ? (submission) => status === 'ONBOARDING' ? (
           <>
             <button onClick={() => decide(submission, 'accept')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Wdróż</button>
             <button onClick={() => decide(submission, 'reject')} className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white">Odrzuć</button>
@@ -55,7 +57,7 @@ const RecruitmentOnboardingPage = () => {
           </>
         ) : (
           <button onClick={() => restore(submission)} className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700">Cofnij do wdrażania</button>
-        )}
+        ) : undefined}
       />
       {selected && <SubmissionDetailModal submission={selected} onClose={() => setSelected(null)} />}
     </section>

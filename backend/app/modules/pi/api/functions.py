@@ -12,7 +12,8 @@ from app.modules.pi.schemas.functions import (
     FunctionUpdateRequest,
 )
 from app.modules.pi.services.functions import FunctionService
-from app.modules.security.dependencies import get_current_user
+from app.modules.security.dependencies import require_permission
+from app.modules.security.models.constants import CAN_MANAGE_FUNCTIONS, CAN_VIEW_FUNCTIONS
 
 router = APIRouter(prefix="/functions", tags=["functions"])
 
@@ -24,7 +25,7 @@ def list_functions(
     name: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(True),
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_VIEW_FUNCTIONS)),
 ):
     """List all functions with optional filters."""
     service = FunctionService(session)
@@ -36,7 +37,7 @@ def list_functions(
 def create_function(
     request: FunctionCreateRequest,
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_MANAGE_FUNCTIONS)),
 ):
     """Create new function."""
     service = FunctionService(session)
@@ -48,7 +49,7 @@ def update_function(
     function_id: int,
     request: FunctionUpdateRequest,
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_MANAGE_FUNCTIONS)),
 ):
     """Update function."""
     service = FunctionService(session)
@@ -59,7 +60,7 @@ def update_function(
 def delete_function(
     function_id: int,
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_MANAGE_FUNCTIONS)),
 ):
     """Delete function."""
     service = FunctionService(session)

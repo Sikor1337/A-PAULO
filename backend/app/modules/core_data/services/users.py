@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.errors import AuthenticationError, ConflictError, NotFoundError
 from app.modules.core_data.models.user import User
 from app.modules.core_data.repositories.users import UserRepository
+from app.modules.security.services.permissions import PermissionService
 from app.modules.security.services.password import hash_password
 
 # Password hashing
@@ -64,6 +65,7 @@ class UserService:
             )
             self.session.flush()
             self.session.refresh(user)
+            PermissionService(self.session).sync_system_groups(user)
             self.session.commit()
             return user
         except Exception:
@@ -185,6 +187,7 @@ class UserService:
             )
             self.session.flush()
             self.session.refresh(user)
+            PermissionService(self.session).sync_system_groups(user)
             self.session.commit()
             return user
         except Exception:
@@ -220,6 +223,7 @@ class UserService:
             user = self.user_repo.update(user, **update_data)
             self.session.flush()
             self.session.refresh(user)
+            PermissionService(self.session).sync_system_groups(user)
             self.session.commit()
             return user
         except Exception:
