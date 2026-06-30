@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import BackendWakeupPopup from './components/BackendWakeupPopup';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -17,17 +18,9 @@ import RecruitmentFormBuilderPage from './pages/recruitment/RecruitmentFormBuild
 import RecruitmentResponsesPage from './pages/recruitment/RecruitmentResponsesPage';
 import RecruitmentOnboardingPage from './pages/recruitment/RecruitmentOnboardingPage';
 import RecruitmentApplicationPage from './pages/recruitment/RecruitmentApplicationPage';
+import { queryClient } from './lib/queryClient';
 import { authService } from './services/authService';
 import { useAuthStore } from './stores/authStore';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
 
 const SessionProfileSync = () => {
   const { isAuthenticated, updateUser } = useAuthStore();
@@ -59,6 +52,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SessionProfileSync />
+      <BackendWakeupPopup />
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />

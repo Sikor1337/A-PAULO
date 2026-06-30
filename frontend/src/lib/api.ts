@@ -1,8 +1,17 @@
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
+import { attachBackendWakeupInterceptors } from '@/lib/backendWakeup';
+import {
+  assertSessionUnchanged,
+  captureSessionRevision,
+  isSessionChangedError,
+} from '@/lib/sessionLifecycle';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 const API_ROOT = API_URL.replace(/\/api\/?$/, '');
+
+export const refreshClient = axios.create();
+attachBackendWakeupInterceptors(refreshClient);
 
 export const clearSessionAndRedirect = () => {
   useAuthStore.getState().logout();
@@ -18,10 +27,12 @@ export const refreshSession = async () => {
     throw new Error('No refresh token available');
   }
 
-  const response = await axios.post(`${API_ROOT}/auth/token/refresh`, {
+  const sessionRevision = captureSessionRevision();
+  const response = await refreshClient.post(`${API_ROOT}/auth/token/refresh`, {
     refresh: refreshToken,
   });
 
+  assertSessionUnchanged(sessionRevision);
   const { access, refresh } = response.data;
   localStorage.setItem('access_token', access);
   if (refresh) {
@@ -35,6 +46,7 @@ export const refreshSession = async () => {
 const apiClient = axios.create({
   baseURL: API_URL,
 });
+attachBackendWakeupInterceptors(apiClient);
 
 // Request interceptor - Add JWT token to requests
 apiClient.interceptors.request.use(
@@ -67,6 +79,9 @@ apiClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
+        if (isSessionChangedError(refreshError)) {
+          return Promise.reject(refreshError);
+        }
         // Refresh failed - clear tokens and redirect to login
         clearSessionAndRedirect();
         return Promise.reject(refreshError);

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { AxiosError } from 'axios';
 import { useAuthStore } from '../stores/authStore';
 import { authService } from '../services/authService';
+import { markSessionChanged } from '../lib/sessionLifecycle';
 
 interface LoginFormData {
   email: string;
@@ -38,6 +39,7 @@ const LoginPage = () => {
       const { access, refresh } = await authService.login(data);
 
       // Zapisz tymczasowo tokeny aby pobrać profil
+      markSessionChanged();
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
 
