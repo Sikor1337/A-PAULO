@@ -37,7 +37,7 @@ const SettingsPage = () => {
   };
   const { data, isLoading, save, remove } = useUsers({
     onSaved: closeForm,
-    enabled: canViewUsers,
+    enabled: canViewUsers || canViewSecurity,
   });
   const security = useSecurityGroups(canViewSecurity);
   const users = data ?? [];

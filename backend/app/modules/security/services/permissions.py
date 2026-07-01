@@ -22,11 +22,7 @@ class PermissionService:
         self.users = UserRepository(session)
 
     def permissions_for_user(self, user: User) -> set[str]:
-        codes = self.repo.permission_codes_for_user(user.id)
-        # Built-in administrators are intentionally impossible to lock out.
-        if user.status == "admin":
-            codes.update(ALL_PERMISSION_CODES)
-        return codes
+        return self.repo.permission_codes_for_user(user.id)
 
     def has_permission(self, user: User, permission_code: str) -> bool:
         return permission_code in self.permissions_for_user(user)
@@ -139,27 +135,30 @@ class PermissionService:
             self.session.rollback()
             raise
 
-    def sync_system_groups(self, user: User) -> None:
-        """Synchronize lifecycle status with built-in groups.
-
-        Custom group memberships are preserved.
-        """
+    def assign_default_group(self, user: User) -> None:
+        """Add the default system group without replacing explicit memberships."""
         user_status = getattr(user, "status", None)
         if user_status is None:
             return
         admin_group = self.repo.get_group_by_system_key(ADMIN_GROUP_KEY)
         staff_group = self.repo.get_group_by_system_key(STAFF_GROUP_KEY)
-        system_ids = {
-            group.id for group in (admin_group, staff_group) if group is not None
-        }
-        current = set(self.repo.group_ids_for_user(user.id)) - system_ids
         selected = admin_group if user_status == "admin" else staff_group
-        if user_status in {"admin", "regular"} and selected:
+        if user_status not in {"admin", "regular"} or selected is None:
+            return
+        current = set(self.repo.group_ids_for_user(user.id))
+        if selected.id not in current:
             current.add(selected.id)
-        self.repo.replace_user_groups(user.id, current)
+            self.repo.replace_user_groups(user.id, current)
 
-    def assign_default_group(self, user: User) -> None:
-        self.sync_system_groups(user)
+    def remove_system_group(self, user: User, system_key: str) -> None:
+        """Remove one lifecycle group while preserving all other memberships."""
+        group = self.repo.get_group_by_system_key(system_key)
+        if group is None:
+            return
+        current = set(self.repo.group_ids_for_user(user.id))
+        if group.id in current:
+            current.remove(group.id)
+            self.repo.replace_user_groups(user.id, current)
 
     def delete_group(self, group_id: int) -> None:
         try:

@@ -7,11 +7,11 @@ from app.core.config import get_settings
 from app.core.dependencies import get_db
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
-from app.modules.security.services.auth import AuthService
 from app.modules.security.models.constants import (
     ALL_PERMISSION_CODES,
     CAN_MANAGE_SECURITY,
 )
+from app.modules.security.services.auth import AuthService
 from app.modules.security.services.permissions import PermissionService
 from app.modules.security.services.token import TokenService
 
@@ -94,24 +94,6 @@ def get_current_user(
     return user
 
 
-def require_status(*allowed_statuses: str) -> Callable[[User], User]:
-    """Build a FastAPI dependency that allows only selected user statuses."""
-
-    def dependency(user: User = Depends(get_current_user)) -> User:
-        if user.status not in allowed_statuses:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions",
-            )
-        return user
-
-    return dependency
-
-
-require_admin = require_status("admin")
-require_staff = require_status("regular", "admin")
-
-
 def require_permission(permission_code: str) -> Callable[[User, Session], User]:
     """Require a permission inherited from any user security group."""
 
@@ -147,8 +129,7 @@ def require_any_permission(*permission_codes: str) -> Callable[[User, Session], 
     return dependency
 
 
-# Backward-compatible aliases used by existing routers while they migrate to
-# action-specific permission checks.
+# Backward-compatible aliases for code that has not yet moved to an
+# action-specific permission. They are group-based and never inspect User.status.
 require_admin = require_permission(CAN_MANAGE_SECURITY)
 require_staff = require_any_permission(*ALL_PERMISSION_CODES)
-

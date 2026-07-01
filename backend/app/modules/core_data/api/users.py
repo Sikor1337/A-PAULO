@@ -1,5 +1,4 @@
 """Admin users API endpoints."""
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -12,8 +11,12 @@ from app.modules.core_data.schemas.users import (
     UserUpdateRequest,
 )
 from app.modules.core_data.services.users import UserService
-from app.modules.security.dependencies import require_permission
-from app.modules.security.models.constants import CAN_MANAGE_USERS, CAN_VIEW_USERS
+from app.modules.security.dependencies import require_any_permission, require_permission
+from app.modules.security.models.constants import (
+    CAN_MANAGE_USERS,
+    CAN_VIEW_SECURITY,
+    CAN_VIEW_USERS,
+)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -22,11 +25,11 @@ router = APIRouter(prefix="/users", tags=["users"])
 def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    search: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    is_active: Optional[bool] = Query(None),
+    search: str | None = Query(None),
+    status: str | None = Query(None),
+    is_active: bool | None = Query(None),
     session: Session = Depends(get_db),
-    _user: User = Depends(require_permission(CAN_VIEW_USERS)),
+    _user: User = Depends(require_any_permission(CAN_VIEW_USERS, CAN_VIEW_SECURITY)),
 ):
     """List users with optional filters."""
     service = UserService(session)
@@ -55,7 +58,7 @@ def create_user(
 def get_user(
     user_id: int,
     session: Session = Depends(get_db),
-    _user: User = Depends(require_permission(CAN_VIEW_USERS)),
+    _user: User = Depends(require_any_permission(CAN_VIEW_USERS, CAN_VIEW_SECURITY)),
 ):
     """Get user by ID."""
     service = UserService(session)

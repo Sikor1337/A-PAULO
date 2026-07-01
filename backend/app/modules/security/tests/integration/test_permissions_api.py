@@ -1,25 +1,6 @@
-from sqlalchemy.orm import Session
-
-from app.modules.security.models import Permission
-from app.modules.security.models.constants import PERMISSION_CATALOG
-
-
-def _seed_catalog(session: Session) -> None:
-    session.add_all(
-        [
-            Permission(code=code, name=name, category=category)
-            for code, name, category in PERMISSION_CATALOG
-        ]
-    )
-    session.commit()
-
-
 def test_admin_can_create_custom_group_from_permission_matrix(
     api_client,
-    db_session: Session,
 ) -> None:
-    _seed_catalog(db_session)
-
     response = api_client.post(
         "/api/v1/security/groups",
         json={
@@ -38,9 +19,7 @@ def test_admin_can_create_custom_group_from_permission_matrix(
     }
 
 
-def test_unknown_permission_code_is_rejected(api_client, db_session: Session) -> None:
-    _seed_catalog(db_session)
-
+def test_unknown_permission_code_is_rejected(api_client) -> None:
     response = api_client.post(
         "/api/v1/security/groups",
         json={
