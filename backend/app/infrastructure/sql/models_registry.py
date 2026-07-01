@@ -5,6 +5,8 @@ from app.modules.pi.models.function import Function
 from app.modules.pi.models.group import BeneficiaryAssignment, Group
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.models import (
+    DepartureField,
+    DepartureInterview,
     RecruitmentField,
     RecruitmentSubmission,
 )
@@ -13,6 +15,8 @@ __all__ = [
     "Attachment",
     "Beneficiary",
     "BeneficiaryAssignment",
+    "DepartureField",
+    "DepartureInterview",
     "Function",
     "Group",
     "RecruitmentField",
@@ -20,4 +24,3 @@ __all__ = [
     "User",
     "Volunteer",
 ]
-

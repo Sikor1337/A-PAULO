@@ -31,3 +31,9 @@ export type {
   RecruitmentStatus,
   RecruitmentSubmission,
 } from './recruitment';
+export type {
+  DepartureAnswer,
+  DepartureField,
+  DepartureFieldDraft,
+  DepartureInterview,
+} from './departure';

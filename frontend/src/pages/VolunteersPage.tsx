@@ -8,12 +8,14 @@ import { useTableControls } from '@/hooks/useTableControls';
 import { buildVolunteerColumns } from '@/features/volunteers/volunteerColumns';
 import { volunteerDetailFields } from '@/features/volunteers/volunteerDetail';
 import VolunteerFormModal from '@/features/volunteers/VolunteerFormModal';
+import DepartureInterviewModal from '@/features/recruitment/DepartureInterviewModal';
 import { exportRowsToCsv } from '@/lib/csv';
 import type { Volunteer, VolunteerStatus } from '@/types';
 
 const VolunteersPage: React.FC = () => {
   const [editing, setEditing] = useState<Volunteer | null>(null);
   const [details, setDetails] = useState<Volunteer | null>(null);
+  const [departing, setDeparting] = useState<Volunteer | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [filterGroup, setFilterGroup] = useState('');
   const [filterStatus, setFilterStatus] = useState<'' | VolunteerStatus>('');
@@ -129,6 +131,17 @@ const VolunteersPage: React.FC = () => {
           onClose={() => setDetails(null)}
           footer={
             <>
+              {details.status === 'Aktywny' && (
+                <button
+                  onClick={() => {
+                    setDeparting(details);
+                    setDetails(null);
+                  }}
+                  className="rounded-md bg-amber-600 px-4 py-2 font-bold text-white hover:opacity-90"
+                >
+                  Oznacz odejście
+                </button>
+              )}
               <button
                 onClick={() => {
                   setEditing(details);
@@ -148,6 +161,9 @@ const VolunteersPage: React.FC = () => {
 
       {(editing || isAdding) && (
         <VolunteerFormModal volunteer={editing} onClose={closeForm} onSave={save.mutate} isPending={save.isPending} />
+      )}
+      {departing && (
+        <DepartureInterviewModal volunteer={departing} onClose={() => setDeparting(null)} />
       )}
     </PageShell>
   );

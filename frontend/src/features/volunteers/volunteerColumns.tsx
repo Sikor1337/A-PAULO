@@ -98,14 +98,16 @@ export function buildVolunteerColumns({ onSelect, onEdit, onDelete }: Handlers):
           <button onClick={() => onEdit(v)} className="bg-[#6366f1] text-white p-1.5 rounded hover:opacity-80">
             ✏️
           </button>
-          <button
-            onClick={() => {
-              if (confirm('Usunąć?')) onDelete(v.id);
-            }}
-            className="bg-[#ef4444] text-white p-1.5 rounded hover:opacity-80"
-          >
-            🗑️
-          </button>
+          {v.status === 'Aktywny' && (
+            <button
+              onClick={() => {
+                if (confirm('Usunąć?')) onDelete(v.id);
+              }}
+              className="bg-[#ef4444] text-white p-1.5 rounded hover:opacity-80"
+            >
+              🗑️
+            </button>
+          )}
         </div>
       ),
     },

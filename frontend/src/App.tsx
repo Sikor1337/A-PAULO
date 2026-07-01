@@ -17,6 +17,7 @@ import RecruitmentLayout from './pages/recruitment/RecruitmentLayout';
 import RecruitmentFormBuilderPage from './pages/recruitment/RecruitmentFormBuilderPage';
 import RecruitmentResponsesPage from './pages/recruitment/RecruitmentResponsesPage';
 import RecruitmentOnboardingPage from './pages/recruitment/RecruitmentOnboardingPage';
+import DepartureSurveyPage from './pages/recruitment/DepartureSurveyPage';
 import RecruitmentApplicationPage from './pages/recruitment/RecruitmentApplicationPage';
 import { queryClient } from './lib/queryClient';
 import { authService } from './services/authService';
@@ -76,6 +77,7 @@ function App() {
               <Route path="form" element={<RecruitmentFormBuilderPage />} />
               <Route path="responses" element={<RecruitmentResponsesPage />} />
               <Route path="onboarding" element={<RecruitmentOnboardingPage />} />
+              <Route path="departures" element={<DepartureSurveyPage />} />
             </Route>
           </Route>
 

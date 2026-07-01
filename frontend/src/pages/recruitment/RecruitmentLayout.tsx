@@ -5,6 +5,7 @@ const tabs = [
   { path: '/recruitment/form', label: 'Formularz' },
   { path: '/recruitment/responses', label: 'Odpowiedzi' },
   { path: '/recruitment/onboarding', label: 'Wdrażanie' },
+  { path: '/recruitment/departures', label: 'Odejścia' },
 ];
 
 const RecruitmentLayout = () => (
