@@ -13,7 +13,6 @@ const listeners = new Set<Listener>();
 const pendingTimers = new Map<symbol, ReturnType<typeof setTimeout>>();
 const slowRequests = new Set<symbol>();
 let isBackendWakeupVisible = false;
-let trackingRevision = 0;
 
 const notifyIfChanged = () => {
   const nextValue = slowRequests.size > 0;
@@ -56,7 +55,6 @@ export const startBackendRequest = (): RequestCleanup => {
 };
 
 export const resetBackendWakeupNotice = () => {
-  trackingRevision += 1;
   pendingTimers.forEach((timer) => clearTimeout(timer));
   pendingTimers.clear();
   slowRequests.clear();
@@ -65,50 +63,24 @@ export const resetBackendWakeupNotice = () => {
 
 export const attachBackendWakeupInterceptors = (client: AxiosInstance) => {
   const cleanups = new WeakMap<InternalAxiosRequestConfig, RequestCleanup>();
-  const settledRequests = new WeakSet<InternalAxiosRequestConfig>();
 
-  const finishRequest = (
-    config?: InternalAxiosRequestConfig,
-    settled = false,
-  ) => {
+  const finishRequest = (config?: InternalAxiosRequestConfig) => {
     if (!config) return;
-    if (settled) settledRequests.add(config);
     cleanups.get(config)?.();
     cleanups.delete(config);
   };
 
   client.interceptors.request.use((config) => {
-    const requestRevision = trackingRevision;
     const originalDownloadProgress = config.onDownloadProgress;
-    const originalUploadProgress = config.onUploadProgress;
-    const isMultipartUpload =
-      typeof FormData !== 'undefined' && config.data instanceof FormData;
 
-    const startTracking = () => {
-      if (
-        settledRequests.has(config) ||
-        requestRevision !== trackingRevision
-      ) {
-        return;
-      }
-      finishRequest(config);
-      cleanups.set(config, startBackendRequest());
-    };
-
-    if (isMultipartUpload) {
-      config.onUploadProgress = (event: AxiosProgressEvent) => {
-        const uploadComplete =
-          (event.total !== undefined && event.loaded >= event.total) ||
-          event.progress === 1;
-        if (uploadComplete) startTracking();
-        originalUploadProgress?.(event);
-      };
-    } else {
-      startTracking();
-    }
+    // Start at dispatch time, before a possible CORS preflight. When Render is
+    // asleep even the preflight remains pending, so waiting for upload progress
+    // would prevent multipart requests from ever showing the wake-up notice.
+    finishRequest(config);
+    cleanups.set(config, startBackendRequest());
 
     config.onDownloadProgress = (event: AxiosProgressEvent) => {
-      finishRequest(config, true);
+      finishRequest(config);
       originalDownloadProgress?.(event);
     };
 
@@ -117,11 +89,11 @@ export const attachBackendWakeupInterceptors = (client: AxiosInstance) => {
 
   client.interceptors.response.use(
     (response) => {
-      finishRequest(response.config, true);
+      finishRequest(response.config);
       return response;
     },
     (error) => {
-      finishRequest(error.config, true);
+      finishRequest(error.config);
       return Promise.reject(error);
     },
   );

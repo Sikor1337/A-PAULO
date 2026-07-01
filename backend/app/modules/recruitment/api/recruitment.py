@@ -1,9 +1,15 @@
 """HTTP API for the volunteer recruitment module."""
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.modules.core_data.models import User
-from app.modules.recruitment.dependencies import get_recruitment_service
+from app.modules.recruitment.access import get_recruitment_frontend_path
+from app.modules.recruitment.constants import NEW_VOLUNTEER_STATUS, STAFF_STATUSES
+from app.modules.recruitment.dependencies import (
+    get_recruitment_service,
+    require_recruitment_access,
+    require_recruitment_candidate,
+)
 from app.modules.recruitment.schemas import (
     DecisionRequest,
     RecruitmentFieldResponse,
@@ -22,7 +28,8 @@ router = APIRouter(prefix="/recruitment", tags=["recruitment"])
 @router.get("/form", response_model=RecruitmentFormResponse)
 def get_application_form(
     service: RecruitmentService = Depends(get_recruitment_service),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_recruitment_candidate),
+    _access_token: str = Depends(require_recruitment_access),
 ):
     submission = service.get_submission_for_user(user.id)
     initial_answers = (
@@ -51,9 +58,22 @@ def get_application_form(
 def submit_application(
     request: RecruitmentSubmissionCreate,
     service: RecruitmentService = Depends(get_recruitment_service),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_recruitment_candidate),
+    _access_token: str = Depends(require_recruitment_access),
 ):
     return service.submit(user, request)
+
+
+@router.get("/access-link", response_model=dict[str, str])
+def get_application_access_link(
+    user: User = Depends(get_current_user),
+):
+    if user.status not in STAFF_STATUSES | {NEW_VOLUNTEER_STATUS}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Brak dostępu do linku rekrutacyjnego",
+        )
+    return {"path": get_recruitment_frontend_path()}
 
 
 @router.get("/fields", response_model=list[RecruitmentFieldResponse])

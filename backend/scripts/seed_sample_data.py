@@ -15,8 +15,8 @@ from app.modules.pi.models.group import (
     group_volunteer,
 )
 from app.modules.pi.models.volunteer import Volunteer
+from app.modules.recruitment.constants import DEFAULT_FIELDS
 from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
-from app.modules.recruitment.models.constants import DEFAULT_FIELDS
 from app.modules.security.services.password import hash_password
 
 DEMO_PASSWORD = "DemoChangeMe123!"

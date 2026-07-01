@@ -3,11 +3,18 @@ import { parseApiError } from '@/lib/errors';
 import { recruitmentService } from '@/services/recruitmentService';
 import type { RecruitmentFieldDraft, RecruitmentStatus } from '@/types';
 
-export function useRecruitmentForm() {
+export function useRecruitmentForm(accessToken: string) {
   return useQuery({
-    queryKey: ['recruitment-form'],
-    queryFn: recruitmentService.getForm,
+    queryKey: ['recruitment-form', accessToken],
+    queryFn: () => recruitmentService.getForm(accessToken),
     retry: false,
+  });
+}
+
+export function useRecruitmentAccessLink() {
+  return useQuery({
+    queryKey: ['recruitment-access-link'],
+    queryFn: recruitmentService.getAccessLink,
   });
 }
 
