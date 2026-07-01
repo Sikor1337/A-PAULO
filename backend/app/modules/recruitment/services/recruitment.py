@@ -20,6 +20,7 @@ from app.modules.recruitment.schemas import (
     RecruitmentFieldDraft,
     RecruitmentSubmissionCreate,
 )
+from app.modules.security.models.constants import STAFF_GROUP_KEY
 from app.modules.security.services.permissions import PermissionService
 
 
@@ -261,7 +262,7 @@ class RecruitmentService:
             submission.decision_comment = comment
             submission.status_changed_at = datetime.now(UTC)
             submission.user.status = "regular"
-            PermissionService(self.session).sync_system_groups(submission.user)
+            PermissionService(self.session).assign_default_group(submission.user)
             self.session.commit()
             self.session.refresh(submission)
             return submission
@@ -284,7 +285,9 @@ class RecruitmentService:
                         f"{volunteer.history}\nCofnięto do etapu wdrażania."
                     ).strip()
             submission.user.status = NEW_VOLUNTEER_STATUS
-            PermissionService(self.session).sync_system_groups(submission.user)
+            PermissionService(self.session).remove_system_group(
+                submission.user, STAFF_GROUP_KEY
+            )
             submission.status = "ONBOARDING"
             submission.decision_comment = None
             submission.status_changed_at = datetime.now(UTC)

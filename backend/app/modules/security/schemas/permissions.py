@@ -17,7 +17,7 @@ class PermissionResponse(BaseModel):
 class UserGroupCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     description: str = Field(default="", max_length=500)
-    permission_codes: list[str] = []
+    permission_codes: list[str] = Field(default_factory=list)
 
     @field_validator("name")
     @classmethod

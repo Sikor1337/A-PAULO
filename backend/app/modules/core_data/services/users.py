@@ -1,4 +1,5 @@
 """Authentication service for users."""
+
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -65,7 +66,7 @@ class UserService:
             )
             self.session.flush()
             self.session.refresh(user)
-            PermissionService(self.session).sync_system_groups(user)
+            PermissionService(self.session).assign_default_group(user)
             self.session.commit()
             return user
         except Exception:
@@ -187,7 +188,7 @@ class UserService:
             )
             self.session.flush()
             self.session.refresh(user)
-            PermissionService(self.session).sync_system_groups(user)
+            PermissionService(self.session).assign_default_group(user)
             self.session.commit()
             return user
         except Exception:
@@ -223,7 +224,6 @@ class UserService:
             user = self.user_repo.update(user, **update_data)
             self.session.flush()
             self.session.refresh(user)
-            PermissionService(self.session).sync_system_groups(user)
             self.session.commit()
             return user
         except Exception:

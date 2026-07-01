@@ -41,9 +41,13 @@ Migracja tworzy:
 
 Definicji, nazwy, usunięcia i matrycy grup systemowych nie można zmieniać.
 Członkostwo można zarządzać, ale grupa Admin nie może zostać bez użytkownika.
-Status `admin` pozostaje awaryjnym zabezpieczeniem przed utratą dostępu.
-Zmiana statusu konta i zakończenie/cofnięcie rekrutacji synchronizują domyślne
-grupy systemowe, nie usuwając grup własnych.
+Status konta sam w sobie nie przyznaje żadnego permission. Dotyczy to również
+statusu `admin`: pełny dostęp wynika z członkostwa w systemowej grupie `Admin`.
+Migracja przypisuje istniejące konta administracyjne do tej grupy i nie pozwala
+usunąć z niej ostatniego użytkownika. Przy utworzeniu konta aplikacja może dodać
+domyślną grupę systemową, ale późniejsza edycja statusu lub profilu nie nadpisuje
+ręcznie skonfigurowanych członkostw. Kontrola każdego endpointu zawsze odczytuje
+permissions z grup.
 
 ## Frontend
 
