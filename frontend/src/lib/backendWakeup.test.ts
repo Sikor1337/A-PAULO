@@ -72,7 +72,7 @@ describe('backend wakeup Axios interceptors', () => {
     await request;
   });
 
-  it('starts the response timer after a multipart upload completes', async () => {
+  it('tracks multipart requests before upload progress begins', async () => {
     let requestConfig: InternalAxiosRequestConfig | undefined;
     let resolveResponse: ((response: AxiosResponse) => void) | undefined;
     const adapter: AxiosAdapter = (config) =>
@@ -90,10 +90,6 @@ describe('backend wakeup Axios interceptors', () => {
     expect(requestConfig).toBeDefined();
 
     vi.advanceTimersByTime(BACKEND_WAKEUP_DELAY_MS);
-    expect(getBackendWakeupSnapshot()).toBe(false);
-
-    requestConfig?.onUploadProgress?.(progressEvent(100, 100));
-    vi.advanceTimersByTime(BACKEND_WAKEUP_DELAY_MS);
     expect(getBackendWakeupSnapshot()).toBe(true);
 
     requestConfig?.onDownloadProgress?.(progressEvent(1, 100));
@@ -109,7 +105,7 @@ describe('backend wakeup Axios interceptors', () => {
     await request;
   });
 
-  it('does not restart tracking after logout resets active requests', async () => {
+  it('does not restore the notice after logout resets active requests', async () => {
     let requestConfig: InternalAxiosRequestConfig | undefined;
     let resolveResponse: ((response: AxiosResponse) => void) | undefined;
     const adapter: AxiosAdapter = (config) =>
@@ -125,7 +121,6 @@ describe('backend wakeup Axios interceptors', () => {
     const request = client.post('/upload', form);
     await flushInterceptors();
     resetBackendWakeupNotice();
-    requestConfig?.onUploadProgress?.(progressEvent(100, 100));
     vi.advanceTimersByTime(BACKEND_WAKEUP_DELAY_MS);
 
     expect(getBackendWakeupSnapshot()).toBe(false);
