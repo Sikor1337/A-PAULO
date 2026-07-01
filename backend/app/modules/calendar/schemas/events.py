@@ -1,5 +1,6 @@
 """Validation and response DTOs for calendar events."""
 
+import re
 from datetime import datetime
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -11,6 +12,8 @@ from app.modules.calendar.models.constants import DEFAULT_TIMEZONE
 EventStatus = Literal["draft", "published", "cancelled"]
 EventVisibility = Literal["organization", "admins"]
 
+RRULE_PATTERN = re.compile(r"^[A-Z0-9=,;+\-]+$")
+
 
 def _normalize_rrule(value: str | None) -> str | None:
     if value is None or not value.strip():
@@ -18,7 +21,14 @@ def _normalize_rrule(value: str | None) -> str | None:
     rule = value.strip().upper()
     if rule.startswith("RRULE:"):
         rule = rule[6:]
-    parts = dict(part.split("=", 1) for part in rule.split(";") if "=" in part)
+    raw_parts = rule.split(";")
+    if not RRULE_PATTERN.fullmatch(rule) or any(
+        part.count("=") != 1 for part in raw_parts
+    ):
+        raise ValueError("Nieprawidłowy format reguły cykliczności")
+    parts = dict(part.split("=", 1) for part in raw_parts)
+    if len(parts) != len(raw_parts):
+        raise ValueError("Reguła cykliczności zawiera powtórzony parametr")
     if parts.get("FREQ") not in {"DAILY", "WEEKLY", "MONTHLY", "YEARLY"}:
         raise ValueError("Reguła cykliczności musi zawierać obsługiwane FREQ")
     return rule
@@ -68,7 +78,12 @@ class EventBase(BaseModel):
 
 
 class EventCreateRequest(EventBase):
-    pass
+    @field_validator("starts_at", "ends_at")
+    @classmethod
+    def validate_datetime_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("Data wydarzenia musi zawierać strefę czasową")
+        return value
 
 
 class EventUpdateRequest(BaseModel):
@@ -102,6 +117,13 @@ class EventUpdateRequest(BaseModel):
             ZoneInfo(value)
         except ZoneInfoNotFoundError as exc:
             raise ValueError("Nieznana strefa czasowa") from exc
+        return value
+
+    @field_validator("starts_at", "ends_at")
+    @classmethod
+    def validate_datetime_timezone(cls, value: datetime | None) -> datetime | None:
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValueError("Data wydarzenia musi zawierać strefę czasową")
         return value
 
     @field_validator("recurrence_rule")

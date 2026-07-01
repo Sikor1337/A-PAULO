@@ -42,12 +42,15 @@ Render musi przekazywać prawidłowy nagłówek protokołu proxy.
 
 Jawny adres jest zwracany tylko podczas generowania. Rotacja zastępuje hash i
 natychmiast unieważnia stary URL. Nie da się odtworzyć utraconego adresu bez
-wygenerowania nowego.
+wygenerowania nowego. Odebranie właścicielowi tokenu `CAN_VIEW_EVENTS` również
+natychmiast blokuje feed. Backend odrzuca daty bez jawnej strefy czasowej oraz
+reguły RRULE zawierające niepoprawną składnię lub dodatkowe linie iCalendar.
 
 ## Frontend
 
 Widok `/events` używa własnego responsywnego kalendarza miesięcznego i listy.
-Obsługuje filtrowanie po statusie i widoczności, szczegóły, CRUD, anulowanie,
+Obsługuje filtrowanie po statusie i widoczności, sortowanie po początku,
+szczegóły, CRUD, anulowanie,
 wydarzenia całodniowe i podstawowe reguły cykliczne. Akcje modyfikujące są
 widoczne tylko z `CAN_MANAGE_EVENTS`.
 

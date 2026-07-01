@@ -35,6 +35,7 @@ const EventDetailModal = ({ event, canManage, onClose, onEdit, onCancel, onDelet
         <div><dt className="font-bold text-gray-500">Status</dt><dd>{event.status === 'published' ? 'Opublikowane' : event.status === 'draft' ? 'Szkic' : 'Anulowane'}</dd></div>
         <div><dt className="font-bold text-gray-500">Widoczność</dt><dd>{event.visibility === 'organization' ? 'Organizacja' : 'Zarządzający'}</dd></div>
       </div>
+      <div><dt className="font-bold text-gray-500">Strefa czasowa</dt><dd>{event.timezone}</dd></div>
       <div><dt className="font-bold text-gray-500">Autor</dt><dd>{event.author_name}</dd></div>
       {event.recurrence_rule && <div><dt className="font-bold text-gray-500">Cykliczność</dt><dd>{event.recurrence_rule}</dd></div>}
     </dl>
@@ -44,6 +45,7 @@ const EventDetailModal = ({ event, canManage, onClose, onEdit, onCancel, onDelet
       {canManage && event.status !== 'cancelled' && <button type="button" onClick={onCancel} className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-bold text-amber-700">Anuluj wydarzenie</button>}
       {canManage && <button type="button" onClick={onDelete} className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700">Usuń</button>}
     </div>
+    <p className="mt-3 text-right text-xs text-gray-500">Pojedynczy plik .ics tworzy kopię wydarzenia i nie synchronizuje późniejszych zmian.</p>
   </Modal>
 );
 

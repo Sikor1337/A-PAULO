@@ -47,9 +47,11 @@ def generate_feed_token(
     service: CalendarSubscriptionService = Depends(get_calendar_subscription_service),
 ):
     plain_token, record = service.generate(user)
-    base_url = str(request.base_url).rstrip("/")
+    feed_url = request.url_for("calendar_feed", token=plain_token)
+    if get_settings().environment.lower() == "production":
+        feed_url = feed_url.replace(scheme="https")
     return FeedTokenCreatedResponse(
-        feed_url=f"{base_url}/api/v1/calendar-feeds/{plain_token}.ics",
+        feed_url=str(feed_url),
         created_at=record.created_at,
         warning=WARNING,
     )

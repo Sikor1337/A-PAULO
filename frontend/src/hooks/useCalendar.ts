@@ -24,6 +24,7 @@ export function useCalendarEvents(filters: CalendarFilters) {
 
 export function useCalendarSubscription() {
   const queryClient = useQueryClient();
+  const onError = (error: unknown) => alert(parseApiError(error, 'Nie udało się zmienić subskrypcji kalendarza.'));
   const status = useQuery({
     queryKey: ['calendar-feed-token'],
     queryFn: calendarService.getFeedTokenStatus,
@@ -31,10 +32,12 @@ export function useCalendarSubscription() {
   const generate = useMutation({
     mutationFn: calendarService.generateFeedToken,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['calendar-feed-token'] }),
+    onError,
   });
   const revoke = useMutation({
     mutationFn: calendarService.revokeFeedToken,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['calendar-feed-token'] }),
+    onError,
   });
   return { status, generate, revoke };
 }

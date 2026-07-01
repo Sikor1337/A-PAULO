@@ -32,11 +32,20 @@ const statusClass: Record<CalendarEventStatus, string> = {
   cancelled: 'border-gray-400 bg-gray-100 text-gray-500 line-through',
 };
 
+const eventRangeLabel = (event: CalendarEvent) => {
+  const options: Intl.DateTimeFormatOptions = event.is_all_day
+    ? { dateStyle: 'medium' }
+    : { dateStyle: 'medium', timeStyle: 'short' };
+  const formatter = new Intl.DateTimeFormat('pl-PL', options);
+  return `${formatter.format(new Date(event.starts_at))} – ${formatter.format(new Date(event.ends_at))}`;
+};
+
 const EventsPage = () => {
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [view, setView] = useState<'month' | 'list'>('month');
   const [status, setStatus] = useState<CalendarEventStatus | ''>('');
   const [visibility, setVisibility] = useState<CalendarEventVisibility | ''>('');
+  const [sort, setSort] = useState<'asc' | 'desc'>('asc');
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
   const [editing, setEditing] = useState<CalendarEvent | null | undefined>(undefined);
   const [initialDate, setInitialDate] = useState<Date | undefined>();
@@ -52,6 +61,7 @@ const EventsPage = () => {
     startsTo: rangeEnd.toISOString(),
     status,
     visibility,
+    sort,
   });
   const events = useMemo(() => eventsQuery.data ?? [], [eventsQuery.data]);
   const eventsByDay = useMemo(() => {
@@ -97,6 +107,10 @@ const EventsPage = () => {
             <select value={visibility} onChange={(event) => setVisibility(event.target.value as CalendarEventVisibility | '')} className="h-9 rounded-lg border bg-white px-3 text-sm text-gray-600">
               <option value="">Każda widoczność</option><option value="organization">Organizacja</option>{canManage && <option value="admins">Zarządzający</option>}
             </select>
+            <select value={sort} onChange={(event) => setSort(event.target.value as 'asc' | 'desc')} className="h-9 rounded-lg border bg-white px-3 text-sm text-gray-600" aria-label="Sortowanie wydarzeń">
+              <option value="asc">Najpierw najwcześniejsze</option>
+              <option value="desc">Najpierw najpóźniejsze</option>
+            </select>
             <div className="flex rounded-lg bg-gray-100 p-1">
               <button type="button" onClick={() => setView('month')} className={`rounded-md px-3 py-1 text-xs font-bold ${view === 'month' ? 'bg-white text-indigo-700 shadow' : 'text-gray-500'}`}>Miesiąc</button>
               <button type="button" onClick={() => setView('list')} className={`rounded-md px-3 py-1 text-xs font-bold ${view === 'list' ? 'bg-white text-indigo-700 shadow' : 'text-gray-500'}`}>Lista</button>
@@ -105,7 +119,9 @@ const EventsPage = () => {
         </div>
       </header>
 
-      {eventsQuery.isLoading ? (
+      {eventsQuery.isError ? (
+        <div className="p-12 text-center text-rose-700">Nie udało się pobrać wydarzeń. Spróbuj ponownie.</div>
+      ) : eventsQuery.isLoading ? (
         <div className="p-16 text-center text-gray-400">Ładowanie kalendarza…</div>
       ) : view === 'month' ? (
         <div className="overflow-x-auto">
@@ -139,7 +155,7 @@ const EventsPage = () => {
         <div className="divide-y">
           {events.length ? events.map((event) => (
             <button key={event.id} type="button" onClick={() => setSelected(event)} className="grid w-full gap-2 px-5 py-4 text-left hover:bg-indigo-50 sm:grid-cols-[180px_1fr_180px] sm:items-center">
-              <span className="text-sm font-bold text-indigo-700">{new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium', timeStyle: event.is_all_day ? undefined : 'short' }).format(new Date(event.starts_at))}</span>
+              <span className="text-sm font-bold text-indigo-700">{eventRangeLabel(event)}</span>
               <span><span className={`block font-bold ${event.status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{event.title}</span><span className="text-xs text-gray-500">{event.location || 'Bez lokalizacji'}</span></span>
               <span className="text-xs font-bold text-gray-500">{event.visibility === 'organization' ? 'Organizacja' : 'Zarządzający'} · {event.status}</span>
             </button>

@@ -41,6 +41,7 @@ describe('EventsPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Wydarzenia' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Subskrybuj .ics' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Sortowanie wydarzeń' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /Spotkanie organizacyjne/ })).toBeInTheDocument();
   });
 });

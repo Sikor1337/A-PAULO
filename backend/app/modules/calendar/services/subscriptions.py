@@ -15,7 +15,7 @@ from app.modules.calendar.repositories import (
     CalendarFeedTokenRepository,
 )
 from app.modules.core_data.models import User
-from app.modules.security.models.constants import CAN_MANAGE_EVENTS
+from app.modules.security.models.constants import CAN_MANAGE_EVENTS, CAN_VIEW_EVENTS
 from app.modules.security.services.permissions import PermissionService
 
 
@@ -77,7 +77,11 @@ class CalendarSubscriptionService:
 
     def events_for_token(self, plain_token: str):
         record = self.tokens.get_active_by_hash(hash_feed_token(plain_token))
-        if not record or not record.user.is_active:
+        if (
+            not record
+            or not record.user.is_active
+            or not self.permissions.has_permission(record.user, CAN_VIEW_EVENTS)
+        ):
             raise NotFoundError("Feed kalendarza nie istnieje")
         events = self.events.list_visible(
             is_admin=self.permissions.has_permission(record.user, CAN_MANAGE_EVENTS),
