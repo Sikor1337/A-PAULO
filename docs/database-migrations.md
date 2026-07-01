@@ -55,6 +55,7 @@ $env:DATABASE_SCHEMA='public'
 ```
 
 Skrypt odmawia działania poza `public` oraz wtedy, gdy istnieją już użytkownicy.
-Tworzy dwa konta, dwóch wolontariuszy, grupę, dwóch podopiecznych, przypisania,
-funkcje i przykładowe zgłoszenie rekrutacyjne. Hasło demonstracyjne jest
+Tworzy dwa konta, 10 wolontariuszy, cztery grupy, 10 podopiecznych, przypisania,
+funkcje i przykładowe zgłoszenie rekrutacyjne. Każdy wolontariusz należy do
+grupy, a każdy podopieczny ma przypisaną grupę i głównego wolontariusza. Hasło demonstracyjne jest
 wyświetlane po poprawnym wykonaniu seeda i nie może być używane w `production`.
