@@ -5,6 +5,10 @@ from sqlalchemy import create_engine, inspect, text
 from app.core.config import get_settings
 from app.infrastructure.sql import models_registry  # noqa: F401
 from app.infrastructure.sql.base import Base
+from app.modules.security.models.constants import (
+    ALL_PERMISSION_CODES,
+    STAFF_PERMISSION_CODES,
+)
 
 
 def main() -> None:
@@ -46,6 +50,46 @@ def main() -> None:
             .scalars()
             .all()
         )
+        permission_codes = set(
+            connection.execute(
+                text(f"SELECT code FROM {schema_sql}.security_permissions")
+            )
+            .scalars()
+            .all()
+        )
+        if permission_codes != ALL_PERMISSION_CODES:
+            errors.append(
+                "permission catalog mismatch: missing="
+                f"{sorted(ALL_PERMISSION_CODES - permission_codes)}, "
+                f"extra={sorted(permission_codes - ALL_PERMISSION_CODES)}"
+            )
+
+        for system_key, expected_codes in (
+            ("admin", ALL_PERMISSION_CODES),
+            ("staff", STAFF_PERMISSION_CODES),
+        ):
+            assigned_codes = set(
+                connection.execute(
+                    text(
+                        f"SELECT permission.code "
+                        f"FROM {schema_sql}.security_permissions AS permission "
+                        f"JOIN {schema_sql}.security_group_permissions AS assignment "
+                        "ON assignment.permission_id = permission.id "
+                        f"JOIN {schema_sql}.security_groups AS security_group "
+                        "ON security_group.id = assignment.group_id "
+                        "WHERE security_group.system_key = :system_key"
+                    ),
+                    {"system_key": system_key},
+                )
+                .scalars()
+                .all()
+            )
+            if assigned_codes != expected_codes:
+                errors.append(
+                    f"{system_key} permission mismatch: missing="
+                    f"{sorted(expected_codes - assigned_codes)}, "
+                    f"extra={sorted(assigned_codes - expected_codes)}"
+                )
 
     engine.dispose()
     if errors:
