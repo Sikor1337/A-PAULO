@@ -21,6 +21,7 @@ from app.core.errors import register_error_handlers  # noqa: E402
 from app.infrastructure.sql.base import Base  # noqa: E402
 from app.infrastructure.sql import models_registry  # noqa: F401, E402
 from app.modules.attachments.api import router as attachments_router  # noqa: E402
+from app.modules.calendar.api import router as calendar_router  # noqa: E402
 from app.modules.core_data.api.users import router as users_router  # noqa: E402
 from app.modules.core_data.models import User  # noqa: E402
 from app.modules.pi.api.beneficiaries import router as beneficiaries_router  # noqa: E402
@@ -33,6 +34,12 @@ from app.modules.security.dependencies import (  # noqa: E402
     get_current_user,
     require_admin,
 )
+from app.modules.security.models import (  # noqa: E402
+    Permission,
+    UserGroup,
+    security_user_groups,
+)
+from app.modules.security.models.constants import PERMISSION_CATALOG  # noqa: E402
 
 
 @pytest.fixture
@@ -68,8 +75,8 @@ def db_session(db_engine: Engine) -> Generator[Session, None, None]:
 
 
 @pytest.fixture
-def admin_user() -> User:
-    return User(
+def admin_user(db_session: Session) -> User:
+    user = User(
         id=999,
         username="admin",
         email="admin@example.com",
@@ -81,6 +88,25 @@ def admin_user() -> User:
         created_at=datetime(2026, 1, 1),
         updated_at=datetime(2026, 1, 1),
     )
+    permissions = [
+        Permission(code=code, name=name, category=category)
+        for code, name, category in PERMISSION_CATALOG
+    ]
+    admin_group = UserGroup(
+        name="Admin",
+        description="System test administrator group",
+        is_system=True,
+        system_key="admin",
+        permissions=permissions,
+    )
+    db_session.add_all([user, admin_group])
+    db_session.flush()
+    db_session.execute(
+        security_user_groups.insert(),
+        {"user_id": user.id, "group_id": admin_group.id},
+    )
+    db_session.commit()
+    return user
 
 
 @pytest.fixture
@@ -98,6 +124,7 @@ def api_client(
     app.include_router(groups_router, prefix="/api/v1")
     app.include_router(attachments_router, prefix="/api/v1")
     app.include_router(recruitment_router, prefix="/api/v1")
+    app.include_router(calendar_router, prefix="/api/v1")
 
     def override_get_db() -> Generator[Session, None, None]:
         yield db_session

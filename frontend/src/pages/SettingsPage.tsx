@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import PageShell from '@/components/layout/PageShell';
 import DataTable from '@/components/ui/DataTable';
+import SecurityGroupsPanel from '@/features/settings/SecurityGroupsPanel';
 import UserFormModal from '@/features/settings/UserFormModal';
+import UserGroupsModal from '@/features/settings/UserGroupsModal';
+import { useMyPermissions, useSecurityGroups } from '@/hooks/usePermissions';
 import { useTableControls } from '@/hooks/useTableControls';
 import { useUsers } from '@/hooks/useUsers';
 import { exportRowsToCsv } from '@/lib/csv';
@@ -15,9 +18,16 @@ const roleLabel = (status: UserStatus) => {
   return 'Użytkownik';
 };
 
-const SettingsAdminPanel = () => {
+const SettingsPage = () => {
   const currentUser = useAuthStore((state) => state.user);
+  const effective = useMyPermissions().data?.permissions ?? [];
+  const canViewUsers = effective.includes('CAN_VIEW_USERS');
+  const canManageUsers = effective.includes('CAN_MANAGE_USERS');
+  const canViewSecurity = effective.includes('CAN_VIEW_SECURITY');
+  const canManageSecurity = effective.includes('CAN_MANAGE_SECURITY');
+  const [section, setSection] = useState<'users' | 'groups'>('users');
   const [editing, setEditing] = useState<AdminUser | null>(null);
+  const [groupEditingUser, setGroupEditingUser] = useState<AdminUser | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'' | UserStatus>('');
 
@@ -25,198 +35,119 @@ const SettingsAdminPanel = () => {
     setEditing(null);
     setIsAdding(false);
   };
-
-  const { data, isLoading, save, remove } = useUsers({ onSaved: closeForm });
+  const { data, isLoading, save, remove } = useUsers({
+    onSaved: closeForm,
+    enabled: canViewUsers || canViewSecurity,
+  });
+  const security = useSecurityGroups(canViewSecurity);
+  const users = data ?? [];
+  const visibleSection = section === 'users' && canViewUsers ? 'users' : 'groups';
   const { search, setSearch, toggleSort, sortIcon, rows } = useTableControls(data, {
     searchFields: ['first_name', 'last_name', 'email', 'username', 'status'],
     initialSort: 'last_name',
-    filterPredicate: (user) => {
-      if (filterStatus && user.status !== filterStatus) return false;
-      return true;
-    },
+    filterPredicate: (user) => !filterStatus || user.status === filterStatus,
   });
 
   const columns: Column<AdminUser>[] = [
     {
-      id: 'name',
-      header: 'Imię i nazwisko',
-      widthClass: 'w-[22%]',
-      sortKey: 'last_name',
-      cellClassName: 'font-medium text-gray-800',
+      id: 'name', header: 'Imię i nazwisko', sortKey: 'last_name',
       render: (user) => `${user.first_name} ${user.last_name}`.trim() || '-',
     },
+    { id: 'email', header: 'Email', sortKey: 'email', render: (user) => user.email },
+    { id: 'username', header: 'Login', sortKey: 'username', render: (user) => user.username },
+    { id: 'status', header: 'Status konta', sortKey: 'status', render: (user) => roleLabel(user.status) },
     {
-      id: 'email',
-      header: 'Email',
-      widthClass: 'w-[24%]',
-      sortKey: 'email',
-      cellClassName: 'text-gray-500',
-      render: (user) => user.email,
-    },
-    {
-      id: 'username',
-      header: 'Login',
-      widthClass: 'w-[16%]',
-      sortKey: 'username',
-      cellClassName: 'text-gray-500',
-      render: (user) => user.username,
-    },
-    {
-      id: 'status',
-      header: 'Rola',
-      widthClass: 'w-[14%]',
-      sortKey: 'status',
+      id: 'actions', header: 'Akcje', align: 'center',
       render: (user) => (
-        <span className={user.status === 'admin' ? 'font-bold text-indigo-700' : 'text-gray-600'}>
-          {roleLabel(user.status)}
-        </span>
-      ),
-    },
-    {
-      id: 'is_active',
-      header: 'Status',
-      widthClass: 'w-[10%]',
-      align: 'center',
-      sortKey: 'is_active',
-      render: (user) => (
-        <span className={user.is_active ? 'text-emerald-600 font-bold' : 'text-gray-400 font-bold'}>
-          {user.is_active ? 'Aktywny' : 'Wyłączony'}
-        </span>
-      ),
-    },
-    {
-      id: 'actions',
-      header: 'Akcje',
-      widthClass: 'w-[14%] min-w-[120px]',
-      align: 'center',
-      render: (user) => (
-        <div className="flex justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => setEditing(user)}
-            className="bg-[#6366f1] text-white px-3 py-1.5 rounded text-xs font-bold hover:opacity-90"
-          >
-            Edytuj
-          </button>
-          <button
-            type="button"
-            disabled={user.id === currentUser?.id}
-            onClick={() => {
-              if (confirm(`Usunąć użytkownika ${user.email}?`)) remove.mutate(user.id);
-            }}
-            className="bg-[#ef4444] text-white px-3 py-1.5 rounded text-xs font-bold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Usuń
-          </button>
+        <div className="flex flex-wrap justify-center gap-2">
+          {canManageSecurity && (
+            <button type="button" onClick={() => setGroupEditingUser(user)} className="rounded bg-slate-600 px-3 py-1.5 text-xs font-bold text-white">
+              Grupy
+            </button>
+          )}
+          {canManageUsers && (
+            <>
+              <button type="button" onClick={() => setEditing(user)} className="rounded bg-indigo-500 px-3 py-1.5 text-xs font-bold text-white">Edytuj</button>
+              <button
+                type="button"
+                disabled={user.id === currentUser?.id}
+                onClick={() => confirm(`Usunąć użytkownika ${user.email}?`) && remove.mutate(user.id)}
+                className="rounded bg-rose-500 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-40"
+              >
+                Usuń
+              </button>
+            </>
+          )}
         </div>
       ),
     },
   ];
 
-  const exportUsers = () => {
-    exportRowsToCsv(
-      'uzytkownicy.csv',
-      [
-        { header: 'Imię', value: (user) => user.first_name },
-        { header: 'Nazwisko', value: (user) => user.last_name },
-        { header: 'Email', value: (user) => user.email },
-        { header: 'Login', value: (user) => user.username },
-        { header: 'Rola', value: (user) => roleLabel(user.status) },
-        { header: 'Aktywny', value: (user) => (user.is_active ? 'TAK' : 'NIE') },
-      ],
-      rows,
-    );
-  };
+  const exportUsers = () => exportRowsToCsv(
+    'uzytkownicy.csv',
+    [
+      { header: 'Imię', value: (user) => user.first_name },
+      { header: 'Nazwisko', value: (user) => user.last_name },
+      { header: 'Email', value: (user) => user.email },
+      { header: 'Login', value: (user) => user.username },
+      { header: 'Status', value: (user) => roleLabel(user.status) },
+    ],
+    rows,
+  );
 
   return (
-    <>
+    <PageShell>
       <div className="mb-6 flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 uppercase">Ustawienia</h1>
-          <p className="text-sm text-gray-500 mt-1">Użytkownicy aplikacji i ich uprawnienia.</p>
+          <h1 className="text-xl font-bold uppercase text-gray-900">Ustawienia</h1>
+          <p className="mt-1 text-sm text-gray-500">Użytkownicy, grupy bezpieczeństwa i dziedziczone uprawnienia.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsAdding(true)}
-          className="min-h-10 rounded-lg bg-[#10b981] px-5 py-2 text-sm font-bold text-white hover:opacity-90"
-        >
-          + Dodaj użytkownika
-        </button>
+        {visibleSection === 'users' && canManageUsers && (
+          <button type="button" onClick={() => setIsAdding(true)} className="rounded-lg bg-emerald-500 px-5 py-2 text-sm font-bold text-white">
+            + Dodaj użytkownika
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_1fr] lg:gap-6">
-        <aside className="border-b pb-3 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-4">
-          <button
-            type="button"
-            className="w-full text-left px-3 py-2 rounded-md bg-[#eef2ff] text-indigo-700 text-sm font-bold"
-          >
+      <div className="mb-5 flex gap-2 border-b">
+        {canViewUsers && (
+          <button type="button" onClick={() => setSection('users')} className={`border-b-2 px-4 py-2 text-sm font-bold ${visibleSection === 'users' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500'}`}>
             Użytkownicy
           </button>
-        </aside>
+        )}
+        {canViewSecurity && (
+          <button type="button" onClick={() => setSection('groups')} className={`border-b-2 px-4 py-2 text-sm font-bold ${visibleSection === 'groups' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500'}`}>
+            Grupy i uprawnienia
+          </button>
+        )}
+      </div>
 
-        <section className="min-w-0">
-          <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:items-center">
-            <input
-              type="text"
-              placeholder="Szukaj po imieniu, nazwisku, emailu lub loginie..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 text-sm font-medium outline-none focus:border-indigo-500 focus:bg-white xl:flex-1"
-            />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as '' | UserStatus)}
-              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-600 outline-none focus:border-indigo-500 xl:w-auto xl:min-w-[150px]"
-            >
-              <option value="">Wszystkie role</option>
+      {visibleSection === 'users' ? (
+        <section>
+          <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:flex">
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Szukaj użytkownika…" className="h-10 rounded-lg border bg-gray-50 px-4 text-sm xl:flex-1" />
+            <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value as '' | UserStatus)} className="h-10 rounded-lg border bg-gray-50 px-3 text-sm">
+              <option value="">Wszystkie statusy</option>
               <option value="admin">Administratorzy</option>
               <option value="regular">Użytkownicy</option>
               <option value="new_volunteer">Nowi wolontariusze</option>
             </select>
-            <button
-              type="button"
-              onClick={exportUsers}
-              className="h-10 rounded-lg border border-gray-200 px-4 text-sm font-bold text-gray-600 hover:bg-gray-50 sm:col-span-2 xl:col-span-1"
-            >
-              Eksport CSV
-            </button>
+            <button type="button" onClick={exportUsers} className="h-10 rounded-lg border px-4 text-sm font-bold text-gray-600">Eksport CSV</button>
           </div>
-
-          <DataTable
-            columns={columns}
-            rows={rows}
-            isLoading={isLoading}
-            getRowKey={(user) => user.id}
-            toggleSort={toggleSort}
-            sortIcon={sortIcon}
-          />
+          <DataTable columns={columns} rows={rows} isLoading={isLoading} getRowKey={(user) => user.id} toggleSort={toggleSort} sortIcon={sortIcon} />
         </section>
-      </div>
+      ) : canViewSecurity ? (
+        <SecurityGroupsPanel users={users} canManage={canManageSecurity} />
+      ) : (
+        <p className="text-sm text-gray-500">Nie masz dostępu do ustawień bezpieczeństwa.</p>
+      )}
 
       {(editing || isAdding) && (
         <UserFormModal user={editing} onClose={closeForm} onSave={save.mutate} isPending={save.isPending} />
       )}
-    </>
-  );
-};
-
-const SettingsPage = () => {
-  const currentUser = useAuthStore((state) => state.user);
-
-  if (currentUser?.status !== 'admin') {
-    return (
-      <PageShell>
-        <div className="max-w-xl">
-          <h1 className="text-xl font-bold text-gray-900 uppercase mb-2">Ustawienia</h1>
-          <p className="text-sm text-gray-500">Ta sekcja jest dostępna tylko dla administratorów.</p>
-        </div>
-      </PageShell>
-    );
-  }
-
-  return (
-    <PageShell>
-      <SettingsAdminPanel />
+      {groupEditingUser && (
+        <UserGroupsModal user={groupEditingUser} groups={security.groups.data ?? []} onClose={() => setGroupEditingUser(null)} />
+      )}
     </PageShell>
   );
 };

@@ -3,7 +3,8 @@
 ## Dwa niezależne sposoby rejestracji
 
 - Zwykła rejestracja w aplikacji tworzy konto ze statusem `regular` i prowadzi
-  użytkownika do panelu.
+  użytkownika do panelu. Konto otrzymuje domyślną grupę systemową przez
+  mechanizm PAP-58, więc jego dostęp nadal wynika wyłącznie z permissions grupy.
 - Rejestracja rozpoczęta przez link rekrutacyjny przekazuje do backendu token i
   tworzy konto ze statusem `new_volunteer`. Takie konto musi wypełnić ankietę.
 

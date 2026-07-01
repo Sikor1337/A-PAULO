@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { useMyPermissions } from '@/hooks/usePermissions';
+import type { PermissionCode } from '@/types';
 
 interface SidebarProps {
   groupsSlot?: ReactNode;
@@ -13,7 +15,8 @@ interface SidebarItem {
   name: string;
   icon: string;
   path: string;
-  adminOnly?: boolean;
+  permission?: PermissionCode;
+  anyPermissions?: PermissionCode[];
 }
 
 interface SidebarSection {
@@ -26,23 +29,28 @@ const sections: SidebarSection[] = [
     title: 'ZARZĄDZANIE',
     items: [
       { name: 'Dashboard', icon: '📊', path: '/' },
-      { name: 'Podopieczni', icon: '📄', path: '/beneficiaries' },
-      { name: 'Wolontariusze', icon: '🙋', path: '/volunteers' },
-      { name: 'Grupy', icon: '👥', path: '/groups' },
-      { name: 'Karty BO', icon: 'BO', path: '/bo-cards' },
-      { name: 'Rekrutacja', icon: 'R', path: '/recruitment' },
+      { name: 'Podopieczni', icon: '📄', path: '/beneficiaries', permission: 'CAN_VIEW_BENEFICIARIES' },
+      { name: 'Wolontariusze', icon: '🙋', path: '/volunteers', permission: 'CAN_VIEW_VOLUNTEERS' },
+      { name: 'Grupy', icon: '👥', path: '/groups', permission: 'CAN_VIEW_PI_GROUPS' },
+      { name: 'Karty BO', icon: 'BO', path: '/bo-cards', permission: 'CAN_VIEW_ATTACHMENTS' },
+      { name: 'Rekrutacja', icon: 'R', path: '/recruitment', permission: 'CAN_VIEW_RECRUITMENT' },
     ],
   },
   {
     title: 'OPERACJE',
     items: [
-      { name: 'Wydarzenia', icon: '📅', path: '/events' },
+      { name: 'Wydarzenia', icon: '📅', path: '/events', permission: 'CAN_VIEW_EVENTS' },
       { name: 'Zadania', icon: '📋', path: '/tasks' },
     ],
   },
   {
     title: 'ADMIN',
-    items: [{ name: 'Ustawienia', icon: '⚙', path: '/settings', adminOnly: true }],
+    items: [{
+      name: 'Ustawienia',
+      icon: '⚙',
+      path: '/settings',
+      anyPermissions: ['CAN_VIEW_USERS', 'CAN_VIEW_SECURITY'],
+    }],
   },
 ];
 
@@ -50,6 +58,7 @@ const Sidebar = ({ groupsSlot, isOpen = true, onClose }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
+  const permissions = useMyPermissions().data?.permissions ?? [];
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const isActive = (path: string) => {
@@ -95,7 +104,11 @@ const Sidebar = ({ groupsSlot, isOpen = true, onClose }: SidebarProps) => {
             </h3>
             <nav className="space-y-0.5">
               {section.items
-                .filter((item) => !item.adminOnly || user?.status === 'admin')
+                .filter((item) => {
+                  if (item.permission && !permissions.includes(item.permission)) return false;
+                  if (item.anyPermissions && !item.anyPermissions.some((code) => permissions.includes(code))) return false;
+                  return true;
+                })
                 .map((item) => (
                   <div
                     key={item.name}

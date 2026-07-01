@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react';
 import SubmissionDetailModal from '@/features/recruitment/SubmissionDetailModal';
 import SubmissionList from '@/features/recruitment/SubmissionList';
 import { useRecruitmentSubmissions } from '@/hooks/useRecruitment';
+import { useHasPermission } from '@/hooks/usePermissions';
 import type { RecruitmentSubmission } from '@/types';
 
 const RecruitmentResponsesPage = () => {
+  const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_RECRUITMENT');
   const { data = [], isLoading, action } = useRecruitmentSubmissions();
   const [selected, setSelected] = useState<RecruitmentSubmission | null>(null);
   const [search, setSearch] = useState('');
@@ -30,12 +32,12 @@ const RecruitmentResponsesPage = () => {
         isLoading={isLoading}
         emptyText="Nikt jeszcze nie wypełnił formularza."
         onSelect={setSelected}
-        actions={(submission) => submission.status === 'SUBMITTED' ? (
+        actions={canManage ? (submission) => submission.status === 'SUBMITTED' ? (
           <>
             <button onClick={() => action.mutate({ id: submission.id, action: 'start-onboarding' })} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Do wdrażania</button>
             <button onClick={() => returnSubmission(submission)} className="rounded-lg bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700">Zwróć</button>
           </>
-        ) : undefined}
+        ) : undefined : undefined}
       />
       {selected && <SubmissionDetailModal submission={selected} onClose={() => setSelected(null)} />}
     </section>
