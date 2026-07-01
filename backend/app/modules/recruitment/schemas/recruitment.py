@@ -8,8 +8,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.errors import ValidationException
-from app.modules.recruitment.models import RecruitmentField
-from app.modules.recruitment.models.constants import (
+from app.modules.recruitment.constants import (
     ALLOWED_FIELD_TYPES,
     ANSWER_MAX_LENGTHS,
     CHOICE_FIELD_TYPES,
@@ -19,6 +18,7 @@ from app.modules.recruitment.models.constants import (
     MULTIPLE_CHOICE_FIELD_TYPES,
     SINGLE_CHOICE_FIELD_TYPES,
 )
+from app.modules.recruitment.models import RecruitmentField
 
 FieldType = Literal[
     "text",
@@ -236,6 +236,36 @@ class RecruitmentSubmissionResponse(BaseModel):
     status_changed_at: datetime
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("answers", mode="before")
+    @classmethod
+    def normalize_legacy_answers(cls, value: Any) -> list[dict[str, Any]]:
+        """Keep historical object-shaped answers from breaking the whole list."""
+
+        if value is None:
+            return []
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError:
+                return []
+        if isinstance(value, dict):
+            return [
+                {
+                    "key": str(key),
+                    "label": str(key).replace("_", " ").strip().capitalize(),
+                    "field_type": (
+                        "checkbox"
+                        if isinstance(answer, bool)
+                        else "multiselect"
+                        if isinstance(answer, list)
+                        else "text"
+                    ),
+                    "value": answer,
+                }
+                for key, answer in value.items()
+            ]
+        return value
 
     model_config = ConfigDict(from_attributes=True)
 

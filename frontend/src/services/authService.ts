@@ -70,6 +70,7 @@ export interface RegisterCredentials {
   password: string;
   first_name?: string;
   last_name?: string;
+  recruitment_token?: string;
 }
 
 export interface LoginResponse {
@@ -104,6 +105,9 @@ export const authService = {
       password: credentials.password,
       first_name: credentials.first_name || '',
       last_name: credentials.last_name || '',
+      ...(credentials.recruitment_token
+        ? { recruitment_token: credentials.recruitment_token }
+        : {}),
     });
     return response.data;
   },

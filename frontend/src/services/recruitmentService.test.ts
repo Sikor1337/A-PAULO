@@ -40,12 +40,20 @@ describe('recruitmentService', () => {
   it('submits through the account-bound permanent form', async () => {
     mockedApiClient.post.mockResolvedValue({ data: { id: 7 } });
 
-    await recruitmentService.submit({ email: 'anna@example.com' });
+    await recruitmentService.submit({ email: 'anna@example.com' }, 'token-123');
 
     expect(mockedApiClient.post).toHaveBeenCalledWith(
       'v1/recruitment/submissions',
       { answers: { email: 'anna@example.com' } },
+      { headers: { 'X-Recruitment-Token': 'token-123' } },
     );
+  });
+
+  it('loads the opaque recruitment path from the backend', async () => {
+    mockedApiClient.get.mockResolvedValue({ data: { path: '/recrutation/abc' } });
+
+    await expect(recruitmentService.getAccessLink()).resolves.toBe('/recrutation/abc');
+    expect(mockedApiClient.get).toHaveBeenCalledWith('v1/recruitment/access-link');
   });
 
   it('saves the complete form draft in one request', async () => {

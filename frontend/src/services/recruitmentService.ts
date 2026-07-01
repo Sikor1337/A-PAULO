@@ -9,6 +9,9 @@ import type {
 
 const path = 'v1/recruitment';
 const pageSize = 1000;
+const accessHeaders = (token: string) => ({
+  headers: { 'X-Recruitment-Token': token },
+});
 
 async function fetchAll<T>(url: string, params: Record<string, unknown> = {}): Promise<T[]> {
   const rows: T[] = [];
@@ -22,14 +25,29 @@ async function fetchAll<T>(url: string, params: Record<string, unknown> = {}): P
 }
 
 export const recruitmentService = {
-  getForm: async (): Promise<RecruitmentForm> => {
-    const response = await apiClient.get<RecruitmentForm>(`${path}/form`);
+  getForm: async (accessToken: string): Promise<RecruitmentForm> => {
+    const response = await apiClient.get<RecruitmentForm>(
+      `${path}/form`,
+      accessHeaders(accessToken),
+    );
     return response.data;
   },
 
-  submit: async (answers: Record<string, unknown>): Promise<RecruitmentSubmission> => {
-    const response = await apiClient.post<RecruitmentSubmission>(`${path}/submissions`, { answers });
+  submit: async (
+    answers: Record<string, unknown>,
+    accessToken: string,
+  ): Promise<RecruitmentSubmission> => {
+    const response = await apiClient.post<RecruitmentSubmission>(
+      `${path}/submissions`,
+      { answers },
+      accessHeaders(accessToken),
+    );
     return response.data;
+  },
+
+  getAccessLink: async (): Promise<string> => {
+    const response = await apiClient.get<{ path: string }>(`${path}/access-link`);
+    return response.data.path;
   },
 
   getFields: async (): Promise<RecruitmentField[]> => {

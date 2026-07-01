@@ -17,7 +17,8 @@ import RecruitmentLayout from './pages/recruitment/RecruitmentLayout';
 import RecruitmentFormBuilderPage from './pages/recruitment/RecruitmentFormBuilderPage';
 import RecruitmentResponsesPage from './pages/recruitment/RecruitmentResponsesPage';
 import RecruitmentOnboardingPage from './pages/recruitment/RecruitmentOnboardingPage';
-import RecruitmentApplicationPage from './pages/recruitment/RecruitmentApplicationPage';
+import RecruitmentEntryPage from './pages/recruitment/RecruitmentEntryPage';
+import RecruitmentAccessRequiredPage from './pages/recruitment/RecruitmentAccessRequiredPage';
 import { queryClient } from './lib/queryClient';
 import { authService } from './services/authService';
 import { useAuthStore } from './stores/authStore';
@@ -57,8 +58,9 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/recrutation/:token" element={<RecruitmentEntryPage />} />
           <Route element={<ProtectedRoute allowedStatuses={['new_volunteer']} />}>
-            <Route path="/recruitment/apply" element={<RecruitmentApplicationPage />} />
+            <Route path="/recruitment-required" element={<RecruitmentAccessRequiredPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedStatuses={['regular', 'admin']} />}>

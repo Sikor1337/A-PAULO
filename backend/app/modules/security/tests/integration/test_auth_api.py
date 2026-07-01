@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db
 from app.core.errors import register_error_handlers
+from app.modules.recruitment.access import get_recruitment_access_token
 from app.modules.security.api import router
 
 
@@ -40,7 +41,7 @@ def test_register_login_refresh_and_current_user(auth_client: TestClient) -> Non
     assert register_response.status_code == 200
     assert register_response.json()["username"] == "newuser"
     assert register_response.json()["email"] == "newuser@example.com"
-    assert register_response.json()["status"] == "new_volunteer"
+    assert register_response.json()["status"] == "regular"
 
     login_response = auth_client.post(
         "/auth/token",
@@ -67,6 +68,37 @@ def test_register_login_refresh_and_current_user(auth_client: TestClient) -> Non
     )
     assert current_user_response.status_code == 200
     assert current_user_response.json()["email"] == "newuser@example.com"
+
+
+def test_register_from_recruitment_link_creates_candidate(
+    auth_client: TestClient,
+) -> None:
+    response = auth_client.post(
+        "/auth/register",
+        json={
+            "username": "candidate",
+            "email": "candidate@example.com",
+            "password": "StrongPass123",
+            "recruitment_token": get_recruitment_access_token(),
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "new_volunteer"
+
+
+def test_register_rejects_invalid_recruitment_link(auth_client: TestClient) -> None:
+    response = auth_client.post(
+        "/auth/register",
+        json={
+            "username": "candidate",
+            "email": "candidate@example.com",
+            "password": "StrongPass123",
+            "recruitment_token": "a" * 64,
+        },
+    )
+
+    assert response.status_code == 422
 
 
 def test_register_rejects_duplicate_username(auth_client: TestClient) -> None:
