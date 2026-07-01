@@ -7,6 +7,7 @@ interface Handlers {
   onSelect: (v: Volunteer) => void;
   onEdit: (v: Volunteer) => void;
   onDelete: (id: number) => void;
+  canManage: boolean;
 }
 
 const statusColor = (status: Volunteer['status']) =>
@@ -39,9 +40,10 @@ const renderFunctionList = (functions: string[]) => {
   );
 };
 
-export function buildVolunteerColumns({ onSelect, onEdit, onDelete }: Handlers): Column<Volunteer>[] {
-  return [
-    {
+export function buildVolunteerColumns({ onSelect, onEdit, onDelete, canManage }: Handlers): Column<Volunteer>[] {
+  const columns: Column<Volunteer>[] = [
+  ];
+  if (canManage) columns.push({
       id: 'full_name',
       header: 'Imię i nazwisko',
       widthClass: 'w-[18%]',
@@ -108,6 +110,6 @@ export function buildVolunteerColumns({ onSelect, onEdit, onDelete }: Handlers):
           </button>
         </div>
       ),
-    },
-  ];
+    });
+  return columns;
 }

@@ -11,6 +11,7 @@ from app.modules.recruitment.constants import (
 )
 from app.modules.security.schemas import LoginRequest, ProfileUpdateRequest, Token
 from app.modules.security.services.password import hash_password, verify_password
+from app.modules.security.services.permissions import PermissionService
 
 from .token import TokenService
 
@@ -65,8 +66,7 @@ class AuthService:
             is_migrated_candidate = bool(
                 existing_email_user
                 and not existing_email_user.is_active
-                and existing_email_user.hashed_password
-                == MIGRATED_RECRUITMENT_PASSWORD
+                and existing_email_user.hashed_password == MIGRATED_RECRUITMENT_PASSWORD
             )
             if existing_email_user and not is_migrated_candidate:
                 raise HTTPException(
@@ -103,6 +103,7 @@ class AuthService:
                 )
             self.session.flush()
             self.session.refresh(user)
+            PermissionService(self.session).assign_default_group(user)
             self.session.commit()
             return user
         except HTTPException:

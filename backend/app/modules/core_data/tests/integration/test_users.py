@@ -10,6 +10,8 @@ from app.core.errors import register_error_handlers
 from app.modules.core_data.api.users import router as users_router
 from app.modules.core_data.repositories.users import UserRepository
 from app.modules.security.dependencies import get_current_user
+from app.modules.security.models import Permission, UserGroup, security_user_groups
+from app.modules.security.models.constants import CAN_VIEW_SECURITY
 
 
 def test_user_repository_filters_and_counts_users(db_session: Session) -> None:
@@ -101,3 +103,46 @@ def test_users_api_rejects_non_admin_user(db_session: Session) -> None:
 
     assert response.status_code == 403
     assert response.json()["detail"] == "Insufficient permissions"
+
+
+def test_security_group_viewer_can_list_users_for_membership_management(
+    db_session: Session,
+) -> None:
+    user = UserRepository(db_session).create(
+        username="security-viewer",
+        email="security-viewer@example.com",
+        hashed_password="hash",
+        status="regular",
+        is_active=True,
+    )
+    permission = Permission(
+        code=CAN_VIEW_SECURITY,
+        name="View security",
+        category="Security",
+    )
+    group = UserGroup(name="Security viewers", permissions=[permission])
+    db_session.add(group)
+    db_session.flush()
+    db_session.execute(
+        security_user_groups.insert(),
+        {"user_id": user.id, "group_id": group.id},
+    )
+    db_session.commit()
+
+    app = FastAPI()
+    register_error_handlers(app)
+    app.include_router(users_router, prefix="/api/v1")
+
+    def override_get_db() -> Generator[Session, None, None]:
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    with TestClient(app) as client:
+        response = client.get("/api/v1/users")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert [item["email"] for item in response.json()] == [user.email]

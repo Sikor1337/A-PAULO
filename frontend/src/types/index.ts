@@ -1,5 +1,12 @@
 export type { Paginated, WithId } from './api';
 export type { AdminUser, AdminUserInput, UserStatus } from './user';
+export type {
+  MyPermissions,
+  PermissionCode,
+  SecurityGroup,
+  SecurityGroupInput,
+  SecurityPermission,
+} from './security';
 export type { Volunteer, VolunteerStatus, VolunteerInput, VolunteerFunction, VolunteerFunctionInput } from './volunteer';
 export type { Beneficiary, BeneficiaryStatus, BeneficiaryInput } from './beneficiary';
 export type {
@@ -31,3 +38,12 @@ export type {
   RecruitmentStatus,
   RecruitmentSubmission,
 } from './recruitment';
+export type {
+  CalendarEvent,
+  CalendarEventInput,
+  CalendarEventStatus,
+  CalendarEventVisibility,
+  CalendarFilters,
+  FeedTokenCreated,
+  FeedTokenStatus,
+} from './calendar';

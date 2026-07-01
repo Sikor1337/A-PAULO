@@ -9,10 +9,21 @@ from app.core.dependencies import get_db
 from app.core.errors import register_error_handlers
 from app.modules.recruitment.access import get_recruitment_access_token
 from app.modules.security.api import router
+from app.modules.security.models import UserGroup
+from app.modules.security.services.permissions import PermissionService
 
 
 @pytest.fixture
 def auth_client(db_session: Session) -> Generator[TestClient, None, None]:
+    db_session.add(
+        UserGroup(
+            name="Staff",
+            description="Default application access",
+            is_system=True,
+            system_key="staff",
+        )
+    )
+    db_session.commit()
     app = FastAPI()
     register_error_handlers(app)
     app.include_router(router)
@@ -27,7 +38,10 @@ def auth_client(db_session: Session) -> Generator[TestClient, None, None]:
     app.dependency_overrides.clear()
 
 
-def test_register_login_refresh_and_current_user(auth_client: TestClient) -> None:
+def test_register_login_refresh_and_current_user(
+    auth_client: TestClient,
+    db_session: Session,
+) -> None:
     register_response = auth_client.post(
         "/auth/register",
         json={
@@ -42,6 +56,8 @@ def test_register_login_refresh_and_current_user(auth_client: TestClient) -> Non
     assert register_response.json()["username"] == "newuser"
     assert register_response.json()["email"] == "newuser@example.com"
     assert register_response.json()["status"] == "regular"
+    registered_id = register_response.json()["id"]
+    assert len(PermissionService(db_session).group_ids_for_user(registered_id)) == 1
 
     login_response = auth_client.post(
         "/auth/token",
@@ -72,6 +88,7 @@ def test_register_login_refresh_and_current_user(auth_client: TestClient) -> Non
 
 def test_register_from_recruitment_link_creates_candidate(
     auth_client: TestClient,
+    db_session: Session,
 ) -> None:
     response = auth_client.post(
         "/auth/register",
@@ -85,6 +102,7 @@ def test_register_from_recruitment_link_creates_candidate(
 
     assert response.status_code == 200
     assert response.json()["status"] == "new_volunteer"
+    assert PermissionService(db_session).group_ids_for_user(response.json()["id"]) == []
 
 
 def test_register_rejects_invalid_recruitment_link(auth_client: TestClient) -> None:

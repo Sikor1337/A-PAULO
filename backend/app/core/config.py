@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    environment: str = "development"
     # Database - required, must be set in .env
     database_url: str
     # Database schema name (default: public)

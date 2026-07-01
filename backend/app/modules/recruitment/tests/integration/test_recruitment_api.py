@@ -131,7 +131,7 @@ def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
             "field_type": "multiselect",
             "required": True,
             "placeholder": "",
-            "options": ["Seniorzy", "Dzieci", "Logistyka"],
+            "options": ["Obszar A", "Obszar B", "Obszar C"],
             "is_active": True,
         }
     )
@@ -148,7 +148,7 @@ def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
         "/api/v1/recruitment/submissions",
         json={
             "answers": _answers(
-                candidate, **{custom["key"]: ["Seniorzy", "Logistyka"]}
+                candidate, **{custom["key"]: ["Obszar A", "Obszar C"]}
             )
         },
     )
@@ -156,7 +156,7 @@ def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
     custom_answer = next(
         answer for answer in first.json()["answers"] if answer["key"] == custom["key"]
     )
-    assert custom_answer["value"] == ["Seniorzy", "Logistyka"]
+    assert custom_answer["value"] == ["Obszar A", "Obszar C"]
 
     _as_user(api_client, admin_user)
     returned = api_client.post(
@@ -170,8 +170,8 @@ def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
     assert reopened.json()["submission_status"] == "RETURNED"
     assert reopened.json()["return_reason"] == "Uzupełnij odpowiedź"
     assert reopened.json()["initial_answers"][custom["key"]] == [
-        "Seniorzy",
-        "Logistyka",
+        "Obszar A",
+        "Obszar C",
     ]
 
 
