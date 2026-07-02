@@ -1,6 +1,7 @@
 """Load deterministic, non-production sample data into the public schema."""
 
-from datetime import UTC, date, datetime
+import argparse
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
@@ -10,8 +11,13 @@ from app.modules.core_data.models import User
 from app.modules.pi.models.beneficiary import Beneficiary
 from app.modules.pi.models.group import Group, group_volunteer
 from app.modules.pi.models.volunteer import Volunteer
-from app.modules.recruitment.constants import DEFAULT_FIELDS
-from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
+from app.modules.recruitment.constants import DEFAULT_FIELDS, ONBOARDING_MEETING_TYPES
+from app.modules.recruitment.models import (
+    RecruitmentField,
+    RecruitmentOnboardingMeeting,
+    RecruitmentSubmission,
+)
+from app.modules.recruitment.services import RecruitmentService
 from app.modules.security.services.password import hash_password
 from app.modules.security.services.permissions import PermissionService
 
@@ -19,6 +25,7 @@ DEMO_PASSWORD = "DemoChangeMe123!"
 SAMPLE_VOLUNTEER_COUNT = 10
 SAMPLE_BENEFICIARY_COUNT = 10
 SAMPLE_GROUP_COUNT = 4
+SAMPLE_ONBOARDING_COUNT = 4
 
 
 def load_sample_data(session: Session) -> None:
@@ -166,9 +173,105 @@ def load_sample_data(session: Session) -> None:
         )
     )
     session.commit()
+    load_onboarding_scenarios(session)
+
+
+def load_onboarding_scenarios(session: Session) -> int:
+    """Add stable candidates with 0/4, 2/4, 3/4 and 4/4 progress."""
+
+    fields = RecruitmentService(session).list_fields()
+    now = datetime.now(UTC)
+    scenarios = [
+        ("demo.onboarding0", "Karol Start", 0),
+        ("demo.onboarding2", "Beata W Połowie", 2),
+        ("demo.onboarding3", "Celina Prawie Gotowa", 3),
+        ("demo.onboarding4", "Daniel Gotowy", 4),
+    ]
+    created = 0
+
+    for index, (username, full_name, completed) in enumerate(scenarios, start=1):
+        user = session.query(User).filter(User.username == username).one_or_none()
+        if user is None:
+            user = User(
+                username=username,
+                email=f"{username}@example.com",
+                first_name=full_name.split()[0],
+                last_name=" ".join(full_name.split()[1:]),
+                hashed_password=hash_password(DEMO_PASSWORD),
+                status="new_volunteer",
+                is_active=True,
+            )
+            session.add(user)
+            session.flush()
+
+        submission = (
+            session.query(RecruitmentSubmission)
+            .filter(RecruitmentSubmission.user_id == user.id)
+            .one_or_none()
+        )
+        if submission is not None:
+            continue
+
+        phone = f"+48 700 200 10{index}"
+        values = {
+            "full_name": full_name,
+            "email": user.email,
+            "phone": phone,
+            "social_link": f"https://example.com/{username}",
+            "availability": "Wieczory w tygodniu",
+        }
+        submission = RecruitmentSubmission(
+            user_id=user.id,
+            full_name=full_name,
+            email=user.email,
+            phone=phone,
+            social_link=values["social_link"],
+            availability=values["availability"],
+            answers=[
+                {
+                    "key": field.key,
+                    "label": field.label,
+                    "field_type": field.field_type,
+                    "value": values.get(field.key),
+                }
+                for field in fields
+            ],
+            status="ONBOARDING",
+            submitted_at=now - timedelta(days=10 - index),
+            status_changed_at=now - timedelta(days=5 - index),
+        )
+        session.add(submission)
+        session.flush()
+        session.add_all(
+            [
+                RecruitmentOnboardingMeeting(
+                    submission_id=submission.id,
+                    meeting_type=meeting_type,
+                    attended_at=(
+                        now - timedelta(days=completed - meeting_index)
+                        if meeting_index < completed
+                        else None
+                    ),
+                )
+                for meeting_index, meeting_type in enumerate(
+                    ONBOARDING_MEETING_TYPES
+                )
+            ]
+        )
+        created += 1
+
+    session.commit()
+    return created
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--recruitment-only",
+        action="store_true",
+        help="Add missing onboarding demo scenarios without resetting other data",
+    )
+    args = parser.parse_args()
     settings = get_settings()
     if settings.database_schema != "public":
         raise SystemExit("Sample data may only be loaded into the public schema")
@@ -184,18 +287,31 @@ def main() -> None:
     try:
         with Session(engine) as session:
             try:
-                load_sample_data(session)
+                if args.recruitment_only:
+                    created = load_onboarding_scenarios(session)
+                else:
+                    load_sample_data(session)
+                    created = SAMPLE_ONBOARDING_COUNT
             except RuntimeError as error:
                 raise SystemExit(str(error)) from error
     finally:
         engine.dispose()
 
+    if args.recruitment_only:
+        print("public: missing onboarding demo scenarios added")
+    else:
+        print(
+            "public: sample data loaded "
+            f"({SAMPLE_VOLUNTEER_COUNT} volunteers, "
+            f"{SAMPLE_BENEFICIARY_COUNT} beneficiaries, "
+            f"{SAMPLE_GROUP_COUNT} groups)"
+        )
+        print("demo login: demo.admin@example.com / DemoChangeMe123!")
     print(
-        "public: sample data loaded "
-        f"({SAMPLE_VOLUNTEER_COUNT} volunteers, "
-        f"{SAMPLE_BENEFICIARY_COUNT} beneficiaries, {SAMPLE_GROUP_COUNT} groups)"
+        "onboarding demo logins: demo.onboarding0@example.com .. "
+        "demo.onboarding4@example.com / DemoChangeMe123! "
+        f"({created} added)"
     )
-    print("demo login: demo.admin@example.com / DemoChangeMe123!")
 
 
 if __name__ == "__main__":
