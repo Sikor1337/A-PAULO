@@ -23,5 +23,6 @@ wymagalność i aktywność.
 - `GET/POST /api/v1/recruitment/departures`
 - `GET /api/v1/recruitment/departures/{id}`
 
-Wszystkie endpointy wymagają dostępu pracownika. Migracja
-`pap29_departures` jest bezpośrednim następcą baseline PAP-69.
+Odczyt pól i ankiet wymaga `CAN_VIEW_RECRUITMENT`. Zmiana pytań oraz zapis
+ankiety wymagają `CAN_MANAGE_RECRUITMENT`. Migracja `pap29_departures` jest
+bezpośrednim następcą baseline PAP-69.
