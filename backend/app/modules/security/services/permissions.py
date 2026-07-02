@@ -95,6 +95,54 @@ class PermissionService:
             self.session.rollback()
             raise
 
+    def save_group(
+        self,
+        group_id: int,
+        *,
+        name: str,
+        description: str,
+        permission_codes: list[str],
+        user_ids: list[int],
+    ) -> dict:
+        """Save metadata, permissions and members atomically."""
+
+        try:
+            group = self.get_group(group_id)
+            member_ids = set(user_ids)
+            self._validate_users(member_ids)
+            self._protect_last_admin(group, member_ids)
+
+            if group.is_system:
+                current_codes = {permission.code for permission in group.permissions}
+                if (
+                    name != group.name
+                    or description != group.description
+                    or set(permission_codes) != current_codes
+                ):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Grupy systemowej nie można dowolnie modyfikować",
+                    )
+            else:
+                duplicate = any(
+                    candidate.id != group.id
+                    and candidate.name.casefold() == name.casefold()
+                    for candidate in self.repo.list_groups()
+                )
+                if duplicate:
+                    raise ConflictError("Grupa o tej nazwie już istnieje")
+                group.name = name
+                group.description = description
+                group.permissions = self._resolve_permissions(permission_codes)
+
+            self.repo.replace_group_users(group.id, member_ids)
+            self.session.commit()
+            self.session.refresh(group)
+            return self._serialize_group(group)
+        except Exception:
+            self.session.rollback()
+            raise
+
     def replace_group_users(self, group_id: int, user_ids: list[int]) -> dict:
         try:
             group = self.get_group(group_id)
