@@ -1,7 +1,7 @@
 """Add configurable volunteer departure interviews.
 
 Revision ID: pap29_departures
-Revises: cd317ee086f0
+Revises: pap59_onboarding_meetings
 Create Date: 2026-06-30 23:00:00+00:00
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "pap29_departures"
-down_revision: str | Sequence[str] | None = "cd317ee086f0"
+down_revision: str | Sequence[str] | None = "pap59_onboarding_meetings"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -41,6 +41,12 @@ export interface RecruitmentForm {
 }
 
 export type RecruitmentStatus = 'SUBMITTED' | 'ONBOARDING' | 'ACCEPTED' | 'REJECTED' | 'RETURNED';
+export type OnboardingMeetingType = 'CHARISM' | 'COMMUNITY' | 'ADMINISTRATION' | 'ACTIVITY';
+
+export interface RecruitmentOnboardingMeeting {
+  meeting_type: OnboardingMeetingType;
+  attended_at: string | null;
+}
 
 export interface RecruitmentAnswer {
   key: string;
@@ -62,6 +68,7 @@ export interface RecruitmentSubmission {
   return_reason: string | null;
   decision_comment: string | null;
   volunteer_id: number | null;
+  onboarding_meetings: RecruitmentOnboardingMeeting[];
   submitted_at: string;
   status_changed_at: string;
   created_at: string;

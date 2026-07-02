@@ -12,9 +12,14 @@ from app.modules.core_data.models import User
 from app.modules.recruitment.constants import (
     DEFAULT_FIELDS,
     NEW_VOLUNTEER_STATUS,
+    ONBOARDING_MEETING_TYPES,
     SUBMISSION_STATUSES,
 )
-from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
+from app.modules.recruitment.models import (
+    RecruitmentField,
+    RecruitmentOnboardingMeeting,
+    RecruitmentSubmission,
+)
 from app.modules.recruitment.repositories import RecruitmentRepository
 from app.modules.recruitment.schemas import (
     RecruitmentFieldDraft,
@@ -38,9 +43,11 @@ class RecruitmentService:
 
     def _ensure_default_fields(self) -> None:
         current = self.repo.list_fields()
-        defaults = DEFAULT_FIELDS if not current else [
-            values for values in DEFAULT_FIELDS if values["is_system"]
-        ]
+        defaults = (
+            DEFAULT_FIELDS
+            if not current
+            else [values for values in DEFAULT_FIELDS if values["is_system"]]
+        )
         by_key = {field.key: field for field in current}
         changed = False
 
@@ -232,7 +239,44 @@ class RecruitmentService:
         return submission
 
     def move_to_onboarding(self, submission_id: int) -> RecruitmentSubmission:
-        return self._transition(submission_id, {"SUBMITTED"}, "ONBOARDING")
+        try:
+            submission = self.get_submission(submission_id)
+            if submission.status != "SUBMITTED":
+                raise ConflictError("Ta zmiana statusu nie jest dostępna")
+            submission.status = "ONBOARDING"
+            submission.decision_comment = None
+            submission.status_changed_at = datetime.now(UTC)
+            self._ensure_onboarding_meetings(submission)
+            self.session.commit()
+            return self.get_submission(submission.id)
+        except Exception:
+            self.session.rollback()
+            raise
+
+    def set_onboarding_attendance(
+        self, submission_id: int, meeting_type: str, attended: bool
+    ) -> RecruitmentSubmission:
+        if meeting_type not in ONBOARDING_MEETING_TYPES:
+            raise ValidationException("Nieznany typ spotkania wdrożeniowego")
+        try:
+            submission = self.get_submission(submission_id)
+            if submission.status != "ONBOARDING":
+                raise ConflictError("Obecność można zmieniać tylko podczas wdrażania")
+            self._ensure_onboarding_meetings(submission)
+            meeting = next(
+                item
+                for item in submission.onboarding_meetings
+                if item.meeting_type == meeting_type
+            )
+            if attended and meeting.attended_at is None:
+                meeting.attended_at = datetime.now(UTC)
+            elif not attended:
+                meeting.attended_at = None
+            self.session.commit()
+            return self.get_submission(submission.id)
+        except Exception:
+            self.session.rollback()
+            raise
 
     def return_submission(
         self, submission_id: int, reason: str | None = None
@@ -272,6 +316,16 @@ class RecruitmentService:
             if submission.status != "ONBOARDING":
                 raise ConflictError(
                     "Tylko osobę we wdrażaniu można oznaczyć jako wdrożoną"
+                )
+            completed = {
+                meeting.meeting_type
+                for meeting in submission.onboarding_meetings
+                if meeting.attended_at is not None
+            }
+            if completed != set(ONBOARDING_MEETING_TYPES):
+                raise ConflictError(
+                    "Promocja wymaga obecności na wszystkich 4 spotkaniach "
+                    "wdrożeniowych"
                 )
             volunteer = (
                 self.repo.get_volunteer(submission.volunteer_id)
@@ -336,12 +390,21 @@ class RecruitmentService:
             submission.status = "ONBOARDING"
             submission.decision_comment = None
             submission.status_changed_at = datetime.now(UTC)
+            self._ensure_onboarding_meetings(submission)
             self.session.commit()
-            self.session.refresh(submission)
-            return submission
+            return self.get_submission(submission.id)
         except Exception:
             self.session.rollback()
             raise
+
+    def _ensure_onboarding_meetings(self, submission: RecruitmentSubmission) -> None:
+        existing = {meeting.meeting_type for meeting in submission.onboarding_meetings}
+        for meeting_type in ONBOARDING_MEETING_TYPES:
+            if meeting_type not in existing:
+                submission.onboarding_meetings.append(
+                    RecruitmentOnboardingMeeting(meeting_type=meeting_type)
+                )
+        self.session.flush()
 
     def _transition(
         self,

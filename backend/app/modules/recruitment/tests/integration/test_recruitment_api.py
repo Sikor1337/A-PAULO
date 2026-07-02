@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from app.modules.core_data.models import User
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.access import get_recruitment_access_token
+from app.modules.recruitment.constants import ONBOARDING_MEETING_TYPES
 from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
 from app.modules.security.dependencies import get_current_user
 
@@ -79,6 +80,29 @@ def test_account_form_submission_and_onboarding_flow(
     )
     assert started.status_code == 200
     assert started.json()["status"] == "ONBOARDING"
+    assert {
+        meeting["meeting_type"] for meeting in started.json()["onboarding_meetings"]
+    } == set(ONBOARDING_MEETING_TYPES)
+
+    premature = api_client.post(
+        f"/api/v1/recruitment/submissions/{submission['id']}/accept",
+        json={"comment": None},
+    )
+    assert premature.status_code == 409
+
+    for meeting_type in ONBOARDING_MEETING_TYPES:
+        attendance = api_client.put(
+            f"/api/v1/recruitment/submissions/{submission['id']}"
+            f"/onboarding-meetings/{meeting_type}",
+            json={"attended": True},
+        )
+        assert attendance.status_code == 200
+        saved = next(
+            meeting
+            for meeting in attendance.json()["onboarding_meetings"]
+            if meeting["meeting_type"] == meeting_type
+        )
+        assert saved["attended_at"] is not None
 
     accepted = api_client.post(
         f"/api/v1/recruitment/submissions/{submission['id']}/accept",
@@ -108,6 +132,45 @@ def test_account_form_submission_and_onboarding_flow(
     assert db_session.get(Volunteer, volunteer_id).status == "Aktywny"
 
 
+def test_onboarding_attendance_can_be_corrected(api_client, db_session, admin_user):
+    candidate = _candidate(db_session, "attendance")
+    _as_user(api_client, candidate)
+    submission = api_client.post(
+        "/api/v1/recruitment/submissions",
+        json={"answers": _answers(candidate)},
+    ).json()
+    _as_user(api_client, admin_user)
+    api_client.post(
+        f"/api/v1/recruitment/submissions/{submission['id']}/start-onboarding"
+    )
+
+    checked = api_client.put(
+        f"/api/v1/recruitment/submissions/{submission['id']}"
+        "/onboarding-meetings/CHARISM",
+        json={"attended": True},
+    )
+    assert checked.status_code == 200
+    unchecked = api_client.put(
+        f"/api/v1/recruitment/submissions/{submission['id']}"
+        "/onboarding-meetings/CHARISM",
+        json={"attended": False},
+    )
+    assert unchecked.status_code == 200
+    charism = next(
+        meeting
+        for meeting in unchecked.json()["onboarding_meetings"]
+        if meeting["meeting_type"] == "CHARISM"
+    )
+    assert charism["attended_at"] is None
+
+    invalid = api_client.put(
+        f"/api/v1/recruitment/submissions/{submission['id']}"
+        "/onboarding-meetings/UNKNOWN",
+        json={"attended": True},
+    )
+    assert invalid.status_code == 422
+
+
 def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
     api_client, db_session, admin_user
 ):
@@ -135,9 +198,7 @@ def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
             "is_active": True,
         }
     )
-    saved = api_client.put(
-        "/api/v1/recruitment/fields", json={"fields": draft}
-    )
+    saved = api_client.put("/api/v1/recruitment/fields", json={"fields": draft})
     assert saved.status_code == 200
     custom = saved.json()[-1]
     assert custom["field_type"] == "multiselect"
@@ -147,9 +208,7 @@ def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
     first = api_client.post(
         "/api/v1/recruitment/submissions",
         json={
-            "answers": _answers(
-                candidate, **{custom["key"]: ["Obszar A", "Obszar C"]}
-            )
+            "answers": _answers(candidate, **{custom["key"]: ["Obszar A", "Obszar C"]})
         },
     )
     assert first.status_code == 201
@@ -245,9 +304,7 @@ def test_form_rejects_a_whitespace_only_question(api_client, admin_user):
         for index, field in enumerate(fields)
     ]
 
-    response = api_client.put(
-        "/api/v1/recruitment/fields", json={"fields": draft}
-    )
+    response = api_client.put("/api/v1/recruitment/fields", json={"fields": draft})
 
     assert response.status_code == 422
 
