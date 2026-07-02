@@ -7,7 +7,11 @@ from app.modules.pi.models.beneficiary import Beneficiary
 from app.modules.pi.models.function import volunteer_function
 from app.modules.pi.models.group import BeneficiaryAssignment, Group, group_volunteer
 from app.modules.pi.models.volunteer import Volunteer
-from scripts.seed_sample_data import load_sample_data
+from app.modules.recruitment.models import (
+    RecruitmentOnboardingMeeting,
+    RecruitmentSubmission,
+)
+from scripts.seed_sample_data import load_onboarding_scenarios, load_sample_data
 
 
 def test_sample_seed_restores_expected_people_and_group_assignments(
@@ -44,3 +48,26 @@ def test_sample_seed_restores_expected_people_and_group_assignments(
     assert beneficiary_assignments == 0
     assert function_assignments == 0
     assert group_leaders == 0
+
+    onboarding = db_session.scalars(
+        select(RecruitmentSubmission).where(
+            RecruitmentSubmission.status == "ONBOARDING"
+        )
+    ).all()
+    progress = sorted(
+        sum(
+            meeting.attended_at is not None
+            for meeting in submission.onboarding_meetings
+        )
+        for submission in onboarding
+    )
+    meeting_count = db_session.scalar(
+        select(func.count()).select_from(RecruitmentOnboardingMeeting)
+    )
+    assert progress == [0, 2, 3, 4]
+    assert meeting_count == 16
+
+    assert load_onboarding_scenarios(db_session) == 0
+    assert db_session.scalar(
+        select(func.count()).select_from(RecruitmentSubmission)
+    ) == 5
