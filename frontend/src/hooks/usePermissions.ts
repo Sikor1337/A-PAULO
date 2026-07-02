@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseApiError } from '@/lib/errors';
 import { permissionService } from '@/services/permissionService';
 import { useAuthStore } from '@/stores/authStore';
-import type { PermissionCode, SecurityGroupInput } from '@/types';
+import type { PermissionCode, SecurityGroupInput, SecurityGroupSaveInput } from '@/types';
 
 export function useMyPermissions() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -45,21 +45,9 @@ export function useSecurityGroups(enabled = true) {
     onSuccess: refresh,
     onError,
   });
-  const update = useMutation({
-    mutationFn: ({ id, input }: { id: number; input: Pick<SecurityGroupInput, 'name' | 'description'> }) =>
-      permissionService.updateGroup(id, input),
-    onSuccess: refresh,
-    onError,
-  });
-  const setPermissions = useMutation({
-    mutationFn: ({ id, codes }: { id: number; codes: PermissionCode[] }) =>
-      permissionService.setGroupPermissions(id, codes),
-    onSuccess: refresh,
-    onError,
-  });
-  const setUsers = useMutation({
-    mutationFn: ({ id, userIds }: { id: number; userIds: number[] }) =>
-      permissionService.setGroupUsers(id, userIds),
+  const save = useMutation({
+    mutationFn: ({ id, input }: { id: number; input: SecurityGroupSaveInput }) =>
+      permissionService.saveGroup(id, input),
     onSuccess: refresh,
     onError,
   });
@@ -69,5 +57,5 @@ export function useSecurityGroups(enabled = true) {
     onError,
   });
 
-  return { permissions, groups, create, update, setPermissions, setUsers, remove };
+  return { permissions, groups, create, save, remove };
 }
