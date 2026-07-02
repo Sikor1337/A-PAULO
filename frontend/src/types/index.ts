@@ -38,3 +38,12 @@ export type {
   RecruitmentStatus,
   RecruitmentSubmission,
 } from './recruitment';
+export type {
+  CalendarEvent,
+  CalendarEventInput,
+  CalendarEventStatus,
+  CalendarEventVisibility,
+  CalendarFilters,
+  FeedTokenCreated,
+  FeedTokenStatus,
+} from './calendar';
