@@ -16,6 +16,11 @@ frontend/.npm-cache/
 # Local dev helper (personal launcher, not shared)
 start-dev.bat
 
+# Root-level npm artifacts from personal dev tools (no root npm package in this monorepo)
+/.npm-cache/
+/package.json
+/package-lock.json
+
 # Claude Code local config (per-developer)
 .claude/settings.local.json
 
