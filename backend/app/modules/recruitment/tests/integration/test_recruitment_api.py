@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from app.modules.core_data.models import User
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.access import get_recruitment_access_token
-from app.modules.recruitment.models import RecruitmentSubmission
+from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
 from app.modules.security.dependencies import get_current_user
 
 
@@ -173,6 +173,37 @@ def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
         "Obszar A",
         "Obszar C",
     ]
+
+
+def test_form_restores_missing_system_fields_without_deleting_custom_fields(
+    api_client, db_session, admin_user
+):
+    custom = RecruitmentField(
+        key="custom_question",
+        label="Pytanie dodatkowe",
+        field_type="text",
+        required=False,
+        placeholder="",
+        options=[],
+        position=0,
+        is_active=True,
+        is_system=False,
+    )
+    db_session.add(custom)
+    db_session.commit()
+    _as_user(api_client, admin_user)
+
+    response = api_client.get("/api/v1/recruitment/fields")
+
+    assert response.status_code == 200
+    fields = response.json()
+    assert [field["key"] for field in fields[:3]] == [
+        "full_name",
+        "email",
+        "phone",
+    ]
+    assert fields[3]["key"] == "custom_question"
+    assert all(field["is_system"] for field in fields[:3])
 
 
 def test_schema_rejects_invalid_public_values(api_client, db_session):
