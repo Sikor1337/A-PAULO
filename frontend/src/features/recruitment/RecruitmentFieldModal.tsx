@@ -6,6 +6,8 @@ interface Props {
   field: RecruitmentFieldDraft | null;
   onClose: () => void;
   onSave: (data: RecruitmentFieldDraft) => void;
+  excludedTypes?: RecruitmentFieldType[];
+  systemFieldHelp?: string;
 }
 
 const fieldTypes: { value: RecruitmentFieldType; label: string }[] = [
@@ -20,7 +22,7 @@ const fieldTypes: { value: RecruitmentFieldType; label: string }[] = [
   { value: 'checkbox', label: 'Potwierdzenie' },
 ];
 
-const RecruitmentFieldModal = ({ field, onClose, onSave }: Props) => {
+const RecruitmentFieldModal = ({ field, onClose, onSave, excludedTypes = [], systemFieldHelp = 'To podstawowe pole kontaktowe. Możesz zmienić jego nazwę i podpowiedź, ale nie typ ani wymagalność.' }: Props) => {
   const [label, setLabel] = useState(field?.label ?? '');
   const [fieldType, setFieldType] = useState<RecruitmentFieldType>(field?.field_type ?? 'text');
   const [required, setRequired] = useState(field?.required ?? false);
@@ -70,7 +72,7 @@ const RecruitmentFieldModal = ({ field, onClose, onSave }: Props) => {
             onChange={(event) => setFieldType(event.target.value as RecruitmentFieldType)}
             className="mt-1 min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 disabled:bg-gray-100"
           >
-            {fieldTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
+            {fieldTypes.filter((type) => !excludedTypes.includes(type.value)).map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
           </select>
         </label>
 
@@ -109,7 +111,7 @@ const RecruitmentFieldModal = ({ field, onClose, onSave }: Props) => {
 
         {field?.is_system && (
           <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
-            To podstawowe pole kontaktowe. Możesz zmienić jego nazwę i podpowiedź, ale nie typ ani wymagalność.
+            {systemFieldHelp}
           </p>
         )}
 

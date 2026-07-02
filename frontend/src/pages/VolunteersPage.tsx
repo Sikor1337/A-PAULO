@@ -9,13 +9,16 @@ import { useHasPermission } from '@/hooks/usePermissions';
 import { buildVolunteerColumns } from '@/features/volunteers/volunteerColumns';
 import { volunteerDetailFields } from '@/features/volunteers/volunteerDetail';
 import VolunteerFormModal from '@/features/volunteers/VolunteerFormModal';
+import DepartureInterviewModal from '@/features/recruitment/DepartureInterviewModal';
 import { exportRowsToCsv } from '@/lib/csv';
 import type { Volunteer, VolunteerStatus } from '@/types';
 
 const VolunteersPage: React.FC = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_VOLUNTEERS');
+  const { hasPermission: canManageDepartures } = useHasPermission('CAN_MANAGE_RECRUITMENT');
   const [editing, setEditing] = useState<Volunteer | null>(null);
   const [details, setDetails] = useState<Volunteer | null>(null);
+  const [departing, setDeparting] = useState<Volunteer | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [filterGroup, setFilterGroup] = useState('');
   const [filterStatus, setFilterStatus] = useState<'' | VolunteerStatus>('');
@@ -69,19 +72,21 @@ const VolunteersPage: React.FC = () => {
           <h1 className="text-xl font-bold text-gray-900 uppercase">Wolontariusze</h1>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
-          {canManage && <button
+          <button
             type="button"
             onClick={exportVolunteers}
             className="min-h-10 rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold text-gray-600 transition-all hover:bg-gray-50"
           >
             Eksport CSV
-          </button>}
-          <button
-            onClick={() => setIsAdding(true)}
-            className="flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#10b981] px-6 py-2 text-sm font-bold text-white transition-all hover:opacity-90"
-          >
-            + Dodaj
           </button>
+          {canManage && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#10b981] px-6 py-2 text-sm font-bold text-white transition-all hover:opacity-90"
+            >
+              + Dodaj
+            </button>
+          )}
         </div>
       </div>
 
@@ -132,15 +137,28 @@ const VolunteersPage: React.FC = () => {
           onClose={() => setDetails(null)}
           footer={
             <>
-              {canManage && <button
-                onClick={() => {
-                  setEditing(details);
-                  setDetails(null);
-                }}
-                className="bg-[#6366f1] text-white px-4 py-2 rounded-md font-bold hover:opacity-90"
-              >
-                ✏️ Edytuj
-              </button>}
+              {canManageDepartures && details.status === 'Aktywny' && (
+                <button
+                  onClick={() => {
+                    setDeparting(details);
+                    setDetails(null);
+                  }}
+                  className="rounded-md bg-amber-600 px-4 py-2 font-bold text-white hover:opacity-90"
+                >
+                  Oznacz odejście
+                </button>
+              )}
+              {canManage && (
+                <button
+                  onClick={() => {
+                    setEditing(details);
+                    setDetails(null);
+                  }}
+                  className="rounded-md bg-[#6366f1] px-4 py-2 font-bold text-white hover:opacity-90"
+                >
+                  ✏️ Edytuj
+                </button>
+              )}
               <button onClick={() => setDetails(null)} className="px-4 py-2 text-gray-400 font-bold">
                 Zamknij
               </button>
@@ -151,6 +169,9 @@ const VolunteersPage: React.FC = () => {
 
       {canManage && (editing || isAdding) && (
         <VolunteerFormModal volunteer={editing} onClose={closeForm} onSave={save.mutate} isPending={save.isPending} />
+      )}
+      {canManageDepartures && departing && (
+        <DepartureInterviewModal volunteer={departing} onClose={() => setDeparting(null)} />
       )}
     </PageShell>
   );
