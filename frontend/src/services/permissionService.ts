@@ -4,6 +4,7 @@ import type {
   PermissionCode,
   SecurityGroup,
   SecurityGroupInput,
+  SecurityGroupSaveInput,
   SecurityPermission,
 } from '@/types';
 
@@ -31,6 +32,10 @@ export const permissionService = {
     input: Pick<SecurityGroupInput, 'name' | 'description'>,
   ): Promise<SecurityGroup> => {
     const response = await apiClient.patch<SecurityGroup>(`${base}/groups/${id}`, input);
+    return response.data;
+  },
+  saveGroup: async (id: number, input: SecurityGroupSaveInput): Promise<SecurityGroup> => {
+    const response = await apiClient.put<SecurityGroup>(`${base}/groups/${id}`, input);
     return response.data;
   },
   setGroupPermissions: async (

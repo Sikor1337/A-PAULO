@@ -43,6 +43,10 @@ export interface SecurityGroupInput {
   permission_codes: PermissionCode[];
 }
 
+export interface SecurityGroupSaveInput extends SecurityGroupInput {
+  user_ids: number[];
+}
+
 export interface MyPermissions {
   permissions: PermissionCode[];
   group_ids: number[];

@@ -8,7 +8,6 @@ from .auth import (
     TokenRefresh,
     UserResponse,
 )
-
 from .permissions import (
     GroupIdsRequest,
     MyPermissionsResponse,
@@ -16,6 +15,7 @@ from .permissions import (
     PermissionResponse,
     UserGroupCreateRequest,
     UserGroupResponse,
+    UserGroupSaveRequest,
     UserGroupUpdateRequest,
     UserIdsRequest,
 )
@@ -32,6 +32,7 @@ __all__ = [
     "TokenRefresh",
     "UserGroupCreateRequest",
     "UserGroupResponse",
+    "UserGroupSaveRequest",
     "UserGroupUpdateRequest",
     "UserIdsRequest",
     "UserResponse",

@@ -43,6 +43,12 @@ class UserGroupUpdateRequest(BaseModel):
         return value
 
 
+class UserGroupSaveRequest(UserGroupCreateRequest):
+    """Complete editable group state saved in one transaction."""
+
+    user_ids: list[int] = Field(default_factory=list)
+
+
 class PermissionCodesRequest(BaseModel):
     permission_codes: list[str]
 
