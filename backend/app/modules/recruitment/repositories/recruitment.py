@@ -1,7 +1,7 @@
 """Data access for recruitment fields and submissions."""
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
@@ -31,17 +31,21 @@ class RecruitmentRepository:
     def get_submission(self, submission_id: int) -> RecruitmentSubmission | None:
         return (
             self.session.query(RecruitmentSubmission)
-            .options(joinedload(RecruitmentSubmission.user))
+            .options(
+                joinedload(RecruitmentSubmission.user),
+                selectinload(RecruitmentSubmission.onboarding_meetings),
+            )
             .filter(RecruitmentSubmission.id == submission_id)
             .one_or_none()
         )
 
-    def get_submission_by_user_id(
-        self, user_id: int
-    ) -> RecruitmentSubmission | None:
+    def get_submission_by_user_id(self, user_id: int) -> RecruitmentSubmission | None:
         return (
             self.session.query(RecruitmentSubmission)
-            .options(joinedload(RecruitmentSubmission.user))
+            .options(
+                joinedload(RecruitmentSubmission.user),
+                selectinload(RecruitmentSubmission.onboarding_meetings),
+            )
             .filter(RecruitmentSubmission.user_id == user_id)
             .one_or_none()
         )
@@ -61,7 +65,9 @@ class RecruitmentRepository:
         status: str | None = None,
         search: str | None = None,
     ) -> list[RecruitmentSubmission]:
-        query = self.session.query(RecruitmentSubmission)
+        query = self.session.query(RecruitmentSubmission).options(
+            selectinload(RecruitmentSubmission.onboarding_meetings)
+        )
         if status:
             query = query.filter(RecruitmentSubmission.status == status)
         if search:

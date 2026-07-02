@@ -3,6 +3,7 @@ import type {
   RecruitmentField,
   RecruitmentFieldDraft,
   RecruitmentForm,
+  OnboardingMeetingType,
   RecruitmentStatus,
   RecruitmentSubmission,
 } from '@/types';
@@ -77,6 +78,18 @@ export const recruitmentService = {
     const response = await apiClient.post<RecruitmentSubmission>(
       `${path}/submissions/${id}/${action}`,
       body,
+    );
+    return response.data;
+  },
+
+  setOnboardingAttendance: async (
+    id: number,
+    meetingType: OnboardingMeetingType,
+    attended: boolean,
+  ): Promise<RecruitmentSubmission> => {
+    const response = await apiClient.put<RecruitmentSubmission>(
+      `${path}/submissions/${id}/onboarding-meetings/${meetingType}`,
+      { attended },
     );
     return response.data;
   },

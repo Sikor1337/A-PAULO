@@ -72,4 +72,15 @@ describe('recruitmentService', () => {
 
     expect(mockedApiClient.put).toHaveBeenCalledWith('v1/recruitment/fields', { fields });
   });
+
+  it('records onboarding attendance in one request', async () => {
+    mockedApiClient.put.mockResolvedValue({ data: { id: 7 } });
+
+    await recruitmentService.setOnboardingAttendance(7, 'COMMUNITY', true);
+
+    expect(mockedApiClient.put).toHaveBeenCalledWith(
+      'v1/recruitment/submissions/7/onboarding-meetings/COMMUNITY',
+      { attended: true },
+    );
+  });
 });

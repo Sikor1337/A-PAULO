@@ -3,7 +3,18 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.sql.base import Base
@@ -78,3 +89,47 @@ class RecruitmentSubmission(Base):
         onupdate=func.now(),
     )
     user: Mapped["User"] = relationship()
+    onboarding_meetings: Mapped[list["RecruitmentOnboardingMeeting"]] = relationship(
+        back_populates="submission",
+        cascade="all, delete-orphan",
+    )
+
+
+class RecruitmentOnboardingMeeting(Base):
+    """Attendance at one required onboarding meeting."""
+
+    __tablename__ = "recruitment_onboarding_meetings"
+    __table_args__ = (
+        CheckConstraint(
+            "meeting_type IN ('CHARISM', 'COMMUNITY', 'ADMINISTRATION', 'ACTIVITY')",
+            name="ck_recruitment_onboarding_meeting_type",
+        ),
+        UniqueConstraint(
+            "submission_id",
+            "meeting_type",
+            name="uq_recruitment_onboarding_meeting_type",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    submission_id: Mapped[int] = mapped_column(
+        ForeignKey("recruitment_submissions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    meeting_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    attended_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+    submission: Mapped["RecruitmentSubmission"] = relationship(
+        back_populates="onboarding_meetings"
+    )
