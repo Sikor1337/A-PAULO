@@ -8,16 +8,12 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.modules.core_data.models import User
 from app.modules.pi.models.beneficiary import Beneficiary
-from app.modules.pi.models.function import Function, volunteer_function
-from app.modules.pi.models.group import (
-    BeneficiaryAssignment,
-    Group,
-    group_volunteer,
-)
+from app.modules.pi.models.group import Group, group_volunteer
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.constants import DEFAULT_FIELDS
 from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
 from app.modules.security.services.password import hash_password
+from app.modules.security.services.permissions import PermissionService
 
 DEMO_PASSWORD = "DemoChangeMe123!"
 SAMPLE_VOLUNTEER_COUNT = 10
@@ -75,24 +71,7 @@ def load_sample_data(session: Session) -> None:
     ]
     session.add_all([admin, candidate, *volunteers])
     session.flush()
-
-    functions = [
-        Function(name="Koordynator", is_system=True, is_active=True),
-        Function(name="Wsparcie seniorów", is_system=False, is_active=True),
-        Function(name="Logistyka", is_system=False, is_active=True),
-    ]
-    session.add_all(functions)
-    session.flush()
-    session.execute(
-        volunteer_function.insert(),
-        [
-            {
-                "volunteer_id": volunteer.id,
-                "function_id": functions[index % len(functions)].id,
-            }
-            for index, volunteer in enumerate(volunteers)
-        ],
-    )
+    PermissionService(session).assign_default_group(admin)
 
     group_names = [
         "Grupa Północ",
@@ -100,10 +79,7 @@ def load_sample_data(session: Session) -> None:
         "Grupa Wschód",
         "Grupa Zachód",
     ]
-    groups = [
-        Group(name=name, leader_id=volunteers[index].id)
-        for index, name in enumerate(group_names)
-    ]
+    groups = [Group(name=name) for name in group_names]
     session.add_all(groups)
     session.flush()
     session.execute(
@@ -147,17 +123,6 @@ def load_sample_data(session: Session) -> None:
     ]
     session.add_all(beneficiaries)
     session.flush()
-    session.add_all(
-        [
-            BeneficiaryAssignment(
-                beneficiary_id=beneficiary.id,
-                volunteer_id=volunteers[index].id,
-                is_main=True,
-                additional_info="Główny kontakt demonstracyjny.",
-            )
-            for index, beneficiary in enumerate(beneficiaries)
-        ]
-    )
 
     fields: list[RecruitmentField] = []
     for position, values in enumerate(DEFAULT_FIELDS):

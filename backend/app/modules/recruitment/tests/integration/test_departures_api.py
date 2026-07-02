@@ -1,6 +1,10 @@
 from datetime import datetime
 
+from sqlalchemy import select
+
 from app.modules.pi.models.volunteer import Volunteer
+from app.modules.security.models import UserGroup
+from app.modules.security.models.constants import CAN_MANAGE_RECRUITMENT
 
 
 def _volunteer(db_session, suffix: str = "departure") -> Volunteer:
@@ -133,3 +137,34 @@ def test_departure_fields_reject_whitespace_question(api_client):
     )
 
     assert response.status_code == 422
+
+
+def test_recruitment_viewer_cannot_change_departure_data(
+    api_client, db_session, admin_user
+):
+    admin_group = db_session.scalar(
+        select(UserGroup).where(UserGroup.system_key == "admin")
+    )
+    assert admin_group is not None
+    admin_group.permissions = [
+        permission
+        for permission in admin_group.permissions
+        if permission.code != CAN_MANAGE_RECRUITMENT
+    ]
+    db_session.commit()
+
+    fields_response = api_client.get("/api/v1/recruitment/departures/fields")
+    assert fields_response.status_code == 200
+
+    update_response = api_client.put(
+        "/api/v1/recruitment/departures/fields",
+        json={"fields": []},
+    )
+    assert update_response.status_code == 403
+
+    volunteer = _volunteer(db_session, "view-only")
+    create_response = api_client.post(
+        "/api/v1/recruitment/departures",
+        json={"volunteer_id": volunteer.id, "answers": _answers()},
+    )
+    assert create_response.status_code == 403

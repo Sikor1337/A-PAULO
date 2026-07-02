@@ -50,7 +50,9 @@ class DepartureInterview(Base):
     departure_reason: Mapped[str] = mapped_column(Text)
     stay_in_contact: Mapped[bool] = mapped_column(Boolean, default=False)
     answers: Mapped[list] = mapped_column(JSON, default=list)
-    completed_by_id: Mapped[int | None] = mapped_column(nullable=True)
+    completed_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

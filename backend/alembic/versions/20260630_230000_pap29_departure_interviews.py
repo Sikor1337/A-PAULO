@@ -1,7 +1,7 @@
 """Add configurable volunteer departure interviews.
 
 Revision ID: pap29_departures
-Revises: 1d79afa0041b
+Revises: cd317ee086f0
 Create Date: 2026-06-30 23:00:00+00:00
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "pap29_departures"
-down_revision: str | Sequence[str] | None = "1d79afa0041b"
+down_revision: str | Sequence[str] | None = "cd317ee086f0"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -71,6 +71,9 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(
             ["volunteer_id"], ["volunteers.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["completed_by_id"], ["users.id"], ondelete="SET NULL"
         ),
         sa.PrimaryKeyConstraint("id"),
     )

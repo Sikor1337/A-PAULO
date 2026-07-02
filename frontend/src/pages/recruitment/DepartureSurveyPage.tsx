@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import DetailModal from '@/components/ui/DetailModal';
 import RecruitmentFieldModal from '@/features/recruitment/RecruitmentFieldModal';
 import { useDepartureFields, useDepartureInterviews } from '@/hooks/useDepartures';
+import { useHasPermission } from '@/hooks/usePermissions';
 import { parseApiError } from '@/lib/errors';
 import type {
   DepartureFieldDraft,
@@ -16,6 +17,7 @@ const displayAnswer = (value: unknown) => {
 };
 
 const DepartureSurveyPage = () => {
+  const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_RECRUITMENT');
   const fieldsQuery = useDepartureFields();
   const interviews = useDepartureInterviews();
   const [draft, setDraft] = useState<DepartureFieldDraft[] | null>(null);
@@ -73,15 +75,15 @@ const DepartureSurveyPage = () => {
             <h2 className="text-xl font-bold text-gray-900">Pytania przy odejściu</h2>
             <p className="text-sm text-gray-500">Zmiany są wysyłane dopiero po kliknięciu „Zapisz”.</p>
           </div>
-          {draft ? (
+          {canManage && draft ? (
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => setEditingIndex(null)} className="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">+ Dodaj pytanie</button>
               <button type="button" onClick={() => setDraft(null)} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Anuluj</button>
               <button type="button" onClick={save} disabled={fieldsQuery.save.isPending} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Zapisz</button>
             </div>
-          ) : (
+          ) : canManage ? (
             <button type="button" onClick={startEditing} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white">Edytuj pytania</button>
-          )}
+          ) : null}
         </div>
         {fieldsQuery.save.isError && <p className="mb-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{parseApiError(fieldsQuery.save.error, 'Nie udało się zapisać pytań.')}</p>}
         <div className="space-y-2">
@@ -122,7 +124,7 @@ const DepartureSurveyPage = () => {
         )}
       </div>
 
-      {editingIndex !== undefined && (
+      {canManage && editingIndex !== undefined && (
         <RecruitmentFieldModal
           field={editingField}
           onClose={() => setEditingIndex(undefined)}

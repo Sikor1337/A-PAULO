@@ -11,7 +11,11 @@ from app.modules.recruitment.schemas.departures import (
     DepartureInterviewResponse,
 )
 from app.modules.recruitment.services.departures import DepartureService
-from app.modules.security.dependencies import require_staff
+from app.modules.security.dependencies import require_permission
+from app.modules.security.models.constants import (
+    CAN_MANAGE_RECRUITMENT,
+    CAN_VIEW_RECRUITMENT,
+)
 
 router = APIRouter(prefix="/recruitment/departures", tags=["volunteer departures"])
 
@@ -19,7 +23,7 @@ router = APIRouter(prefix="/recruitment/departures", tags=["volunteer departures
 @router.get("/fields", response_model=list[DepartureFieldResponse])
 def list_departure_fields(
     service: DepartureService = Depends(get_departure_service),
-    _user: User = Depends(require_staff),
+    _user: User = Depends(require_permission(CAN_VIEW_RECRUITMENT)),
 ):
     return service.list_fields()
 
@@ -28,7 +32,7 @@ def list_departure_fields(
 def save_departure_fields(
     request: DepartureFieldsUpdate,
     service: DepartureService = Depends(get_departure_service),
-    _user: User = Depends(require_staff),
+    _user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
 ):
     return service.save_fields(request.fields)
 
@@ -38,7 +42,7 @@ def list_departure_interviews(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=1000),
     service: DepartureService = Depends(get_departure_service),
-    _user: User = Depends(require_staff),
+    _user: User = Depends(require_permission(CAN_VIEW_RECRUITMENT)),
 ):
     return service.list_interviews(skip=skip, limit=limit)
 
@@ -47,7 +51,7 @@ def list_departure_interviews(
 def get_departure_interview(
     interview_id: int,
     service: DepartureService = Depends(get_departure_service),
-    _user: User = Depends(require_staff),
+    _user: User = Depends(require_permission(CAN_VIEW_RECRUITMENT)),
 ):
     return service.get_interview(interview_id)
 
@@ -58,6 +62,6 @@ def get_departure_interview(
 def create_departure_interview(
     request: DepartureInterviewCreate,
     service: DepartureService = Depends(get_departure_service),
-    user: User = Depends(require_staff),
+    user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
 ):
     return service.create_interview(request.volunteer_id, request.answers, user.id)

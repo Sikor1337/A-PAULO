@@ -3,7 +3,7 @@
 ## Stan po PAP-69
 
 Stary, niespójny graf migracji został zastąpiony jedną migracją bazową:
-`1d79afa0041b` (`baseline current schema`). Baseline został wygenerowany z
+`cd317ee086f0` (`baseline current schema`). Baseline został wygenerowany z
 aktualnego `Base.metadata` na pustym i odizolowanym schemacie `dev1`.
 
 Przyczyną wcześniejszych błędów był między innymi `search_path` ustawiony na
@@ -11,13 +11,13 @@ Przyczyną wcześniejszych błędów był między innymi `search_path` ustawiony
 widziała tabele z `public`, a Alembic generował niepełną różnicę zamiast migracji
 od zera. Środowisko Alembic ustawia teraz wyłącznie wskazany schemat.
 
-Stan zweryfikowany 2026-06-30:
+Stan zweryfikowany 2026-07-01:
 
 | Schemat | Rewizja | Tabele modelowe | Dane |
 | --- | --- | ---: | --- |
-| `dev1` | `1d79afa0041b` | 11 | pusty |
-| `production` | `1d79afa0041b` | 11 | pusty, gotowy do wdrożenia |
-| `public` | `1d79afa0041b` | 11 | dane demonstracyjne |
+| `dev1` | `cd317ee086f0` | 18 | pusty |
+| `production` | `cd317ee086f0` | 18 | pusty biznesowo, gotowy do wdrożenia |
+| `public` | `cd317ee086f0` | 18 | dane demonstracyjne |
 
 Wdrożenie korzystające ze schematu produkcyjnego musi mieć ustawione
 `DATABASE_SCHEMA=production`. Samo istnienie poprawnego schematu nie zmienia
@@ -55,7 +55,9 @@ $env:DATABASE_SCHEMA='public'
 ```
 
 Skrypt odmawia działania poza `public` oraz wtedy, gdy istnieją już użytkownicy.
-Tworzy dwa konta, 10 wolontariuszy, cztery grupy, 10 podopiecznych, przypisania,
-funkcje i przykładowe zgłoszenie rekrutacyjne. Każdy wolontariusz należy do
-grupy, a każdy podopieczny ma przypisaną grupę i głównego wolontariusza. Hasło demonstracyjne jest
+Tworzy dwa konta, 10 wolontariuszy, cztery grupy, 10 podopiecznych i przykładowe
+zgłoszenie rekrutacyjne. Każdy wolontariusz należy do grupy, a każdy podopieczny
+ma przypisaną grupę. Seed nie przypisuje wolontariuszom funkcji, kierowania grupą
+ani opieki nad podopiecznym, ponieważ takie dane muszą wynikać z rzeczywistych
+decyzji organizacji. Hasło demonstracyjne jest
 wyświetlane po poprawnym wykonaniu seeda i nie może być używane w `production`.

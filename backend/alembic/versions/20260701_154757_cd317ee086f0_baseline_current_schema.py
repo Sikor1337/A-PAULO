@@ -1,8 +1,8 @@
 """baseline current schema
 
-Revision ID: 1d79afa0041b
+Revision ID: cd317ee086f0
 Revises:
-Create Date: 2026-06-30 21:08:13.254824+00:00
+Create Date: 2026-07-01 15:47:57.116853+00:00
 
 """
 
@@ -13,10 +13,38 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "1d79afa0041b"
+revision: str = "cd317ee086f0"
 down_revision: str | Sequence[str] | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+PERMISSIONS = (
+    ("CAN_VIEW_USERS", "Podgląd użytkowników", "Użytkownicy"),
+    ("CAN_MANAGE_USERS", "Zarządzanie użytkownikami", "Użytkownicy"),
+    ("CAN_VIEW_VOLUNTEERS", "Podgląd wolontariuszy", "Wolontariusze"),
+    ("CAN_MANAGE_VOLUNTEERS", "Zarządzanie wolontariuszami", "Wolontariusze"),
+    ("CAN_VIEW_BENEFICIARIES", "Podgląd podopiecznych", "Podopieczni"),
+    ("CAN_MANAGE_BENEFICIARIES", "Zarządzanie podopiecznymi", "Podopieczni"),
+    ("CAN_VIEW_PI_GROUPS", "Podgląd grup A-PAULO", "Grupy A-PAULO"),
+    ("CAN_MANAGE_PI_GROUPS", "Zarządzanie grupami A-PAULO", "Grupy A-PAULO"),
+    ("CAN_VIEW_FUNCTIONS", "Podgląd funkcji", "Funkcje"),
+    ("CAN_MANAGE_FUNCTIONS", "Zarządzanie funkcjami", "Funkcje"),
+    ("CAN_VIEW_ATTACHMENTS", "Podgląd załączników i kart BO", "Załączniki"),
+    ("CAN_MANAGE_ATTACHMENTS", "Zarządzanie załącznikami i kartami BO", "Załączniki"),
+    ("CAN_VIEW_RECRUITMENT", "Podgląd rekrutacji", "Rekrutacja"),
+    ("CAN_MANAGE_RECRUITMENT", "Zarządzanie rekrutacją", "Rekrutacja"),
+    ("CAN_VIEW_EVENTS", "Podgląd wydarzeń", "Wydarzenia"),
+    ("CAN_MANAGE_EVENTS", "Zarządzanie wydarzeniami", "Wydarzenia"),
+    ("CAN_VIEW_SECURITY", "Podgląd grup użytkowników", "Bezpieczeństwo"),
+    ("CAN_MANAGE_SECURITY", "Zarządzanie grupami i uprawnieniami", "Bezpieczeństwo"),
+)
+
+STAFF_EXCLUDED = {
+    "CAN_VIEW_USERS",
+    "CAN_MANAGE_USERS",
+    "CAN_VIEW_SECURITY",
+    "CAN_MANAGE_SECURITY",
+}
 
 
 def upgrade() -> None:
@@ -79,6 +107,56 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
+        "security_groups",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("name", sa.String(length=120), nullable=False),
+        sa.Column("description", sa.String(length=500), nullable=False),
+        sa.Column("is_system", sa.Boolean(), nullable=False),
+        sa.Column("system_key", sa.String(length=50), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_security_groups_name"), "security_groups", ["name"], unique=True
+    )
+    op.create_index(
+        op.f("ix_security_groups_system_key"),
+        "security_groups",
+        ["system_key"],
+        unique=True,
+    )
+    op.create_table(
+        "security_permissions",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("code", sa.String(length=100), nullable=False),
+        sa.Column("name", sa.String(length=200), nullable=False),
+        sa.Column("category", sa.String(length=100), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_security_permissions_category"),
+        "security_permissions",
+        ["category"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_security_permissions_code"),
+        "security_permissions",
+        ["code"],
+        unique=True,
+    )
+    op.create_table(
         "users",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("username", sa.String(length=150), nullable=False),
@@ -132,6 +210,84 @@ def upgrade() -> None:
     op.create_index(op.f("ix_volunteers_email"), "volunteers", ["email"], unique=True)
     op.create_index(
         op.f("ix_volunteers_full_name"), "volunteers", ["full_name"], unique=False
+    )
+    op.create_table(
+        "calendar_events",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("uid", sa.String(length=64), nullable=False),
+        sa.Column("title", sa.String(length=200), nullable=False),
+        sa.Column("description", sa.Text(), nullable=False),
+        sa.Column("starts_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("ends_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("timezone", sa.String(length=64), nullable=False),
+        sa.Column("is_all_day", sa.Boolean(), nullable=False),
+        sa.Column("location", sa.String(length=300), nullable=False),
+        sa.Column("recurrence_rule", sa.String(length=500), nullable=True),
+        sa.Column("status", sa.String(length=30), nullable=False),
+        sa.Column("visibility", sa.String(length=30), nullable=False),
+        sa.Column("author_id", sa.Integer(), nullable=False),
+        sa.Column("sequence", sa.Integer(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(["author_id"], ["users.id"], ondelete="RESTRICT"),
+        sa.CheckConstraint(
+            "status IN ('draft', 'published', 'cancelled')",
+            name="ck_calendar_event_status",
+        ),
+        sa.CheckConstraint(
+            "visibility IN ('organization', 'admins')",
+            name="ck_calendar_event_visibility",
+        ),
+        sa.CheckConstraint("ends_at >= starts_at", name="ck_calendar_event_dates"),
+        sa.CheckConstraint("sequence >= 0", name="ck_calendar_event_sequence"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("uid"),
+    )
+    op.create_index(
+        op.f("ix_calendar_events_author_id"),
+        "calendar_events",
+        ["author_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_calendar_events_status"), "calendar_events", ["status"], unique=False
+    )
+    op.create_index(
+        op.f("ix_calendar_events_title"), "calendar_events", ["title"], unique=False
+    )
+    op.create_index(
+        op.f("ix_calendar_events_visibility"),
+        "calendar_events",
+        ["visibility"],
+        unique=False,
+    )
+    op.create_table(
+        "calendar_feed_tokens",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("user_id", sa.Integer(), nullable=False),
+        sa.Column("token_hash", sa.String(length=64), nullable=False),
+        sa.Column("is_active", sa.Boolean(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("token_hash"),
+        sa.UniqueConstraint("user_id"),
     )
     op.create_table(
         "groups",
@@ -224,6 +380,28 @@ def upgrade() -> None:
         unique=True,
     )
     op.create_table(
+        "security_group_permissions",
+        sa.Column("group_id", sa.Integer(), nullable=False),
+        sa.Column("permission_id", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["group_id"], ["security_groups.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["permission_id"], ["security_permissions.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("group_id", "permission_id"),
+    )
+    op.create_table(
+        "security_user_groups",
+        sa.Column("user_id", sa.Integer(), nullable=False),
+        sa.Column("group_id", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["group_id"], ["security_groups.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("user_id", "group_id"),
+    )
+    op.create_table(
         "volunteer_function",
         sa.Column("volunteer_id", sa.Integer(), nullable=False),
         sa.Column("function_id", sa.Integer(), nullable=False),
@@ -264,6 +442,35 @@ def upgrade() -> None:
     )
     op.create_index(
         op.f("ix_beneficiaries_full_name"), "beneficiaries", ["full_name"], unique=False
+    )
+    op.create_table(
+        "calendar_audit",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("actor_id", sa.Integer(), nullable=True),
+        sa.Column("event_id", sa.Integer(), nullable=True),
+        sa.Column("action", sa.String(length=30), nullable=False),
+        sa.Column("entity_type", sa.String(length=30), nullable=False),
+        sa.Column("changes", sa.JSON(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(["actor_id"], ["users.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["event_id"], ["calendar_events.id"], ondelete="SET NULL"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_calendar_audit_action"), "calendar_audit", ["action"], unique=False
+    )
+    op.create_index(
+        op.f("ix_calendar_audit_actor_id"), "calendar_audit", ["actor_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_calendar_audit_event_id"), "calendar_audit", ["event_id"], unique=False
     )
     op.create_table(
         "group_volunteer",
@@ -370,6 +577,65 @@ def upgrade() -> None:
             "beneficiary_id", "volunteer_id", name="uq_beneficiary_volunteer"
         ),
     )
+    permission_table = sa.table(
+        "security_permissions",
+        sa.column("code", sa.String),
+        sa.column("name", sa.String),
+        sa.column("category", sa.String),
+    )
+    op.bulk_insert(
+        permission_table,
+        [
+            {"code": code, "name": name, "category": category}
+            for code, name, category in PERMISSIONS
+        ],
+    )
+    group_table = sa.table(
+        "security_groups",
+        sa.column("name", sa.String),
+        sa.column("description", sa.String),
+        sa.column("is_system", sa.Boolean),
+        sa.column("system_key", sa.String),
+    )
+    op.bulk_insert(
+        group_table,
+        [
+            {
+                "name": "Admin",
+                "description": "Pełny dostęp administracyjny",
+                "is_system": True,
+                "system_key": "admin",
+            },
+            {
+                "name": "Staff",
+                "description": "Domyślne uprawnienia pracownika",
+                "is_system": True,
+                "system_key": "staff",
+            },
+        ],
+    )
+    op.execute(
+        """
+        INSERT INTO security_group_permissions (group_id, permission_id)
+        SELECT security_group.id, permission.id
+        FROM security_groups AS security_group
+        CROSS JOIN security_permissions AS permission
+        WHERE security_group.system_key = 'admin'
+        """
+    )
+    staff_codes = ", ".join(
+        f"'{code}'" for code, _, _ in PERMISSIONS if code not in STAFF_EXCLUDED
+    )
+    op.execute(
+        f"""
+        INSERT INTO security_group_permissions (group_id, permission_id)
+        SELECT security_group.id, permission.id
+        FROM security_groups AS security_group
+        CROSS JOIN security_permissions AS permission
+        WHERE security_group.system_key = 'staff'
+          AND permission.code IN ({staff_codes})
+        """
+    )
     # ### end Alembic commands ###
 
 
@@ -386,9 +652,15 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_attachments_beneficiary_id"), table_name="attachments")
     op.drop_table("attachments")
     op.drop_table("group_volunteer")
+    op.drop_index(op.f("ix_calendar_audit_event_id"), table_name="calendar_audit")
+    op.drop_index(op.f("ix_calendar_audit_actor_id"), table_name="calendar_audit")
+    op.drop_index(op.f("ix_calendar_audit_action"), table_name="calendar_audit")
+    op.drop_table("calendar_audit")
     op.drop_index(op.f("ix_beneficiaries_full_name"), table_name="beneficiaries")
     op.drop_table("beneficiaries")
     op.drop_table("volunteer_function")
+    op.drop_table("security_user_groups")
+    op.drop_table("security_group_permissions")
     op.drop_index(
         op.f("ix_recruitment_submissions_user_id"), table_name="recruitment_submissions"
     )
@@ -405,12 +677,28 @@ def downgrade() -> None:
     op.drop_table("recruitment_submissions")
     op.drop_index(op.f("ix_groups_name"), table_name="groups")
     op.drop_table("groups")
+    op.drop_table("calendar_feed_tokens")
+    op.drop_index(op.f("ix_calendar_events_visibility"), table_name="calendar_events")
+    op.drop_index(op.f("ix_calendar_events_title"), table_name="calendar_events")
+    op.drop_index(op.f("ix_calendar_events_status"), table_name="calendar_events")
+    op.drop_index(op.f("ix_calendar_events_author_id"), table_name="calendar_events")
+    op.drop_table("calendar_events")
     op.drop_index(op.f("ix_volunteers_full_name"), table_name="volunteers")
     op.drop_index(op.f("ix_volunteers_email"), table_name="volunteers")
     op.drop_table("volunteers")
     op.drop_index(op.f("ix_users_username"), table_name="users")
     op.drop_index(op.f("ix_users_email"), table_name="users")
     op.drop_table("users")
+    op.drop_index(
+        op.f("ix_security_permissions_code"), table_name="security_permissions"
+    )
+    op.drop_index(
+        op.f("ix_security_permissions_category"), table_name="security_permissions"
+    )
+    op.drop_table("security_permissions")
+    op.drop_index(op.f("ix_security_groups_system_key"), table_name="security_groups")
+    op.drop_index(op.f("ix_security_groups_name"), table_name="security_groups")
+    op.drop_table("security_groups")
     op.drop_index(
         op.f("ix_recruitment_fields_position"), table_name="recruitment_fields"
     )
