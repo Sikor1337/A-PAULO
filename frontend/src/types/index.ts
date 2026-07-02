@@ -5,6 +5,7 @@ export type {
   PermissionCode,
   SecurityGroup,
   SecurityGroupInput,
+  SecurityGroupSaveInput,
   SecurityPermission,
 } from './security';
 export type { Volunteer, VolunteerStatus, VolunteerInput, VolunteerFunction, VolunteerFunctionInput } from './volunteer';

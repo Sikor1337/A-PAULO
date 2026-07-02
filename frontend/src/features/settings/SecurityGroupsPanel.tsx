@@ -8,7 +8,7 @@ interface Props {
 }
 
 const SecurityGroupsPanel = ({ users, canManage }: Props) => {
-  const { permissions, groups, create, update, setPermissions, setUsers, remove } = useSecurityGroups();
+  const { permissions, groups, create, save: saveGroup, remove } = useSecurityGroups();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [drafts, setDrafts] = useState<Record<number, {
     name: string;
@@ -51,11 +51,21 @@ const SecurityGroupsPanel = ({ users, canManage }: Props) => {
 
   const save = () => {
     if (!selected || !draft) return;
-    if (!selected.is_system) {
-      update.mutate({ id: selected.id, input: { name: draft.name.trim(), description: draft.description.trim() } });
-      setPermissions.mutate({ id: selected.id, codes: draft.permissionCodes });
-    }
-    setUsers.mutate({ id: selected.id, userIds: draft.userIds });
+    saveGroup.mutate({
+      id: selected.id,
+      input: {
+        name: draft.name.trim(),
+        description: draft.description.trim(),
+        permission_codes: draft.permissionCodes,
+        user_ids: draft.userIds,
+      },
+    }, {
+      onSuccess: () => setDrafts((current) => {
+        const next = { ...current };
+        delete next[selected.id];
+        return next;
+      }),
+    });
   };
 
   return (
@@ -152,8 +162,13 @@ const SecurityGroupsPanel = ({ users, canManage }: Props) => {
                   Usuń grupę
                 </button>
               )}
-              <button type="button" onClick={save} className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-bold text-white">
-                Zapisz zmiany
+              <button
+                type="button"
+                onClick={save}
+                disabled={saveGroup.isPending}
+                className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-50"
+              >
+                {saveGroup.isPending ? 'Zapisywanie…' : 'Zapisz zmiany'}
               </button>
             </div>
           )}

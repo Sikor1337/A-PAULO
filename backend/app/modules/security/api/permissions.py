@@ -14,6 +14,7 @@ from app.modules.security.schemas import (
     PermissionResponse,
     UserGroupCreateRequest,
     UserGroupResponse,
+    UserGroupSaveRequest,
     UserGroupUpdateRequest,
     UserIdsRequest,
 )
@@ -71,6 +72,16 @@ def update_group(
     return PermissionService(session).update_group(
         group_id, **request.model_dump(exclude_unset=True)
     )
+
+
+@router.put("/groups/{group_id}", response_model=UserGroupResponse)
+def save_group(
+    group_id: int,
+    request: UserGroupSaveRequest,
+    _user: User = Depends(require_permission(CAN_MANAGE_SECURITY)),
+    session: Session = Depends(get_db),
+):
+    return PermissionService(session).save_group(group_id, **request.model_dump())
 
 
 @router.put("/groups/{group_id}/permissions", response_model=UserGroupResponse)
