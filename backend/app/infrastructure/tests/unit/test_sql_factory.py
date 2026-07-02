@@ -63,6 +63,27 @@ class TestSQLConnectionFactory:
 
         assert mock_create_engine.call_args[1]["pool_pre_ping"] is True
 
+    @patch("app.infrastructure.sql.factory.event.listen")
+    @patch("app.infrastructure.sql.factory.create_engine")
+    def test_postgres_schema_is_selected_for_every_transaction(
+        self, mock_create_engine, mock_listen
+    ):
+        engine = MagicMock()
+        engine.dialect.name = "postgresql"
+        engine.dialect.identifier_preparer.quote.return_value = '"dev1"'
+        mock_create_engine.return_value = engine
+
+        SQLConnectionFactory().get_or_create_engine(POSTGRES_URL, "dev1")
+
+        mock_listen.assert_called_once()
+        assert mock_listen.call_args.args[:2] == (engine, "begin")
+        on_begin = mock_listen.call_args.args[2]
+        connection = MagicMock()
+        on_begin(connection)
+        connection.exec_driver_sql.assert_called_once_with(
+            'SET LOCAL search_path TO "dev1"'
+        )
+
     def test_create_session_factory_returns_scoped_session_by_default(self):
         """Default session factory should be scoped and bind sessions to the engine."""
         factory = SQLConnectionFactory()
