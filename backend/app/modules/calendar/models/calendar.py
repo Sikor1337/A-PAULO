@@ -3,7 +3,17 @@
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.sql.base import Base
@@ -16,6 +26,18 @@ from app.modules.calendar.models.constants import (
 
 class CalendarEvent(Base):
     __tablename__ = "calendar_events"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('draft', 'published', 'cancelled')",
+            name="ck_calendar_event_status",
+        ),
+        CheckConstraint(
+            "visibility IN ('organization', 'admins')",
+            name="ck_calendar_event_visibility",
+        ),
+        CheckConstraint("ends_at >= starts_at", name="ck_calendar_event_dates"),
+        CheckConstraint("sequence >= 0", name="ck_calendar_event_sequence"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     uid: Mapped[str] = mapped_column(
