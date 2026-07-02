@@ -49,6 +49,17 @@ const SessionProfileSync = () => {
 };
 
 function App() {
+  const operationalPermissions = [
+    'CAN_VIEW_VOLUNTEERS',
+    'CAN_VIEW_BENEFICIARIES',
+    'CAN_VIEW_PI_GROUPS',
+    'CAN_VIEW_ATTACHMENTS',
+    'CAN_VIEW_RECRUITMENT',
+    'CAN_VIEW_EVENTS',
+    'CAN_VIEW_USERS',
+    'CAN_VIEW_SECURITY',
+  ] as const;
+
   return (
     <QueryClientProvider client={queryClient}>
       <SessionProfileSync />
@@ -61,16 +72,32 @@ function App() {
             <Route path="/recruitment/apply" element={<RecruitmentApplicationPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedStatuses={['regular', 'admin']} />}>
+          <Route element={<ProtectedRoute requiredAnyPermission={[...operationalPermissions]} />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+          </Route>
+          <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_BENEFICIARIES" />}>
             <Route path="/beneficiaries" element={<BeneficiariesPage />} />
+          </Route>
+          <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_ATTACHMENTS" />}>
             <Route path="/bo-cards" element={<BOCardsPage />} />
+          </Route>
+          <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_VOLUNTEERS" />}>
             <Route path="/volunteers" element={<VolunteersPage />} />
+          </Route>
+          <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_PI_GROUPS" />}>
             <Route path="/groups" element={<GroupsPage />} />
+          </Route>
+          <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_EVENTS" />}>
             <Route path="/events" element={<EventsPage />} />
+          </Route>
+          <Route element={<ProtectedRoute />}>
             <Route path="/profile" element={<ProfilePage />} />
+          </Route>
+          <Route element={<ProtectedRoute requiredAnyPermission={['CAN_VIEW_USERS', 'CAN_VIEW_SECURITY']} />}>
             <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+          <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_RECRUITMENT" />}>
             <Route path="/recruitment" element={<RecruitmentLayout />}>
               <Route index element={<Navigate to="form" replace />} />
               <Route path="form" element={<RecruitmentFormBuilderPage />} />

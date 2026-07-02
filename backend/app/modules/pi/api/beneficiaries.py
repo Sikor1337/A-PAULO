@@ -11,7 +11,11 @@ from app.modules.pi.schemas.beneficiaries import (
     BeneficiaryResponse,
 )
 from app.modules.pi.services.beneficiaries import BeneficiaryService
-from app.modules.security.dependencies import get_current_user
+from app.modules.security.dependencies import require_permission
+from app.modules.security.models.constants import (
+    CAN_MANAGE_BENEFICIARIES,
+    CAN_VIEW_BENEFICIARIES,
+)
 
 router = APIRouter(prefix="/beneficiaries", tags=["beneficiaries"])
 
@@ -24,7 +28,7 @@ def list_beneficiaries(
     status: Optional[str] = Query(None),
     bo_enrolled: Optional[bool] = Query(None),
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_VIEW_BENEFICIARIES)),
 ):
     """List all beneficiaries with optional filters."""
     service = BeneficiaryService(session)
@@ -42,7 +46,7 @@ def list_beneficiaries(
 def create_beneficiary(
     request: BeneficiaryCreateRequest,
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
 ):
     """Create new beneficiary."""
     service = BeneficiaryService(session)
@@ -54,7 +58,7 @@ def create_beneficiary(
 def get_beneficiary(
     beneficiary_id: int,
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_VIEW_BENEFICIARIES)),
 ):
     """Get beneficiary by ID."""
     service = BeneficiaryService(session)
@@ -67,7 +71,7 @@ def update_beneficiary(
     beneficiary_id: int,
     request: BeneficiaryUpdateRequest,
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
 ):
     """Update beneficiary."""
     service = BeneficiaryService(session)
@@ -81,7 +85,7 @@ def update_beneficiary(
 def delete_beneficiary(
     beneficiary_id: int,
     session: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
 ):
     """Delete beneficiary."""
     service = BeneficiaryService(session)

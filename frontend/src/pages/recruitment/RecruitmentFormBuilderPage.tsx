@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import RecruitmentFieldModal from '@/features/recruitment/RecruitmentFieldModal';
 import { useRecruitmentFields } from '@/hooks/useRecruitment';
+import { useHasPermission } from '@/hooks/usePermissions';
 import type { RecruitmentFieldDraft, RecruitmentFieldType } from '@/types';
 
 const typeLabels: Record<RecruitmentFieldType, string> = {
@@ -16,6 +17,7 @@ const typeLabels: Record<RecruitmentFieldType, string> = {
 };
 
 const RecruitmentFormBuilderPage = () => {
+  const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_RECRUITMENT');
   const { data = [], isLoading, save } = useRecruitmentFields();
   const [draft, setDraft] = useState<RecruitmentFieldDraft[] | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null | undefined>(undefined);
@@ -121,9 +123,9 @@ const RecruitmentFormBuilderPage = () => {
               {save.isPending ? 'Zapisywanie…' : 'Zapisz formularz'}
             </button>
           </div>
-        ) : (
+        ) : canManage ? (
           <button type="button" onClick={beginEditing} className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-bold text-white">Edytuj formularz</button>
-        )}
+        ) : null}
       </div>
 
       {isLoading ? (
@@ -160,7 +162,7 @@ const RecruitmentFormBuilderPage = () => {
         </div>
       )}
 
-      {editingIndex !== undefined && (
+      {canManage && editingIndex !== undefined && (
         <RecruitmentFieldModal
           field={editingField}
           onClose={() => setEditingIndex(undefined)}

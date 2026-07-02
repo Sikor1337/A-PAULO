@@ -19,7 +19,11 @@ from app.modules.attachments.schemas import (
 )
 from app.modules.attachments.services import AttachmentService
 from app.modules.core_data.models import User
-from app.modules.security.dependencies import get_current_user
+from app.modules.security.dependencies import require_permission
+from app.modules.security.models.constants import (
+    CAN_MANAGE_ATTACHMENTS,
+    CAN_VIEW_ATTACHMENTS,
+)
 
 router = APIRouter(prefix="/attachments", tags=["attachments"])
 
@@ -34,7 +38,7 @@ def _iter_file(file: BinaryIO, chunk_size: int = 64 * 1024) -> Iterator[bytes]:
 def list_bo_card_attachments(
     filters: Annotated[BOCardAttachmentListQuery, Query()],
     service: AttachmentService = Depends(get_attachment_service),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_VIEW_ATTACHMENTS)),
 ):
     """List BO-card metadata with optional filters, sorting, and paging."""
     items, total = service.list_bo_cards(**filters.model_dump())
@@ -50,7 +54,7 @@ def list_bo_card_attachments(
 def download_bo_card_attachments(
     filters: Annotated[BOCardArchiveQuery, Query()],
     service: AttachmentService = Depends(get_attachment_service),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_VIEW_ATTACHMENTS)),
 ):
     """Download a ZIP archive with all BO cards matching filters."""
     archive, included_count = service.build_bo_cards_archive(**filters.model_dump())
@@ -74,7 +78,7 @@ def download_bo_card_attachments(
 async def create_bo_card_attachment(
     request: Annotated[CreateAttachmentRequest, Form()],
     service: AttachmentService = Depends(get_attachment_service),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission(CAN_MANAGE_ATTACHMENTS)),
 ):
     """Upload a BO-card file and metadata as multipart form data."""
     content = await request.content.read(ATTACHMENT_MAX_SIZE_BYTES + 1)
@@ -93,7 +97,7 @@ async def create_bo_card_attachment(
 def get_attachment(
     attachment_id: int,
     service: AttachmentService = Depends(get_attachment_service),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_VIEW_ATTACHMENTS)),
 ):
     """Get attachment metadata."""
     return service.get_attachment_by_id(attachment_id)
@@ -103,7 +107,7 @@ def get_attachment(
 def get_attachment_content(
     attachment_id: int,
     service: AttachmentService = Depends(get_attachment_service),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_VIEW_ATTACHMENTS)),
 ):
     """View or download attachment content."""
     attachment, path = service.get_file_path(attachment_id)
@@ -120,7 +124,7 @@ def update_attachment(
     attachment_id: int,
     request: AttachmentUpdateRequest,
     service: AttachmentService = Depends(get_attachment_service),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission(CAN_MANAGE_ATTACHMENTS)),
 ):
     """Update editable attachment metadata."""
     return service.update_attachment(
@@ -134,7 +138,7 @@ def update_attachment(
 def delete_attachment(
     attachment_id: int,
     service: AttachmentService = Depends(get_attachment_service),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_permission(CAN_MANAGE_ATTACHMENTS)),
 ):
     """Delete attachment metadata and stored file."""
     service.delete_attachment(attachment_id)

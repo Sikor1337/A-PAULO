@@ -33,6 +33,12 @@ from app.modules.security.dependencies import (  # noqa: E402
     get_current_user,
     require_admin,
 )
+from app.modules.security.models import (  # noqa: E402
+    Permission,
+    UserGroup,
+    security_user_groups,
+)
+from app.modules.security.models.constants import PERMISSION_CATALOG  # noqa: E402
 
 
 @pytest.fixture
@@ -68,8 +74,8 @@ def db_session(db_engine: Engine) -> Generator[Session, None, None]:
 
 
 @pytest.fixture
-def admin_user() -> User:
-    return User(
+def admin_user(db_session: Session) -> User:
+    user = User(
         id=999,
         username="admin",
         email="admin@example.com",
@@ -81,6 +87,25 @@ def admin_user() -> User:
         created_at=datetime(2026, 1, 1),
         updated_at=datetime(2026, 1, 1),
     )
+    permissions = [
+        Permission(code=code, name=name, category=category)
+        for code, name, category in PERMISSION_CATALOG
+    ]
+    admin_group = UserGroup(
+        name="Admin",
+        description="System test administrator group",
+        is_system=True,
+        system_key="admin",
+        permissions=permissions,
+    )
+    db_session.add_all([user, admin_group])
+    db_session.flush()
+    db_session.execute(
+        security_user_groups.insert(),
+        {"user_id": user.id, "group_id": admin_group.id},
+    )
+    db_session.commit()
+    return user
 
 
 @pytest.fixture

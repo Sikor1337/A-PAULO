@@ -5,6 +5,7 @@ import DetailModal from '@/components/ui/DetailModal';
 import { useBeneficiaries } from '@/hooks/useBeneficiaries';
 import { useGroupList } from '@/hooks/useGroups';
 import { useTableControls } from '@/hooks/useTableControls';
+import { useHasPermission } from '@/hooks/usePermissions';
 import { buildBeneficiaryColumns } from '@/features/beneficiaries/beneficiaryColumns';
 import { beneficiaryDetailFields } from '@/features/beneficiaries/beneficiaryDetail';
 import BeneficiaryFormModal from '@/features/beneficiaries/BeneficiaryFormModal';
@@ -12,6 +13,7 @@ import { exportRowsToCsv } from '@/lib/csv';
 import type { Beneficiary } from '@/types';
 
 const BeneficiariesPage: React.FC = () => {
+  const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_BENEFICIARIES');
   const [editing, setEditing] = useState<Beneficiary | null>(null);
   const [details, setDetails] = useState<Beneficiary | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -43,6 +45,7 @@ const BeneficiariesPage: React.FC = () => {
     onSelect: setDetails,
     onEdit: setEditing,
     onDelete: remove.mutate,
+    canManage,
   });
 
   const exportBeneficiaries = () => {
@@ -71,13 +74,13 @@ const BeneficiariesPage: React.FC = () => {
           <h1 className="text-xl font-bold text-gray-900 uppercase">Podopieczni</h1>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
-          <button
+          {canManage && <button
             type="button"
             onClick={exportBeneficiaries}
             className="min-h-10 rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold text-gray-600 transition-all hover:bg-gray-50"
           >
             Eksport CSV
-          </button>
+          </button>}
           <button
             onClick={() => setIsAdding(true)}
             className="flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#10b981] px-6 py-2 text-sm font-bold text-white transition-all hover:opacity-90"
@@ -135,7 +138,7 @@ const BeneficiariesPage: React.FC = () => {
           onClose={() => setDetails(null)}
           footer={
             <>
-              <button
+              {canManage && <button
                 onClick={() => {
                   setEditing(details);
                   setDetails(null);
@@ -143,7 +146,7 @@ const BeneficiariesPage: React.FC = () => {
                 className="bg-[#6366f1] text-white px-4 py-2 rounded-md font-bold hover:opacity-90"
               >
                 ✏️ Edytuj
-              </button>
+              </button>}
               <button onClick={() => setDetails(null)} className="px-4 py-2 text-gray-400 font-bold">
                 Zamknij
               </button>
@@ -152,7 +155,7 @@ const BeneficiariesPage: React.FC = () => {
         />
       )}
 
-      {(editing || isAdding) && (
+      {canManage && (editing || isAdding) && (
         <BeneficiaryFormModal beneficiary={editing} onClose={closeForm} onSave={save.mutate} isPending={save.isPending} />
       )}
     </PageShell>
