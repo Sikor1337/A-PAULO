@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import select
 
 from app.modules.pi.models.volunteer import Volunteer
+from app.modules.recruitment.models import DepartureField
 from app.modules.security.models import UserGroup
 from app.modules.security.models.constants import CAN_MANAGE_RECRUITMENT
 
@@ -115,6 +116,34 @@ def test_departure_fields_are_saved_atomically(api_client):
 
     assert response.status_code == 200
     assert response.json()[-1]["label"] == "Co warto poprawić?"
+
+
+def test_departure_fields_restore_missing_system_fields(api_client, db_session):
+    custom = DepartureField(
+        key="custom_question",
+        label="Pytanie dodatkowe",
+        field_type="text",
+        required=False,
+        placeholder="",
+        options=[],
+        position=0,
+        is_active=True,
+        is_system=False,
+    )
+    db_session.add(custom)
+    db_session.commit()
+
+    response = api_client.get("/api/v1/recruitment/departures/fields")
+
+    assert response.status_code == 200
+    fields = response.json()
+    assert [field["key"] for field in fields[:3]] == [
+        "departure_date",
+        "departure_reason",
+        "stay_in_contact",
+    ]
+    assert fields[3]["key"] == "custom_question"
+    assert all(field["is_system"] for field in fields[:3])
 
 
 def test_departure_fields_reject_whitespace_question(api_client):
