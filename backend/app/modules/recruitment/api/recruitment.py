@@ -11,6 +11,7 @@ from app.modules.recruitment.dependencies import (
 )
 from app.modules.recruitment.schemas import (
     DecisionRequest,
+    OnboardingAttendanceRequest,
     RecruitmentFieldResponse,
     RecruitmentFormResponse,
     RecruitmentFormUpdateRequest,
@@ -127,6 +128,22 @@ def start_onboarding(
     _user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
 ):
     return service.move_to_onboarding(submission_id)
+
+
+@router.put(
+    "/submissions/{submission_id}/onboarding-meetings/{meeting_type}",
+    response_model=RecruitmentSubmissionResponse,
+)
+def set_onboarding_attendance(
+    submission_id: int,
+    meeting_type: str,
+    request: OnboardingAttendanceRequest,
+    service: RecruitmentService = Depends(get_recruitment_service),
+    _user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
+):
+    return service.set_onboarding_attendance(
+        submission_id, meeting_type, request.attended
+    )
 
 
 @router.post(

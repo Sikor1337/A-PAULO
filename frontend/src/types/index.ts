@@ -31,11 +31,13 @@ export type {
   BeneficiaryAssignment,
 } from './group';
 export type {
+  OnboardingMeetingType,
   RecruitmentAnswer,
   RecruitmentField,
   RecruitmentFieldDraft,
   RecruitmentFieldType,
   RecruitmentForm,
+  RecruitmentOnboardingMeeting,
   RecruitmentStatus,
   RecruitmentSubmission,
 } from './recruitment';

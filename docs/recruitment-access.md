@@ -33,3 +33,14 @@ backendu i usługę Render trzeba ponownie zbudować z właściwego brancha/comm
 Lista zgłoszeń normalizuje również historyczne odpowiedzi zapisane jako obiekt
 JSON. Pojedynczy rekord ze starego formatu nie powoduje już odpowiedzi 500 dla
 całego `GET /api/v1/recruitment/submissions`.
+
+## Spotkania wdrożeniowe
+
+Po przeniesieniu zgłoszenia do etapu `ONBOARDING` backend tworzy cztery
+wymagane spotkania: `CHARISM`, `COMMUNITY`, `ADMINISTRATION` oraz `ACTIVITY`.
+Obecność jest zapisywana przez
+`PUT /api/v1/recruitment/submissions/{id}/onboarding-meetings/{type}`.
+Zaznaczenie ustawia bieżący czas po stronie serwera, a odznaczenie usuwa datę
+obecności. Promocja przez endpoint `accept` jest możliwa dopiero wtedy, gdy
+wszystkie cztery spotkania mają zapisaną obecność; reguła jest egzekwowana
+na backendzie niezależnie od stanu interfejsu.

@@ -123,9 +123,7 @@ class RecruitmentSubmissionCreate(BaseModel):
             raise ValueError("Formularz zawiera zbyt dużo danych")
         return self
 
-    def validated_answers(
-        self, fields: list[RecruitmentField]
-    ) -> list[dict[str, Any]]:
+    def validated_answers(self, fields: list[RecruitmentField]) -> list[dict[str, Any]]:
         """Validate answers against the current form definition."""
 
         result: list[dict[str, Any]] = []
@@ -143,9 +141,7 @@ class RecruitmentSubmissionCreate(BaseModel):
                 if isinstance(value, list):
                     value = [item.strip() for item in value if item.strip()]
             elif value is not None and not isinstance(value, str):
-                raise ValidationException(
-                    f"Pole „{field.label}” musi zawierać tekst"
-                )
+                raise ValidationException(f"Pole „{field.label}” musi zawierać tekst")
 
             if isinstance(value, str):
                 value = value.strip()
@@ -219,6 +215,13 @@ class RecruitmentAnswerResponse(BaseModel):
     value: Any = None
 
 
+class RecruitmentOnboardingMeetingResponse(BaseModel):
+    meeting_type: str
+    attended_at: datetime | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class RecruitmentSubmissionResponse(BaseModel):
     id: int
     user_id: int
@@ -232,6 +235,9 @@ class RecruitmentSubmissionResponse(BaseModel):
     return_reason: str | None
     decision_comment: str | None
     volunteer_id: int | None
+    onboarding_meetings: list[RecruitmentOnboardingMeetingResponse] = Field(
+        default_factory=list
+    )
     submitted_at: datetime
     status_changed_at: datetime
     created_at: datetime
@@ -286,3 +292,7 @@ class DecisionRequest(BaseModel):
     @classmethod
     def strip_comment(cls, value: str | None) -> str | None:
         return value.strip() or None if value is not None else None
+
+
+class OnboardingAttendanceRequest(BaseModel):
+    attended: bool

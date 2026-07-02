@@ -7,22 +7,24 @@ from app.modules.pi.models.group import BeneficiaryAssignment, Group
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.models import (
     RecruitmentField,
+    RecruitmentOnboardingMeeting,
     RecruitmentSubmission,
 )
 from app.modules.security.models import Permission, UserGroup
 
 __all__ = [
     "Attachment",
+    "Beneficiary",
+    "BeneficiaryAssignment",
     "CalendarAudit",
     "CalendarEvent",
     "CalendarFeedToken",
-    "Beneficiary",
-    "BeneficiaryAssignment",
     "Function",
     "Group",
-    "RecruitmentField",
-    "RecruitmentSubmission",
     "Permission",
+    "RecruitmentField",
+    "RecruitmentOnboardingMeeting",
+    "RecruitmentSubmission",
     "User",
     "UserGroup",
     "Volunteer",
