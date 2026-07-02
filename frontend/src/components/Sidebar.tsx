@@ -85,7 +85,10 @@ const Sidebar = ({ groupsSlot, isOpen = true, onClose }: SidebarProps) => {
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#2d3345] text-sm font-black text-blue-200">
               💙
             </span>
-            <span className="truncate font-bold tracking-tight">A PAULO - Wolontariat v1.0</span>
+            <span className="min-w-0 leading-tight">
+              <span className="block whitespace-nowrap font-bold tracking-tight">A PAULO</span>
+              <span className="block whitespace-nowrap text-[10px] font-medium text-gray-400">Wolontariat v1.0</span>
+            </span>
           </div>
           <button
             type="button"
