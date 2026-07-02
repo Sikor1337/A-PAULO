@@ -5,6 +5,10 @@ import { AxiosError } from 'axios';
 import { useAuthStore } from '../stores/authStore';
 import { authService } from '../services/authService';
 import { markSessionChanged } from '../lib/sessionLifecycle';
+import {
+  clearRecruitmentAccessToken,
+  destinationForUser,
+} from '../lib/recruitmentAccess';
 
 interface LoginFormData {
   email: string;
@@ -26,7 +30,8 @@ const LoginPage = () => {
   // Przekieruj jeśli już zalogowany
   useEffect(() => {
     if (isAuthenticated && currentUser) {
-      navigate(currentUser?.status === 'new_volunteer' ? '/recruitment/apply' : '/dashboard');
+      if (currentUser.status !== 'new_volunteer') clearRecruitmentAccessToken();
+      navigate(destinationForUser(currentUser.status));
     }
   }, [currentUser, isAuthenticated, navigate]);
 
@@ -58,7 +63,8 @@ const LoginPage = () => {
 
         // Update store with user data
         login(access, refresh, user);
-        navigate(user.status === 'new_volunteer' ? '/recruitment/apply' : '/dashboard');
+        if (user.status !== 'new_volunteer') clearRecruitmentAccessToken();
+        navigate(destinationForUser(user.status));
       } catch (profileError) {
         // Clear tokens if profile fetch fails
         localStorage.removeItem('access_token');

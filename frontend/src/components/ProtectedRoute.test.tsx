@@ -19,7 +19,10 @@ const renderProtectedRoute = () =>
   );
 
 describe('ProtectedRoute', () => {
-  beforeEach(() => useAuthStore.setState({ user: null, isAuthenticated: false }));
+  beforeEach(() => {
+    sessionStorage.clear();
+    useAuthStore.setState({ user: null, isAuthenticated: false });
+  });
   afterEach(() => {
     useAuthStore.setState({ user: null, isAuthenticated: false });
     vi.restoreAllMocks();
@@ -54,6 +57,32 @@ describe('ProtectedRoute', () => {
     renderProtectedRoute();
 
     expect(screen.getByRole('heading', { name: 'Private page' })).toBeInTheDocument();
+  });
+
+  it('sends a recruitment account away from operational routes', async () => {
+    useAuthStore.setState({
+      user: {
+        id: 2,
+        email: 'candidate@example.org',
+        first_name: 'Anna',
+        last_name: 'Kandydatka',
+        status: 'new_volunteer',
+      },
+      isAuthenticated: true,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/private']}>
+        <Routes>
+          <Route element={<ProtectedRoute allowedStatuses={['regular', 'admin']} />}>
+            <Route path="/private" element={<h1>Private page</h1>} />
+          </Route>
+          <Route path="/recruitment-required" element={<h1>Recruitment required</h1>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Recruitment required' })).toBeInTheDocument();
   });
 
   it('blocks a route when the inherited permission is missing', async () => {

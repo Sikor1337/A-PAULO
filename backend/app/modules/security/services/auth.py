@@ -3,12 +3,15 @@ from sqlalchemy.orm import Session
 
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
-from app.modules.recruitment.models.constants import (
+from app.modules.recruitment.access import is_valid_recruitment_access_token
+from app.modules.recruitment.constants import (
     MIGRATED_RECRUITMENT_PASSWORD,
     NEW_VOLUNTEER_STATUS,
+    REGULAR_USER_STATUS,
 )
 from app.modules.security.schemas import LoginRequest, ProfileUpdateRequest, Token
 from app.modules.security.services.password import hash_password, verify_password
+from app.modules.security.services.permissions import PermissionService
 
 from .token import TokenService
 
@@ -37,12 +40,21 @@ class AuthService:
         password: str,
         first_name: str = "",
         last_name: str = "",
+        recruitment_token: str | None = None,
     ) -> User:
         """Register new user."""
         try:
             # Normalize inputs for consistent lookups
             normalized_username = username.strip().lower()
             normalized_email = email.strip().lower()
+
+            if recruitment_token and not is_valid_recruitment_access_token(
+                recruitment_token
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Link rekrutacyjny jest nieprawidłowy lub nieaktualny",
+                )
 
             # Check if user already exists
             if self.repo.get_by_username(normalized_username):
@@ -54,8 +66,7 @@ class AuthService:
             is_migrated_candidate = bool(
                 existing_email_user
                 and not existing_email_user.is_active
-                and existing_email_user.hashed_password
-                == MIGRATED_RECRUITMENT_PASSWORD
+                and existing_email_user.hashed_password == MIGRATED_RECRUITMENT_PASSWORD
             )
             if existing_email_user and not is_migrated_candidate:
                 raise HTTPException(
@@ -67,6 +78,7 @@ class AuthService:
             hashed_password = hash_password(password)
 
             if is_migrated_candidate:
+                assert existing_email_user is not None
                 user = self.repo.update(
                     existing_email_user,
                     username=normalized_username,
@@ -83,10 +95,15 @@ class AuthService:
                     hashed_password=hashed_password,
                     first_name=first_name,
                     last_name=last_name,
-                    status=NEW_VOLUNTEER_STATUS,
+                    status=(
+                        NEW_VOLUNTEER_STATUS
+                        if recruitment_token
+                        else REGULAR_USER_STATUS
+                    ),
                 )
             self.session.flush()
             self.session.refresh(user)
+            PermissionService(self.session).assign_default_group(user)
             self.session.commit()
             return user
         except HTTPException:

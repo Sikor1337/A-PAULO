@@ -3,7 +3,12 @@
 from fastapi import APIRouter, Depends, Query, status
 
 from app.modules.core_data.models import User
-from app.modules.recruitment.dependencies import get_recruitment_service
+from app.modules.recruitment.access import get_recruitment_frontend_path
+from app.modules.recruitment.dependencies import (
+    get_recruitment_service,
+    require_recruitment_access,
+    require_recruitment_candidate,
+)
 from app.modules.recruitment.schemas import (
     DecisionRequest,
     RecruitmentFieldResponse,
@@ -14,8 +19,11 @@ from app.modules.recruitment.schemas import (
     ReturnSubmissionRequest,
 )
 from app.modules.recruitment.services import RecruitmentService
-from app.modules.security.dependencies import get_current_user, require_permission
-from app.modules.security.models.constants import CAN_MANAGE_RECRUITMENT, CAN_VIEW_RECRUITMENT
+from app.modules.security.dependencies import require_permission
+from app.modules.security.models.constants import (
+    CAN_MANAGE_RECRUITMENT,
+    CAN_VIEW_RECRUITMENT,
+)
 
 router = APIRouter(prefix="/recruitment", tags=["recruitment"])
 
@@ -23,7 +31,8 @@ router = APIRouter(prefix="/recruitment", tags=["recruitment"])
 @router.get("/form", response_model=RecruitmentFormResponse)
 def get_application_form(
     service: RecruitmentService = Depends(get_recruitment_service),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_recruitment_candidate),
+    _access_token: str = Depends(require_recruitment_access),
 ):
     submission = service.get_submission_for_user(user.id)
     initial_answers = (
@@ -31,9 +40,10 @@ def get_application_form(
         if submission
         else {}
     )
-    applicant_name = " ".join(
-        part for part in (user.first_name, user.last_name) if part
-    ) or user.username
+    applicant_name = (
+        " ".join(part for part in (user.first_name, user.last_name) if part)
+        or user.username
+    )
     return RecruitmentFormResponse(
         fields=service.list_fields(active_only=True),
         applicant_name=applicant_name,
@@ -52,9 +62,17 @@ def get_application_form(
 def submit_application(
     request: RecruitmentSubmissionCreate,
     service: RecruitmentService = Depends(get_recruitment_service),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_recruitment_candidate),
+    _access_token: str = Depends(require_recruitment_access),
 ):
     return service.submit(user, request)
+
+
+@router.get("/access-link", response_model=dict[str, str])
+def get_application_access_link(
+    _user: User = Depends(require_permission(CAN_VIEW_RECRUITMENT)),
+):
+    return {"path": get_recruitment_frontend_path()}
 
 
 @router.get("/fields", response_model=list[RecruitmentFieldResponse])

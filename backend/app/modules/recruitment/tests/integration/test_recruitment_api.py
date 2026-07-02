@@ -1,5 +1,9 @@
+from fastapi.testclient import TestClient
+
 from app.modules.core_data.models import User
 from app.modules.pi.models.volunteer import Volunteer
+from app.modules.recruitment.access import get_recruitment_access_token
+from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
 from app.modules.security.dependencies import get_current_user
 
 
@@ -21,6 +25,10 @@ def _candidate(db_session, suffix: str = "anna") -> User:
 
 def _as_user(api_client, user: User) -> None:
     api_client.app.dependency_overrides[get_current_user] = lambda: user
+    if user.status == "new_volunteer":
+        api_client.headers["X-Recruitment-Token"] = get_recruitment_access_token()
+    else:
+        api_client.headers.pop("X-Recruitment-Token", None)
 
 
 def _answers(user: User, **extra):
@@ -123,7 +131,7 @@ def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
             "field_type": "multiselect",
             "required": True,
             "placeholder": "",
-            "options": ["Seniorzy", "Dzieci", "Logistyka"],
+            "options": ["Obszar A", "Obszar B", "Obszar C"],
             "is_active": True,
         }
     )
@@ -140,7 +148,7 @@ def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
         "/api/v1/recruitment/submissions",
         json={
             "answers": _answers(
-                candidate, **{custom["key"]: ["Seniorzy", "Logistyka"]}
+                candidate, **{custom["key"]: ["Obszar A", "Obszar C"]}
             )
         },
     )
@@ -148,7 +156,7 @@ def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
     custom_answer = next(
         answer for answer in first.json()["answers"] if answer["key"] == custom["key"]
     )
-    assert custom_answer["value"] == ["Seniorzy", "Logistyka"]
+    assert custom_answer["value"] == ["Obszar A", "Obszar C"]
 
     _as_user(api_client, admin_user)
     returned = api_client.post(
@@ -162,9 +170,40 @@ def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
     assert reopened.json()["submission_status"] == "RETURNED"
     assert reopened.json()["return_reason"] == "Uzupełnij odpowiedź"
     assert reopened.json()["initial_answers"][custom["key"]] == [
-        "Seniorzy",
-        "Logistyka",
+        "Obszar A",
+        "Obszar C",
     ]
+
+
+def test_form_restores_missing_system_fields_without_deleting_custom_fields(
+    api_client, db_session, admin_user
+):
+    custom = RecruitmentField(
+        key="custom_question",
+        label="Pytanie dodatkowe",
+        field_type="text",
+        required=False,
+        placeholder="",
+        options=[],
+        position=0,
+        is_active=True,
+        is_system=False,
+    )
+    db_session.add(custom)
+    db_session.commit()
+    _as_user(api_client, admin_user)
+
+    response = api_client.get("/api/v1/recruitment/fields")
+
+    assert response.status_code == 200
+    fields = response.json()
+    assert [field["key"] for field in fields[:3]] == [
+        "full_name",
+        "email",
+        "phone",
+    ]
+    assert fields[3]["key"] == "custom_question"
+    assert all(field["is_system"] for field in fields[:3])
 
 
 def test_schema_rejects_invalid_public_values(api_client, db_session):
@@ -237,3 +276,59 @@ def test_decision_can_be_reverted_to_onboarding(api_client, db_session, admin_us
     assert restored.status_code == 200
     assert restored.json()["status"] == "ONBOARDING"
     assert restored.json()["decision_comment"] is None
+
+
+def test_list_submissions_normalizes_legacy_object_answers(
+    api_client, db_session, admin_user
+):
+    candidate = _candidate(db_session, "legacy")
+    submission = RecruitmentSubmission(
+        user_id=candidate.id,
+        full_name="Anna Legacy",
+        email=candidate.email,
+        phone="123456789",
+        social_link="",
+        availability="Wtorki",
+        answers={"full_name": "Anna Legacy", "contact_ok": True},
+        status="SUBMITTED",
+    )
+    db_session.add(submission)
+    db_session.commit()
+    _as_user(api_client, admin_user)
+
+    response = api_client.get(
+        "/api/v1/recruitment/submissions", params={"skip": 0, "limit": 1000}
+    )
+
+    assert response.status_code == 200
+    answers = response.json()[0]["answers"]
+    assert answers[0]["key"] == "full_name"
+    assert answers[1]["field_type"] == "checkbox"
+
+
+def test_access_link_is_opaque_and_candidate_endpoints_require_it(
+    api_client, db_session, admin_user
+):
+    _as_user(api_client, admin_user)
+    link_response = api_client.get("/api/v1/recruitment/access-link")
+    assert link_response.status_code == 200
+    path = link_response.json()["path"]
+    assert path.startswith("/recrutation/")
+    assert len(path.rsplit("/", 1)[-1]) == 64
+
+    candidate = _candidate(db_session, "guarded")
+    _as_user(api_client, candidate)
+    api_client.headers.pop("X-Recruitment-Token")
+    assert api_client.get("/api/v1/recruitment/form").status_code == 404
+
+
+def test_main_application_registers_production_recruitment_routes():
+    from app.main import app
+
+    paths = set(app.openapi()["paths"])
+    assert "/api/v1/recruitment/fields" in paths
+    assert "/api/v1/recruitment/submissions" in paths
+    assert "/api/v1/recruitment/access-link" in paths
+
+    with TestClient(app) as client:
+        assert client.get("/api/v1/recruitment/fields").status_code != 404

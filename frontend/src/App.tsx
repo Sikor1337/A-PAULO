@@ -17,7 +17,8 @@ import RecruitmentLayout from './pages/recruitment/RecruitmentLayout';
 import RecruitmentFormBuilderPage from './pages/recruitment/RecruitmentFormBuilderPage';
 import RecruitmentResponsesPage from './pages/recruitment/RecruitmentResponsesPage';
 import RecruitmentOnboardingPage from './pages/recruitment/RecruitmentOnboardingPage';
-import RecruitmentApplicationPage from './pages/recruitment/RecruitmentApplicationPage';
+import RecruitmentEntryPage from './pages/recruitment/RecruitmentEntryPage';
+import RecruitmentAccessRequiredPage from './pages/recruitment/RecruitmentAccessRequiredPage';
 import { queryClient } from './lib/queryClient';
 import { authService } from './services/authService';
 import { useAuthStore } from './stores/authStore';
@@ -68,41 +69,44 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/recrutation/:token" element={<RecruitmentEntryPage />} />
           <Route element={<ProtectedRoute allowedStatuses={['new_volunteer']} />}>
-            <Route path="/recruitment/apply" element={<RecruitmentApplicationPage />} />
+            <Route path="/recruitment-required" element={<RecruitmentAccessRequiredPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute requiredAnyPermission={[...operationalPermissions]} />}>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-          </Route>
-          <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_BENEFICIARIES" />}>
-            <Route path="/beneficiaries" element={<BeneficiariesPage />} />
-          </Route>
-          <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_ATTACHMENTS" />}>
-            <Route path="/bo-cards" element={<BOCardsPage />} />
-          </Route>
-          <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_VOLUNTEERS" />}>
-            <Route path="/volunteers" element={<VolunteersPage />} />
-          </Route>
-          <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_PI_GROUPS" />}>
-            <Route path="/groups" element={<GroupsPage />} />
-          </Route>
-          <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_EVENTS" />}>
-            <Route path="/events" element={<EventsPage />} />
-          </Route>
-          <Route element={<ProtectedRoute />}>
-            <Route path="/profile" element={<ProfilePage />} />
-          </Route>
-          <Route element={<ProtectedRoute requiredAnyPermission={['CAN_VIEW_USERS', 'CAN_VIEW_SECURITY']} />}>
-            <Route path="/settings" element={<SettingsPage />} />
-          </Route>
-          <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_RECRUITMENT" />}>
-            <Route path="/recruitment" element={<RecruitmentLayout />}>
-              <Route index element={<Navigate to="form" replace />} />
-              <Route path="form" element={<RecruitmentFormBuilderPage />} />
-              <Route path="responses" element={<RecruitmentResponsesPage />} />
-              <Route path="onboarding" element={<RecruitmentOnboardingPage />} />
+          <Route element={<ProtectedRoute allowedStatuses={['regular', 'admin']} />}>
+            <Route element={<ProtectedRoute requiredAnyPermission={[...operationalPermissions]} />}>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+            </Route>
+            <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_BENEFICIARIES" />}>
+              <Route path="/beneficiaries" element={<BeneficiariesPage />} />
+            </Route>
+            <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_ATTACHMENTS" />}>
+              <Route path="/bo-cards" element={<BOCardsPage />} />
+            </Route>
+            <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_VOLUNTEERS" />}>
+              <Route path="/volunteers" element={<VolunteersPage />} />
+            </Route>
+            <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_PI_GROUPS" />}>
+              <Route path="/groups" element={<GroupsPage />} />
+            </Route>
+            <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_EVENTS" />}>
+              <Route path="/events" element={<EventsPage />} />
+            </Route>
+            <Route element={<ProtectedRoute />}>
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
+            <Route element={<ProtectedRoute requiredAnyPermission={['CAN_VIEW_USERS', 'CAN_VIEW_SECURITY']} />}>
+              <Route path="/settings" element={<SettingsPage />} />
+            </Route>
+            <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_RECRUITMENT" />}>
+              <Route path="/recruitment" element={<RecruitmentLayout />}>
+                <Route index element={<Navigate to="form" replace />} />
+                <Route path="form" element={<RecruitmentFormBuilderPage />} />
+                <Route path="responses" element={<RecruitmentResponsesPage />} />
+                <Route path="onboarding" element={<RecruitmentOnboardingPage />} />
+              </Route>
             </Route>
           </Route>
 

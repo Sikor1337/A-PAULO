@@ -9,12 +9,12 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import ConflictError, NotFoundError, ValidationException
 from app.modules.core_data.models import User
-from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
-from app.modules.recruitment.models.constants import (
+from app.modules.recruitment.constants import (
     DEFAULT_FIELDS,
     NEW_VOLUNTEER_STATUS,
     SUBMISSION_STATUSES,
 )
+from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
 from app.modules.recruitment.repositories import RecruitmentRepository
 from app.modules.recruitment.schemas import (
     RecruitmentFieldDraft,
@@ -37,12 +37,57 @@ class RecruitmentService:
         self.repo = RecruitmentRepository(session)
 
     def _ensure_default_fields(self) -> None:
-        if self.repo.list_fields():
+        current = self.repo.list_fields()
+        defaults = DEFAULT_FIELDS if not current else [
+            values for values in DEFAULT_FIELDS if values["is_system"]
+        ]
+        by_key = {field.key: field for field in current}
+        changed = False
+
+        for values in defaults:
+            field = by_key.get(values["key"])
+            if field is None:
+                field = self.repo.create_field(
+                    position=0,
+                    options=[],
+                    is_active=True,
+                    **values,
+                )
+                by_key[values["key"]] = field
+                changed = True
+                continue
+
+            if values["is_system"]:
+                protected_values = {
+                    "field_type": values["field_type"],
+                    "required": values["required"],
+                    "is_active": True,
+                    "is_system": True,
+                }
+                for attribute, expected in protected_values.items():
+                    if getattr(field, attribute) != expected:
+                        setattr(field, attribute, expected)
+                        changed = True
+
+        if not changed:
             return
-        for position, values in enumerate(DEFAULT_FIELDS):
-            self.repo.create_field(
-                position=position, options=[], is_active=True, **values
+
+        system_keys = [
+            values["key"] for values in DEFAULT_FIELDS if values["is_system"]
+        ]
+        ordered = [by_key[key] for key in system_keys]
+        if current:
+            ordered.extend(field for field in current if field.key not in system_keys)
+        else:
+            ordered.extend(
+                by_key[values["key"]]
+                for values in DEFAULT_FIELDS
+                if not values["is_system"]
             )
+        for position, field in enumerate(ordered):
+            if field.position != position:
+                field.position = position
+
         self.session.commit()
 
     def list_fields(self, *, active_only: bool = False) -> list[RecruitmentField]:
