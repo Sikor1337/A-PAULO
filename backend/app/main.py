@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
@@ -14,7 +14,6 @@ from app.modules.pi.api.groups import router as groups_router
 from app.modules.pi.api.volunteers import router as volunteers_router
 from app.modules.recruitment.api import router as recruitment_router
 from app.modules.security.api import router as security_router
-from app.modules.security.dependencies import require_staff
 
 
 @asynccontextmanager
@@ -47,12 +46,11 @@ def root_redirect():
 app.include_router(security_router)
 
 # API v1 endpoints
-staff_only = [Depends(require_staff)]
-app.include_router(users_router, prefix="/api/v1", dependencies=staff_only)
-app.include_router(volunteers_router, prefix="/api/v1", dependencies=staff_only)
-app.include_router(functions_router, prefix="/api/v1", dependencies=staff_only)
-app.include_router(beneficiaries_router, prefix="/api/v1", dependencies=staff_only)
-app.include_router(groups_router, prefix="/api/v1", dependencies=staff_only)
-app.include_router(attachments_router, prefix="/api/v1", dependencies=staff_only)
+app.include_router(users_router, prefix="/api/v1")
+app.include_router(volunteers_router, prefix="/api/v1")
+app.include_router(functions_router, prefix="/api/v1")
+app.include_router(beneficiaries_router, prefix="/api/v1")
+app.include_router(groups_router, prefix="/api/v1")
+app.include_router(attachments_router, prefix="/api/v1")
 app.include_router(recruitment_router, prefix="/api/v1")
 

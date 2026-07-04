@@ -14,7 +14,8 @@ from app.modules.recruitment.schemas import (
     ReturnSubmissionRequest,
 )
 from app.modules.recruitment.services import RecruitmentService
-from app.modules.security.dependencies import get_current_user, require_staff
+from app.modules.security.dependencies import get_current_user, require_permission
+from app.modules.security.models.constants import CAN_MANAGE_RECRUITMENT, CAN_VIEW_RECRUITMENT
 
 router = APIRouter(prefix="/recruitment", tags=["recruitment"])
 
@@ -59,7 +60,7 @@ def submit_application(
 @router.get("/fields", response_model=list[RecruitmentFieldResponse])
 def list_fields(
     service: RecruitmentService = Depends(get_recruitment_service),
-    _user: User = Depends(require_staff),
+    _user: User = Depends(require_permission(CAN_VIEW_RECRUITMENT)),
 ):
     return service.list_fields()
 
@@ -68,7 +69,7 @@ def list_fields(
 def save_fields(
     request: RecruitmentFormUpdateRequest,
     service: RecruitmentService = Depends(get_recruitment_service),
-    _user: User = Depends(require_staff),
+    _user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
 ):
     return service.save_fields(request.fields)
 
@@ -80,7 +81,7 @@ def list_submissions(
     submission_status: str | None = Query(default=None, alias="status"),
     search: str | None = None,
     service: RecruitmentService = Depends(get_recruitment_service),
-    _user: User = Depends(require_staff),
+    _user: User = Depends(require_permission(CAN_VIEW_RECRUITMENT)),
 ):
     return service.list_submissions(
         skip=skip, limit=limit, status=submission_status, search=search
@@ -93,7 +94,7 @@ def list_submissions(
 def get_submission(
     submission_id: int,
     service: RecruitmentService = Depends(get_recruitment_service),
-    _user: User = Depends(require_staff),
+    _user: User = Depends(require_permission(CAN_VIEW_RECRUITMENT)),
 ):
     return service.get_submission(submission_id)
 
@@ -105,7 +106,7 @@ def get_submission(
 def start_onboarding(
     submission_id: int,
     service: RecruitmentService = Depends(get_recruitment_service),
-    _user: User = Depends(require_staff),
+    _user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
 ):
     return service.move_to_onboarding(submission_id)
 
@@ -117,7 +118,7 @@ def return_submission(
     submission_id: int,
     request: ReturnSubmissionRequest,
     service: RecruitmentService = Depends(get_recruitment_service),
-    _user: User = Depends(require_staff),
+    _user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
 ):
     return service.return_submission(submission_id, request.reason)
 
@@ -129,7 +130,7 @@ def accept_submission(
     submission_id: int,
     request: DecisionRequest,
     service: RecruitmentService = Depends(get_recruitment_service),
-    _user: User = Depends(require_staff),
+    _user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
 ):
     return service.accept(submission_id, request.comment)
 
@@ -141,7 +142,7 @@ def reject_submission(
     submission_id: int,
     request: DecisionRequest,
     service: RecruitmentService = Depends(get_recruitment_service),
-    _user: User = Depends(require_staff),
+    _user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
 ):
     return service.reject(submission_id, request.comment)
 
@@ -153,6 +154,6 @@ def reject_submission(
 def restore_onboarding(
     submission_id: int,
     service: RecruitmentService = Depends(get_recruitment_service),
-    _user: User = Depends(require_staff),
+    _user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
 ):
     return service.restore_to_onboarding(submission_id)

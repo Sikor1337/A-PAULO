@@ -20,7 +20,7 @@ interface SaveArgs<TInput> {
 export function useCrudResource<T, TInput>(
   queryKey: string,
   service: CrudService<T, TInput>,
-  options?: { onSaved?: () => void; invalidateKeys?: string[] },
+  options?: { onSaved?: () => void; invalidateKeys?: string[]; enabled?: boolean },
 ) {
   const queryClient = useQueryClient();
 
@@ -29,7 +29,11 @@ export function useCrudResource<T, TInput>(
     options?.invalidateKeys?.forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
   };
 
-  const list = useQuery({ queryKey: [queryKey], queryFn: service.getAll });
+  const list = useQuery({
+    queryKey: [queryKey],
+    queryFn: service.getAll,
+    enabled: options?.enabled ?? true,
+  });
 
   const save = useMutation({
     mutationFn: ({ id, data }: SaveArgs<TInput>) =>

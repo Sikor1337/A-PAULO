@@ -4,6 +4,7 @@ import DetailModal from '@/components/ui/DetailModal';
 import { useGroups, useGroupDetail } from '@/hooks/useGroups';
 import { useVolunteerList } from '@/hooks/useVolunteers';
 import { useBeneficiaryList } from '@/hooks/useBeneficiaries';
+import { useHasPermission } from '@/hooks/usePermissions';
 import { useBOCardAttachmentActions, useBOCardAttachments } from '@/hooks/useAttachments';
 import { attachmentService, BO_CARD_ACCEPT, BO_CARD_MAX_SIZE_BYTES, BO_CARD_SUPPORTED_LABEL } from '@/services/attachmentService';
 import { volunteerDetailFields } from '@/features/volunteers/volunteerDetail';
@@ -55,6 +56,7 @@ const formatAttachmentSize = (sizeBytes: number) => {
 };
 
 const GroupsPage: React.FC = () => {
+  const { hasPermission: canManageGroups } = useHasPermission('CAN_MANAGE_PI_GROUPS');
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [previousGroupId, setPreviousGroupId] = useState<number | null>(null);
   const [showKartyBO, setShowKartyBO] = useState(false);
@@ -423,7 +425,7 @@ const GroupsPage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-2xl">👥</span>
           <h1 className="text-xl font-bold text-gray-900 uppercase">Grupy</h1>
-          {isNewGroup ? (
+          {canManageGroups && (isNewGroup ? (
             <button
               type="button"
               onClick={cancelNewGroup}
@@ -439,11 +441,11 @@ const GroupsPage: React.FC = () => {
             >
               + Nowa
             </button>
-          )}
+          ))}
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-          {!isNewGroup && !isEditing && (
+          {canManageGroups && !isNewGroup && !isEditing && (
             <button
               type="button"
               onClick={enterEditMode}
