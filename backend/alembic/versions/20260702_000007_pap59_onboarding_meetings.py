@@ -1,7 +1,7 @@
 """Add required recruitment onboarding meetings.
 
 Revision ID: pap59_onboarding_meetings
-Revises: pap49_calendar
+Revises: cd317ee086f0
 Create Date: 2026-07-02 16:30:00.000000+00:00
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "pap59_onboarding_meetings"
-down_revision: str | Sequence[str] | None = "pap49_calendar"
+down_revision: str | Sequence[str] | None = "cd317ee086f0"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
