@@ -25,7 +25,7 @@ const RecruitmentEntryPage = () => {
     );
   }
   if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login?recruitment=1" replace />;
   }
   if (user.status !== 'new_volunteer') {
     clearRecruitmentAccessToken();
