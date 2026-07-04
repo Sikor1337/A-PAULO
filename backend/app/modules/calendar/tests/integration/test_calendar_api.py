@@ -149,6 +149,10 @@ def test_view_permission_filters_private_events_and_does_not_allow_changes(
         "/api/v1/calendar/events",
         json=_event_payload(title="Zarządzający", visibility="admins"),
     ).json()
+    draft = api_client.post(
+        "/api/v1/calendar/events",
+        json=_event_payload(title="Szkic", status="draft"),
+    ).json()
     permission = db_session.query(Permission).filter_by(code=CAN_VIEW_EVENTS).one()
     viewer = User(
         username="calendar-viewer",
@@ -169,6 +173,7 @@ def test_view_permission_filters_private_events_and_does_not_allow_changes(
 
     listed = api_client.get("/api/v1/calendar/events")
     hidden = api_client.get(f"/api/v1/calendar/events/{private['id']}")
+    hidden_draft = api_client.get(f"/api/v1/calendar/events/{draft['id']}")
     create = api_client.post(
         "/api/v1/calendar/events",
         json=_event_payload(title="Niedozwolone"),
@@ -177,4 +182,5 @@ def test_view_permission_filters_private_events_and_does_not_allow_changes(
     assert listed.status_code == 200
     assert [event["id"] for event in listed.json()] == [organization["id"]]
     assert hidden.status_code == 404
+    assert hidden_draft.status_code == 404
     assert create.status_code == 403

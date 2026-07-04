@@ -3,6 +3,7 @@ import PageShell from '@/components/layout/PageShell';
 import CalendarSubscriptionModal from '@/features/calendar/CalendarSubscriptionModal';
 import EventDetailModal from '@/features/calendar/EventDetailModal';
 import EventFormModal from '@/features/calendar/EventFormModal';
+import { expandOccurrences, occurrenceDays } from '@/features/calendar/recurrence';
 import { useCalendarEvents } from '@/hooks/useCalendar';
 import { useHasPermission } from '@/hooks/usePermissions';
 import type { CalendarEvent, CalendarEventStatus, CalendarEventVisibility } from '@/types';
@@ -53,9 +54,12 @@ const EventsPage = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_EVENTS');
 
   const days = useMemo(() => calendarDays(month), [month]);
-  const rangeStart = days[0];
-  const rangeEnd = new Date(days[days.length - 1]);
-  rangeEnd.setHours(23, 59, 59, 999);
+  const [rangeStart, rangeEnd] = useMemo(() => {
+    const start = days[0];
+    const end = new Date(days[days.length - 1]);
+    end.setHours(23, 59, 59, 999);
+    return [start, end];
+  }, [days]);
   const eventsQuery = useCalendarEvents({
     startsFrom: rangeStart.toISOString(),
     startsTo: rangeEnd.toISOString(),
@@ -64,14 +68,19 @@ const EventsPage = () => {
     sort,
   });
   const events = useMemo(() => eventsQuery.data ?? [], [eventsQuery.data]);
+  const occurrences = useMemo(
+    () => expandOccurrences(events, rangeStart, rangeEnd),
+    [events, rangeEnd, rangeStart],
+  );
   const eventsByDay = useMemo(() => {
-    const result = new Map<string, CalendarEvent[]>();
-    events.forEach((event) => {
-      const key = dateKey(new Date(event.starts_at));
-      result.set(key, [...(result.get(key) ?? []), event]);
+    const result = new Map<string, typeof occurrences>();
+    occurrences.forEach((event) => {
+      occurrenceDays(event).forEach((key) => {
+        result.set(key, [...(result.get(key) ?? []), event]);
+      });
     });
     return result;
-  }, [events]);
+  }, [occurrences]);
 
   const openNew = (date = new Date()) => {
     setInitialDate(date);
@@ -81,7 +90,7 @@ const EventsPage = () => {
   const monthLabel = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric' }).format(month);
 
   return (
-    <PageShell cardClassName="overflow-hidden">
+    <PageShell cardClassName="min-h-[calc(100dvh-88px)] overflow-hidden rounded-xl bg-white text-gray-900 shadow-lg lg:min-h-[calc(100dvh-48px)]">
       <header className="border-b px-4 py-4 sm:px-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-3">
@@ -89,7 +98,7 @@ const EventsPage = () => {
             <div><h1 className="text-xl font-bold uppercase text-gray-900">Wydarzenia</h1><p className="text-sm text-gray-500">Kalendarz całej organizacji</p></div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setSubscriptionOpen(true)} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-700">Subskrybuj .ics</button>
+            <button type="button" onClick={() => setSubscriptionOpen(true)} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-900 shadow-sm hover:bg-gray-50">Subskrybuj .ics</button>
             {canManage && <button type="button" onClick={() => openNew()} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white">+ Nowe wydarzenie</button>}
           </div>
         </div>
@@ -139,7 +148,7 @@ const EventsPage = () => {
                     <div className={`mb-1 flex size-7 items-center justify-center rounded-full text-xs font-bold ${isToday ? 'bg-indigo-600 text-white' : isCurrentMonth ? 'text-gray-700' : 'text-gray-300'}`}>{day.getDate()}</div>
                     <div className="space-y-1">
                       {(eventsByDay.get(key) ?? []).slice(0, 3).map((event) => (
-                        <button key={event.id} type="button" onClick={() => setSelected(event)} className={`block w-full truncate rounded border-l-4 px-2 py-1 text-left text-[11px] font-bold ${statusClass[event.status]}`} title={event.title}>
+                        <button key={`${event.occurrence_key}-${key}`} type="button" onClick={() => setSelected(event)} className={`block w-full truncate rounded border-l-4 px-2 py-1 text-left text-[11px] font-bold ${statusClass[event.status]}`} title={event.title}>
                           {!event.is_all_day && <span className="mr-1 font-normal">{new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit' }).format(new Date(event.starts_at))}</span>}{event.title}
                         </button>
                       ))}
@@ -153,8 +162,8 @@ const EventsPage = () => {
         </div>
       ) : (
         <div className="divide-y">
-          {events.length ? events.map((event) => (
-            <button key={event.id} type="button" onClick={() => setSelected(event)} className="grid w-full gap-2 px-5 py-4 text-left hover:bg-indigo-50 sm:grid-cols-[180px_1fr_180px] sm:items-center">
+          {occurrences.length ? occurrences.map((event) => (
+            <button key={event.occurrence_key} type="button" onClick={() => setSelected(event)} className="grid w-full gap-2 px-5 py-4 text-left hover:bg-indigo-50 sm:grid-cols-[180px_1fr_180px] sm:items-center">
               <span className="text-sm font-bold text-indigo-700">{eventRangeLabel(event)}</span>
               <span><span className={`block font-bold ${event.status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{event.title}</span><span className="text-xs text-gray-500">{event.location || 'Bez lokalizacji'}</span></span>
               <span className="text-xs font-bold text-gray-500">{event.visibility === 'organization' ? 'Organizacja' : 'Zarządzający'} · {event.status}</span>
