@@ -36,7 +36,7 @@ const mockSurvey = (interview: object | null = null) => {
     isLoading: false,
     isError: false,
     error: null,
-    submit: { mutate, isPending: false, isError: false, error: null },
+    save: { mutate, isPending: false, isError: false, error: null },
   } as unknown as ReturnType<typeof useMyDepartureSurvey>);
   return mutate;
 };
@@ -58,11 +58,21 @@ describe('MyDepartureSurveyPage', () => {
     }));
   });
 
-  it('does not allow a submitted interview to be filled again', () => {
-    mockSurvey({ departure_date: '2026-07-01' });
+  it('lets the volunteer edit the original submitted answers', () => {
+    const mutate = mockSurvey({
+      id: 8,
+      departure_date: '2026-07-01',
+      answers: [{ ...field, value: 'Pierwotny powód' }],
+    });
     render(<MyDepartureSurveyPage />);
 
-    expect(screen.getByText('Ankieta została wysłana')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Wyślij ankietę' })).not.toBeInTheDocument();
+    const answer = screen.getByLabelText(/Dlaczego odchodzisz/);
+    expect(answer).toHaveValue('Pierwotny powód');
+    fireEvent.change(answer, { target: { value: 'Poprawiony powód' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmiany' }));
+
+    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
+      departure_reason: 'Poprawiony powód',
+    }));
   });
 });

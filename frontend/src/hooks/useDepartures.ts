@@ -29,8 +29,12 @@ export const useMyDepartureSurvey = () => {
     queryFn: departureService.getMine,
     retry: false,
   });
-  const submit = useMutation({
-    mutationFn: departureService.submitMine,
+  const save = useMutation({
+    mutationFn: (answers: Record<string, unknown>) => (
+      query.data?.interview
+        ? departureService.updateMine(answers)
+        : departureService.submitMine(answers)
+    ),
     onSuccess: (interview) => {
       queryClient.setQueryData<DepartureSelfService>(
         ['my-departure-survey'],
@@ -40,5 +44,5 @@ export const useMyDepartureSurvey = () => {
       queryClient.invalidateQueries({ queryKey: ['departure-interviews'] });
     },
   });
-  return { ...query, submit };
+  return { ...query, save };
 };

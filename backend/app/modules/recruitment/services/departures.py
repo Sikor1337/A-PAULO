@@ -180,6 +180,62 @@ class DepartureService:
                     "key": field.key,
                     "label": field.label,
                     "field_type": field.field_type,
+                    "required": field.required,
+                    "placeholder": field.placeholder,
+                    "options": list(field.options),
+                    "value": value,
+                }
+            )
+        return result
+
+    def _validate_snapshot_answers(
+        self, fields: list[dict[str, Any]], answers: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for field in fields:
+            key = str(field["key"])
+            label = str(field["label"])
+            field_type = str(field["field_type"])
+            required = bool(field.get("required", False))
+            placeholder = str(field.get("placeholder", ""))
+            options = list(field.get("options", []))
+            value = answers.get(key)
+            if field_type == "checkbox":
+                if value is not None and not isinstance(value, bool):
+                    raise ValidationException(f"Nieprawidłowa odpowiedź: {label}")
+            elif field_type == "multiselect":
+                if value is not None and (
+                    not isinstance(value, list)
+                    or any(not isinstance(item, str) for item in value)
+                    or len(value) != len(set(value))
+                ):
+                    raise ValidationException(f"Nieprawidłowa odpowiedź: {label}")
+            elif value is not None and not isinstance(value, str):
+                raise ValidationException(f"Pole „{label}” musi zawierać tekst")
+            if isinstance(value, str):
+                value = value.strip()
+                if len(value) > 10_000:
+                    raise ValidationException(f"Odpowiedź jest zbyt długa: {label}")
+            empty = value is None or value == "" or value == []
+            if required and empty:
+                raise ValidationException(f"Pole „{label}” jest wymagane")
+            if field_type in DEPARTURE_CHOICE_TYPES and not empty:
+                selected = value if isinstance(value, list) else [value]
+                if any(item not in options for item in selected):
+                    raise ValidationException(f"Nieprawidłowa odpowiedź: {label}")
+            if field_type == "date" and not empty:
+                try:
+                    date.fromisoformat(str(value))
+                except ValueError as error:
+                    raise ValidationException(f"Nieprawidłowa data: {label}") from error
+            result.append(
+                {
+                    "key": key,
+                    "label": label,
+                    "field_type": field_type,
+                    "required": required,
+                    "placeholder": placeholder,
+                    "options": options,
                     "value": value,
                 }
             )
@@ -206,10 +262,6 @@ class DepartureService:
                 answers=validated,
                 completed_by_id=completed_by_id,
             )
-            volunteer.status = "Były"
-            volunteer.history = (
-                f"{volunteer.history}\nOdejście {departure_date.isoformat()}: {reason}"
-            ).strip()
             self.session.commit()
             return self.get_interview(interview.id)
         except IntegrityError as error:
@@ -236,6 +288,30 @@ class DepartureService:
         if volunteer is None:
             raise NotFoundError("Brak profilu wolontariusza powiązanego z tym kontem")
         return self.create_interview(volunteer.id, answers, user.id)
+
+    def update_self_interview(
+        self, user: User, answers: dict[str, Any]
+    ) -> DepartureInterview:
+        volunteer = self.repo.get_volunteer_for_user(user.id, user.email)
+        if volunteer is None:
+            raise NotFoundError("Brak profilu wolontariusza powiązanego z tym kontem")
+        interview = self.repo.get_by_volunteer(volunteer.id)
+        if interview is None:
+            raise NotFoundError("Ankieta odejścia nie została jeszcze wypełniona")
+        try:
+            validated = self._validate_snapshot_answers(interview.answers, answers)
+            indexed = {answer["key"]: answer["value"] for answer in validated}
+            interview.departure_date = date.fromisoformat(
+                str(indexed["departure_date"])
+            )
+            interview.departure_reason = str(indexed["departure_reason"])
+            interview.stay_in_contact = bool(indexed.get("stay_in_contact"))
+            interview.answers = validated
+            self.session.commit()
+            return self.get_interview(interview.id)
+        except Exception:
+            self.session.rollback()
+            raise
 
     def list_interviews(self, *, skip: int, limit: int) -> list[DepartureInterview]:
         return self.repo.list(skip=skip, limit=limit)

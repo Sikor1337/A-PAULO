@@ -35,4 +35,9 @@ export const departureService = {
     const response = await apiClient.post<DepartureInterview>(`${path}/me`, { answers });
     return response.data;
   },
+
+  updateMine: async (answers: Record<string, unknown>): Promise<DepartureInterview> => {
+    const response = await apiClient.put<DepartureInterview>(`${path}/me`, { answers });
+    return response.data;
+  },
 };

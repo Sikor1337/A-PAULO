@@ -33,6 +33,16 @@ describe('departureService', () => {
     });
   });
 
+  it('updates the existing account-bound interview', async () => {
+    client.put.mockResolvedValue({ data: { id: 8 } });
+
+    await departureService.updateMine({ departure_reason: 'Nowy powód' });
+
+    expect(client.put).toHaveBeenCalledWith('v1/recruitment/departures/me', {
+      answers: { departure_reason: 'Nowy powód' },
+    });
+  });
+
   it('loads all departure interviews for the history view', async () => {
     client.get.mockResolvedValue({ data: [] });
 

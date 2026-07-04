@@ -16,7 +16,10 @@ export interface DepartureField extends DepartureFieldDraft {
 export interface DepartureAnswer {
   key: string;
   label: string;
-  field_type: string;
+  field_type: DepartureField['field_type'];
+  required: boolean;
+  placeholder: string;
+  options: string[];
   value: unknown;
 }
 

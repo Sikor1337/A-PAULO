@@ -92,6 +92,9 @@ class DepartureAnswerResponse(BaseModel):
     key: str
     label: str
     field_type: str
+    required: bool = False
+    placeholder: str = ""
+    options: list[str] = Field(default_factory=list)
     value: Any = None
 
 

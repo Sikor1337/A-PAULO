@@ -82,12 +82,39 @@ def test_volunteer_submits_own_departure_interview(api_client, db_session, admin
     assert response.json()["stay_in_contact"] is True
     assert response.json()["completed_by_id"] == user.id
     db_session.refresh(volunteer)
-    assert volunteer.status == "Były"
-    assert "Odejście 2026-06-30" in volunteer.history
+    assert volunteer.status == "Aktywny"
+    assert volunteer.history == "Początek współpracy."
 
     mine = api_client.get("/api/v1/recruitment/departures/me")
     assert mine.status_code == 200
     assert mine.json()["interview"]["id"] == response.json()["id"]
+
+    original_reason = next(
+        answer
+        for answer in response.json()["answers"]
+        if answer["key"] == "departure_reason"
+    )
+    reason_field = db_session.scalar(
+        select(DepartureField).where(DepartureField.key == "departure_reason")
+    )
+    assert reason_field is not None
+    reason_field.label = "Nowa treść pytania"
+    db_session.commit()
+
+    updated = api_client.put(
+        "/api/v1/recruitment/departures/me",
+        json={"answers": _answers(departure_reason="Nowy powód")},
+    )
+    assert updated.status_code == 200
+    updated_reason = next(
+        answer
+        for answer in updated.json()["answers"]
+        if answer["key"] == "departure_reason"
+    )
+    assert updated_reason["value"] == "Nowy powód"
+    assert updated_reason["label"] == original_reason["label"]
+    db_session.refresh(volunteer)
+    assert volunteer.status == "Aktywny"
 
     _as_user(api_client, admin_user)
     listed = api_client.get("/api/v1/recruitment/departures")

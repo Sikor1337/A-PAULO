@@ -2,7 +2,7 @@ import { useState } from 'react';
 import PageShell from '@/components/layout/PageShell';
 import { useMyDepartureSurvey } from '@/hooks/useDepartures';
 import { parseApiError } from '@/lib/errors';
-import type { DepartureField } from '@/types';
+import type { DepartureAnswer, DepartureField } from '@/types';
 
 const inputClass = 'mt-1 min-h-11 w-full rounded-lg border border-gray-200 px-3 outline-none focus:border-indigo-500';
 
@@ -12,7 +12,7 @@ const today = () => {
 };
 
 interface FieldControlProps {
-  field: DepartureField;
+  field: Pick<DepartureField | DepartureAnswer, 'key' | 'label' | 'field_type' | 'required' | 'placeholder' | 'options'>;
   value: unknown;
   onChange: (value: unknown) => void;
 }
@@ -90,14 +90,18 @@ const FieldControl = ({ field, value, onChange }: FieldControlProps) => {
 
 const MyDepartureSurveyPage = () => {
   const survey = useMyDepartureSurvey();
-  const [answers, setAnswers] = useState<Record<string, unknown>>({
-    departure_date: today(),
-  });
+  const [draftAnswers, setDraftAnswers] = useState<Record<string, unknown> | null>(null);
+  const interview = survey.data?.interview;
+  const formFields = interview?.answers ?? survey.data?.fields ?? [];
+  const savedAnswers = interview
+    ? Object.fromEntries(interview.answers.map((answer) => [answer.key, answer.value]))
+    : { departure_date: today() };
+  const answers = draftAnswers ?? savedAnswers;
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!window.confirm('Wysłać ankietę? Po wysłaniu nie będzie można jej edytować.')) return;
-    survey.submit.mutate(answers);
+    if (!interview && !window.confirm('Wysłać ankietę odejścia?')) return;
+    survey.save.mutate(answers);
   };
 
   return (
@@ -114,42 +118,45 @@ const MyDepartureSurveyPage = () => {
         <p className="rounded-xl bg-rose-50 p-4 text-rose-700">
           {parseApiError(survey.error, 'Nie udało się pobrać ankiety odejścia.')}
         </p>
-      ) : survey.data?.interview ? (
-        <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
-          <h2 className="text-lg font-bold text-emerald-900">Ankieta została wysłana</h2>
-          <p className="mt-2 text-sm text-emerald-800">
-            Dziękujemy za jej wypełnienie. Data odejścia: {survey.data.interview.departure_date}.
-          </p>
-        </section>
       ) : survey.data ? (
         <form onSubmit={submit} className="space-y-6">
           <div className="rounded-xl bg-indigo-50 p-4 text-sm text-indigo-900">
             Ankietę wypełnia: <strong>{survey.data.volunteer.full_name}</strong>
           </div>
-          {survey.data.fields.map((field) => (
-            <label key={field.id} className="block text-sm font-semibold text-gray-700">
+          {interview && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+              Ankieta została wysłana. Możesz nadal poprawiać odpowiedzi.
+            </div>
+          )}
+          {formFields.map((field) => (
+            <label key={field.key} className="block text-sm font-semibold text-gray-700">
               <span>
                 {field.label} {field.required && <span className="text-rose-600">*</span>}
               </span>
               <FieldControl
                 field={field}
                 value={answers[field.key]}
-                onChange={(value) => setAnswers((current) => ({ ...current, [field.key]: value }))}
+                onChange={(value) => setDraftAnswers((current) => ({
+                  ...(current ?? answers),
+                  [field.key]: value,
+                }))}
               />
             </label>
           ))}
-          {survey.submit.isError && (
+          {survey.save.isError && (
             <p className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">
-              {parseApiError(survey.submit.error, 'Nie udało się wysłać ankiety odejścia.')}
+              {parseApiError(survey.save.error, 'Nie udało się zapisać ankiety odejścia.')}
             </p>
           )}
           <div className="flex justify-end border-t pt-5">
             <button
               type="submit"
-              disabled={survey.submit.isPending}
+              disabled={survey.save.isPending}
               className="min-h-11 rounded-lg bg-indigo-600 px-6 py-2 font-bold text-white disabled:opacity-50"
             >
-              {survey.submit.isPending ? 'Wysyłanie…' : 'Wyślij ankietę'}
+              {survey.save.isPending
+                ? 'Zapisywanie…'
+                : interview ? 'Zapisz zmiany' : 'Wyślij ankietę'}
             </button>
           </div>
         </form>

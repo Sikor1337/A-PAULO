@@ -69,6 +69,15 @@ def submit_my_departure_survey(
     return service.create_self_interview(user, request.answers)
 
 
+@router.put("/me", response_model=DepartureInterviewResponse)
+def update_my_departure_survey(
+    request: DepartureInterviewCreate,
+    service: DepartureService = Depends(get_departure_service),
+    user: User = Depends(get_current_user),
+):
+    return service.update_self_interview(user, request.answers)
+
+
 @router.get("/{interview_id}", response_model=DepartureInterviewResponse)
 def get_departure_interview(
     interview_id: int,
