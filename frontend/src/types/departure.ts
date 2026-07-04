@@ -36,3 +36,9 @@ export interface DepartureInterview {
     email: string;
   };
 }
+
+export interface DepartureSelfService {
+  volunteer: DepartureInterview['volunteer'];
+  fields: DepartureField[];
+  interview: DepartureInterview | null;
+}

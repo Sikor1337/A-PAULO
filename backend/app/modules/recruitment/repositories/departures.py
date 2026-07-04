@@ -1,9 +1,14 @@
 """Data access for volunteer departure interviews."""
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.modules.pi.models.volunteer import Volunteer
-from app.modules.recruitment.models import DepartureField, DepartureInterview
+from app.modules.recruitment.models import (
+    DepartureField,
+    DepartureInterview,
+    RecruitmentSubmission,
+)
 
 
 class DepartureRepository:
@@ -26,6 +31,24 @@ class DepartureRepository:
 
     def get_volunteer(self, volunteer_id: int) -> Volunteer | None:
         return self.session.get(Volunteer, volunteer_id)
+
+    def get_volunteer_for_user(self, user_id: int, email: str) -> Volunteer | None:
+        submission = (
+            self.session.query(RecruitmentSubmission)
+            .filter(RecruitmentSubmission.user_id == user_id)
+            .one_or_none()
+        )
+        if submission and submission.volunteer_id is not None:
+            volunteer = self.get_volunteer(submission.volunteer_id)
+            if volunteer is not None:
+                return volunteer
+        matches = (
+            self.session.query(Volunteer)
+            .filter(func.lower(Volunteer.email) == email.strip().lower())
+            .limit(2)
+            .all()
+        )
+        return matches[0] if len(matches) == 1 else None
 
     def get_by_volunteer(self, volunteer_id: int) -> DepartureInterview | None:
         return (

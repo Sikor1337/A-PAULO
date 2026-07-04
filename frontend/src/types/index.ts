@@ -46,6 +46,7 @@ export type {
   DepartureField,
   DepartureFieldDraft,
   DepartureInterview,
+  DepartureSelfService,
 } from './departure';
 export type {
   CalendarEvent,

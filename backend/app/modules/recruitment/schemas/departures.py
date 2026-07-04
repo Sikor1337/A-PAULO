@@ -79,7 +79,6 @@ class DepartureFieldResponse(BaseModel):
 
 
 class DepartureInterviewCreate(BaseModel):
-    volunteer_id: int = Field(..., ge=1)
     answers: dict[str, Any]
 
     @model_validator(mode="after")
@@ -117,3 +116,9 @@ class DepartureInterviewResponse(BaseModel):
     volunteer: DepartureVolunteerResponse
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DepartureSelfServiceResponse(BaseModel):
+    volunteer: DepartureVolunteerResponse
+    fields: list[DepartureFieldResponse]
+    interview: DepartureInterviewResponse | None

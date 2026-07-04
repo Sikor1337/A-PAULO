@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { departureService } from '@/services/departureService';
-import type { DepartureFieldDraft } from '@/types';
+import type { DepartureFieldDraft, DepartureSelfService } from '@/types';
 
 export const useDepartureFields = () => {
   const queryClient = useQueryClient();
@@ -22,20 +22,23 @@ export const useDepartureInterviews = () => useQuery({
   queryFn: departureService.getAll,
 });
 
-export const useCreateDepartureInterview = (onSuccess?: () => void) => {
+export const useMyDepartureSurvey = () => {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      volunteerId,
-      answers,
-    }: {
-      volunteerId: number;
-      answers: Record<string, unknown>;
-    }) => departureService.create(volunteerId, answers),
-    onSuccess: () => {
+  const query = useQuery({
+    queryKey: ['my-departure-survey'],
+    queryFn: departureService.getMine,
+    retry: false,
+  });
+  const submit = useMutation({
+    mutationFn: departureService.submitMine,
+    onSuccess: (interview) => {
+      queryClient.setQueryData<DepartureSelfService>(
+        ['my-departure-survey'],
+        (current) => current ? { ...current, interview } : current,
+      );
       queryClient.invalidateQueries({ queryKey: ['volunteers'] });
       queryClient.invalidateQueries({ queryKey: ['departure-interviews'] });
-      onSuccess?.();
     },
   });
+  return { ...query, submit };
 };

@@ -1,4 +1,4 @@
-"""Staff endpoints for volunteer departure interviews."""
+"""Endpoints for volunteer departure interviews."""
 
 from fastapi import APIRouter, Depends, Query, status
 
@@ -9,9 +9,10 @@ from app.modules.recruitment.schemas.departures import (
     DepartureFieldsUpdate,
     DepartureInterviewCreate,
     DepartureInterviewResponse,
+    DepartureSelfServiceResponse,
 )
 from app.modules.recruitment.services.departures import DepartureService
-from app.modules.security.dependencies import require_permission
+from app.modules.security.dependencies import get_current_user, require_permission
 from app.modules.security.models.constants import (
     CAN_MANAGE_RECRUITMENT,
     CAN_VIEW_RECRUITMENT,
@@ -47,6 +48,27 @@ def list_departure_interviews(
     return service.list_interviews(skip=skip, limit=limit)
 
 
+@router.get("/me", response_model=DepartureSelfServiceResponse)
+def get_my_departure_survey(
+    service: DepartureService = Depends(get_departure_service),
+    user: User = Depends(get_current_user),
+):
+    return service.get_self_service(user)
+
+
+@router.post(
+    "/me",
+    response_model=DepartureInterviewResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def submit_my_departure_survey(
+    request: DepartureInterviewCreate,
+    service: DepartureService = Depends(get_departure_service),
+    user: User = Depends(get_current_user),
+):
+    return service.create_self_interview(user, request.answers)
+
+
 @router.get("/{interview_id}", response_model=DepartureInterviewResponse)
 def get_departure_interview(
     interview_id: int,
@@ -54,14 +76,3 @@ def get_departure_interview(
     _user: User = Depends(require_permission(CAN_VIEW_RECRUITMENT)),
 ):
     return service.get_interview(interview_id)
-
-
-@router.post(
-    "", response_model=DepartureInterviewResponse, status_code=status.HTTP_201_CREATED
-)
-def create_departure_interview(
-    request: DepartureInterviewCreate,
-    service: DepartureService = Depends(get_departure_service),
-    user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
-):
-    return service.create_interview(request.volunteer_id, request.answers, user.id)

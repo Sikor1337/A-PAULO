@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.errors import ConflictError, NotFoundError, ValidationException
+from app.modules.core_data.models import User
 from app.modules.recruitment.departure_constants import (
     DEFAULT_DEPARTURE_FIELDS,
     DEPARTURE_CHOICE_TYPES,
@@ -32,9 +33,11 @@ class DepartureService:
 
     def _ensure_default_fields(self) -> None:
         current = self.repo.list_fields()
-        defaults = DEFAULT_DEPARTURE_FIELDS if not current else [
-            values for values in DEFAULT_DEPARTURE_FIELDS if values["is_system"]
-        ]
+        defaults = (
+            DEFAULT_DEPARTURE_FIELDS
+            if not current
+            else [values for values in DEFAULT_DEPARTURE_FIELDS if values["is_system"]]
+        )
         by_key = {field.key: field for field in current}
         changed = False
 
@@ -67,9 +70,7 @@ class DepartureService:
             return
 
         system_keys = [
-            values["key"]
-            for values in DEFAULT_DEPARTURE_FIELDS
-            if values["is_system"]
+            values["key"] for values in DEFAULT_DEPARTURE_FIELDS if values["is_system"]
         ]
         ordered = [by_key[key] for key in system_keys]
         if current:
@@ -217,6 +218,24 @@ class DepartureService:
         except Exception:
             self.session.rollback()
             raise
+
+    def get_self_service(self, user: User) -> dict:
+        volunteer = self.repo.get_volunteer_for_user(user.id, user.email)
+        if volunteer is None:
+            raise NotFoundError("Brak profilu wolontariusza powiązanego z tym kontem")
+        return {
+            "volunteer": volunteer,
+            "fields": self.list_fields(active_only=True),
+            "interview": self.repo.get_by_volunteer(volunteer.id),
+        }
+
+    def create_self_interview(
+        self, user: User, answers: dict[str, Any]
+    ) -> DepartureInterview:
+        volunteer = self.repo.get_volunteer_for_user(user.id, user.email)
+        if volunteer is None:
+            raise NotFoundError("Brak profilu wolontariusza powiązanego z tym kontem")
+        return self.create_interview(volunteer.id, answers, user.id)
 
     def list_interviews(self, *, skip: int, limit: int) -> list[DepartureInterview]:
         return self.repo.list(skip=skip, limit=limit)

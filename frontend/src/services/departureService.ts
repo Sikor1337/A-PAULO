@@ -3,6 +3,7 @@ import type {
   DepartureField,
   DepartureFieldDraft,
   DepartureInterview,
+  DepartureSelfService,
 } from '@/types';
 
 const path = 'v1/recruitment/departures';
@@ -25,14 +26,13 @@ export const departureService = {
     return response.data;
   },
 
-  create: async (
-    volunteerId: number,
-    answers: Record<string, unknown>,
-  ): Promise<DepartureInterview> => {
-    const response = await apiClient.post<DepartureInterview>(path, {
-      volunteer_id: volunteerId,
-      answers,
-    });
+  getMine: async (): Promise<DepartureSelfService> => {
+    const response = await apiClient.get<DepartureSelfService>(`${path}/me`);
+    return response.data;
+  },
+
+  submitMine: async (answers: Record<string, unknown>): Promise<DepartureInterview> => {
+    const response = await apiClient.post<DepartureInterview>(`${path}/me`, { answers });
     return response.data;
   },
 };

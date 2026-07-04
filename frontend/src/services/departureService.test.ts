@@ -15,13 +15,20 @@ const client = vi.mocked(apiClient);
 describe('departureService', () => {
   beforeEach(() => vi.resetAllMocks());
 
-  it('creates an account-bound departure interview', async () => {
+  it('loads the survey linked to the current account', async () => {
+    client.get.mockResolvedValue({ data: { fields: [], interview: null } });
+
+    await departureService.getMine();
+
+    expect(client.get).toHaveBeenCalledWith('v1/recruitment/departures/me');
+  });
+
+  it('submits an account-bound departure interview', async () => {
     client.post.mockResolvedValue({ data: { id: 8 } });
 
-    await departureService.create(4, { departure_date: '2026-06-30' });
+    await departureService.submitMine({ departure_date: '2026-06-30' });
 
-    expect(client.post).toHaveBeenCalledWith('v1/recruitment/departures', {
-      volunteer_id: 4,
+    expect(client.post).toHaveBeenCalledWith('v1/recruitment/departures/me', {
       answers: { departure_date: '2026-06-30' },
     });
   });

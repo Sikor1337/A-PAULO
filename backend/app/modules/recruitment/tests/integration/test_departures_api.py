@@ -2,8 +2,10 @@ from datetime import datetime
 
 from sqlalchemy import select
 
+from app.modules.core_data.models import User
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.models import DepartureField
+from app.modules.security.dependencies import get_current_user
 from app.modules.security.models import UserGroup
 from app.modules.security.models.constants import CAN_MANAGE_RECRUITMENT
 
@@ -24,6 +26,26 @@ def _volunteer(db_session, suffix: str = "departure") -> Volunteer:
     return volunteer
 
 
+def _user(db_session, volunteer: Volunteer, suffix: str = "departure-user") -> User:
+    user = User(
+        username=suffix,
+        email=volunteer.email,
+        first_name="Jan",
+        last_name="Odchodzący",
+        hashed_password="not-used",
+        status="regular",
+        is_active=True,
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+def _as_user(api_client, user: User) -> None:
+    api_client.app.dependency_overrides[get_current_user] = lambda: user
+
+
 def _answers(**extra):
     return {
         "departure_date": "2026-06-30",
@@ -35,52 +57,91 @@ def _answers(**extra):
     }
 
 
-def test_departure_interview_marks_volunteer_as_former(api_client, db_session):
+def test_volunteer_submits_own_departure_interview(api_client, db_session, admin_user):
     volunteer = _volunteer(db_session)
+    user = _user(db_session, volunteer)
+    _as_user(api_client, user)
 
-    fields = api_client.get("/api/v1/recruitment/departures/fields")
-    assert fields.status_code == 200
-    assert [field["key"] for field in fields.json()][:3] == [
+    survey = api_client.get("/api/v1/recruitment/departures/me")
+    assert survey.status_code == 200
+    assert survey.json()["volunteer"]["id"] == volunteer.id
+    assert survey.json()["interview"] is None
+    assert [field["key"] for field in survey.json()["fields"]][:3] == [
         "departure_date",
         "departure_reason",
         "stay_in_contact",
     ]
 
     response = api_client.post(
-        "/api/v1/recruitment/departures",
-        json={"volunteer_id": volunteer.id, "answers": _answers()},
+        "/api/v1/recruitment/departures/me",
+        json={"answers": _answers()},
     )
 
     assert response.status_code == 201
     assert response.json()["volunteer"]["full_name"] == volunteer.full_name
     assert response.json()["stay_in_contact"] is True
+    assert response.json()["completed_by_id"] == user.id
     db_session.refresh(volunteer)
     assert volunteer.status == "Były"
     assert "Odejście 2026-06-30" in volunteer.history
 
+    mine = api_client.get("/api/v1/recruitment/departures/me")
+    assert mine.status_code == 200
+    assert mine.json()["interview"]["id"] == response.json()["id"]
+
+    _as_user(api_client, admin_user)
     listed = api_client.get("/api/v1/recruitment/departures")
     assert listed.status_code == 200
     assert listed.json()[0]["volunteer_id"] == volunteer.id
 
+    _as_user(api_client, user)
     duplicate = api_client.post(
-        "/api/v1/recruitment/departures",
-        json={"volunteer_id": volunteer.id, "answers": _answers()},
+        "/api/v1/recruitment/departures/me",
+        json={"answers": _answers()},
     )
     assert duplicate.status_code == 409
 
 
 def test_departure_interview_validates_required_answers(api_client, db_session):
     volunteer = _volunteer(db_session, "missing-answer")
+    user = _user(db_session, volunteer, "missing-answer-user")
+    _as_user(api_client, user)
 
     response = api_client.post(
-        "/api/v1/recruitment/departures",
+        "/api/v1/recruitment/departures/me",
         json={
-            "volunteer_id": volunteer.id,
             "answers": _answers(departure_reason=""),
         },
     )
 
     assert response.status_code == 422
+    db_session.refresh(volunteer)
+    assert volunteer.status == "Aktywny"
+
+
+def test_user_cannot_submit_departure_for_an_unrelated_volunteer(
+    api_client, db_session
+):
+    volunteer = _volunteer(db_session, "unrelated-volunteer")
+    user = User(
+        username="unrelated-user",
+        email="unrelated-user@example.com",
+        first_name="Inny",
+        last_name="Użytkownik",
+        hashed_password="not-used",
+        status="regular",
+        is_active=True,
+    )
+    db_session.add(user)
+    db_session.commit()
+    _as_user(api_client, user)
+
+    response = api_client.post(
+        "/api/v1/recruitment/departures/me",
+        json={"answers": _answers()},
+    )
+
+    assert response.status_code == 404
     db_session.refresh(volunteer)
     assert volunteer.status == "Aktywny"
 
@@ -191,9 +252,8 @@ def test_recruitment_viewer_cannot_change_departure_data(
     )
     assert update_response.status_code == 403
 
-    volunteer = _volunteer(db_session, "view-only")
     create_response = api_client.post(
         "/api/v1/recruitment/departures",
-        json={"volunteer_id": volunteer.id, "answers": _answers()},
+        json={"answers": _answers()},
     )
-    assert create_response.status_code == 403
+    assert create_response.status_code == 405
