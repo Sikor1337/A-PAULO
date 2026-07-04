@@ -10,6 +10,7 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=6)
     first_name: str = Field(default="", max_length=150)
     last_name: str = Field(default="", max_length=150)
+    recruitment_token: str | None = Field(default=None, min_length=32, max_length=128)
 
 
 class LoginRequest(BaseModel):

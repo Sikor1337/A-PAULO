@@ -1,13 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseApiError } from '@/lib/errors';
 import { recruitmentService } from '@/services/recruitmentService';
-import type { RecruitmentFieldDraft, RecruitmentStatus } from '@/types';
+import type {
+  OnboardingMeetingType,
+  RecruitmentFieldDraft,
+  RecruitmentStatus,
+  RecruitmentSubmission,
+} from '@/types';
 
-export function useRecruitmentForm() {
+export function useRecruitmentForm(accessToken: string) {
   return useQuery({
-    queryKey: ['recruitment-form'],
-    queryFn: recruitmentService.getForm,
+    queryKey: ['recruitment-form', accessToken],
+    queryFn: () => recruitmentService.getForm(accessToken),
     retry: false,
+  });
+}
+
+export function useRecruitmentAccessLink() {
+  return useQuery({
+    queryKey: ['recruitment-access-link'],
+    queryFn: recruitmentService.getAccessLink,
   });
 }
 
@@ -47,5 +59,27 @@ export function useRecruitmentSubmissions(status?: RecruitmentStatus) {
     },
     onError: (error) => alert(parseApiError(error, 'Nie udało się zmienić etapu rekrutacji.')),
   });
-  return { data: list.data, isLoading: list.isLoading, action };
+  const meeting = useMutation({
+    mutationFn: ({
+      id,
+      meetingType,
+      attended,
+    }: {
+      id: number;
+      meetingType: OnboardingMeetingType;
+      attended: boolean;
+    }) => recruitmentService.setOnboardingAttendance(id, meetingType, attended),
+    onSuccess: (updated) => {
+      queryClient.setQueriesData<RecruitmentSubmission[]>(
+        { queryKey: ['recruitment-submissions'] },
+        (current) => Array.isArray(current)
+          ? current.map((item) => (
+            item.id === updated.id ? updated : item
+          ))
+          : current,
+      );
+    },
+    onError: (error) => alert(parseApiError(error, 'Nie udało się zapisać obecności.')),
+  });
+  return { data: list.data, isLoading: list.isLoading, action, meeting };
 }

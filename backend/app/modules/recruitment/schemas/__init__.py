@@ -1,9 +1,11 @@
 from app.modules.recruitment.schemas.recruitment import (
     DecisionRequest,
+    OnboardingAttendanceRequest,
     RecruitmentFieldDraft,
     RecruitmentFieldResponse,
     RecruitmentFormResponse,
     RecruitmentFormUpdateRequest,
+    RecruitmentOnboardingMeetingResponse,
     RecruitmentSubmissionCreate,
     RecruitmentSubmissionResponse,
     ReturnSubmissionRequest,
@@ -11,10 +13,12 @@ from app.modules.recruitment.schemas.recruitment import (
 
 __all__ = [
     "DecisionRequest",
+    "OnboardingAttendanceRequest",
     "RecruitmentFieldDraft",
     "RecruitmentFieldResponse",
     "RecruitmentFormResponse",
     "RecruitmentFormUpdateRequest",
+    "RecruitmentOnboardingMeetingResponse",
     "RecruitmentSubmissionCreate",
     "RecruitmentSubmissionResponse",
     "ReturnSubmissionRequest",

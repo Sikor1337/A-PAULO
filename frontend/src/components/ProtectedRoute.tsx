@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useMyPermissions } from '@/hooks/usePermissions';
+import { destinationForUser } from '@/lib/recruitmentAccess';
 import type { PermissionCode, UserStatus } from '@/types';
 
 interface Props {
@@ -16,7 +17,7 @@ const ProtectedRoute = ({ allowedStatuses, requiredPermission, requiredAnyPermis
     return <Navigate to="/login" replace />;
   }
   if (allowedStatuses && !allowedStatuses.includes(user.status)) {
-    return <Navigate to={user.status === 'new_volunteer' ? '/recruitment/apply' : '/dashboard'} replace />;
+    return <Navigate to={destinationForUser(user.status)} replace />;
   }
   if (requiredPermission || requiredAnyPermission?.length) {
     return (

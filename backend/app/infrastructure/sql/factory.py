@@ -47,18 +47,18 @@ class SQLConnectionFactory:
         )
 
         if engine.dialect.name == "postgresql" and target_schema:
+            schema_sql = engine.dialect.identifier_preparer.quote(target_schema)
 
-            def _on_connect(dbapi_connection, connection_record):
-                try:
-                    # psycopg2 / pg8000: execute SQL to set search_path
-                    cursor = dbapi_connection.cursor()
-                    cursor.execute(f'SET search_path TO "{target_schema}"')
-                    cursor.close()
-                except Exception:
-                    # best-effort: don't fail engine creation
-                    pass
+            def _on_begin(connection):
+                # Supabase uses a transaction-mode connection pooler. Session-level
+                # SET executed only when a physical connection is opened can be lost
+                # between requests and make one request read another schema. Apply
+                # the schema to every transaction instead.
+                connection.exec_driver_sql(
+                    f"SET LOCAL search_path TO {schema_sql}"
+                )
 
-            event.listen(engine, "connect", _on_connect)
+            event.listen(engine, "begin", _on_begin)
 
         self._engines[database_url] = engine
         return engine

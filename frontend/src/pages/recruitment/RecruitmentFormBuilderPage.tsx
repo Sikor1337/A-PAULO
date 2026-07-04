@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import RecruitmentFieldModal from '@/features/recruitment/RecruitmentFieldModal';
-import { useRecruitmentFields } from '@/hooks/useRecruitment';
+import { useRecruitmentAccessLink, useRecruitmentFields } from '@/hooks/useRecruitment';
 import { useHasPermission } from '@/hooks/usePermissions';
 import type { RecruitmentFieldDraft, RecruitmentFieldType } from '@/types';
 
@@ -19,10 +19,13 @@ const typeLabels: Record<RecruitmentFieldType, string> = {
 const RecruitmentFormBuilderPage = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_RECRUITMENT');
   const { data = [], isLoading, save } = useRecruitmentFields();
+  const accessLink = useRecruitmentAccessLink();
   const [draft, setDraft] = useState<RecruitmentFieldDraft[] | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null | undefined>(undefined);
   const [copied, setCopied] = useState(false);
-  const applicationUrl = `${window.location.origin}/recruitment/apply`;
+  const applicationUrl = accessLink.data
+    ? `${window.location.origin}${accessLink.data}`
+    : '';
   const fields = draft ?? data;
 
   const editingField = useMemo(() => {
@@ -88,6 +91,7 @@ const RecruitmentFormBuilderPage = () => {
   };
 
   const copyLink = async () => {
+    if (!applicationUrl) return;
     await navigator.clipboard.writeText(applicationUrl);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
@@ -101,8 +105,10 @@ const RecruitmentFormBuilderPage = () => {
           To jeden stały link dla wszystkich kandydatów. Po zalogowaniu każda osoba widzi własną ankietę.
         </p>
         <div className="mt-4 flex flex-col gap-2 rounded-lg bg-white p-3 sm:flex-row sm:items-center">
-          <code className="min-w-0 flex-1 break-all text-xs text-indigo-900">{applicationUrl}</code>
-          <button type="button" onClick={copyLink} className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">
+          <code className="min-w-0 flex-1 break-all text-xs text-indigo-900">
+            {accessLink.isLoading ? 'Ładowanie linku…' : applicationUrl || 'Nie udało się pobrać linku'}
+          </code>
+          <button type="button" onClick={copyLink} disabled={!applicationUrl} className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
             {copied ? 'Skopiowano' : 'Kopiuj link'}
           </button>
         </div>

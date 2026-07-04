@@ -71,10 +71,17 @@ const FieldControl = ({ field, id, disabled, value, onChange }: FieldControlProp
   return <input id={id} type={field.field_type} required={field.required} disabled={disabled} value={String(value ?? '')} placeholder={field.placeholder} onChange={(event) => onChange(event.target.value)} className={controlClass} />;
 };
 
-const RecruitmentApplicationPage = () => {
-  const { data: form, isLoading, isError, error } = useRecruitmentForm();
+interface RecruitmentApplicationPageProps {
+  accessToken: string;
+}
+
+const RecruitmentApplicationPage = ({ accessToken }: RecruitmentApplicationPageProps) => {
+  const { data: form, isLoading, isError, error } = useRecruitmentForm(accessToken);
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
-  const submit = useMutation({ mutationFn: recruitmentService.submit });
+  const submit = useMutation({
+    mutationFn: (answers: Record<string, unknown>) =>
+      recruitmentService.submit(answers, accessToken),
+  });
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
