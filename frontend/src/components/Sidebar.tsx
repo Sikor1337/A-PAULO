@@ -39,6 +39,7 @@ const sections: SidebarSection[] = [
   {
     title: 'OPERACJE',
     items: [
+      { name: 'Kalendarz PAP', icon: 'K', path: '/pap-calendar', permission: 'CAN_VIEW_EVENTS' },
       { name: 'Wydarzenia', icon: '📅', path: '/events', permission: 'CAN_VIEW_EVENTS' },
       { name: 'Zadania', icon: '📋', path: '/tasks' },
     ],
