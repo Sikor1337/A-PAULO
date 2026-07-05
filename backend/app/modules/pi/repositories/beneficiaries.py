@@ -1,11 +1,14 @@
 """Beneficiary repository for PI domain."""
-from sqlalchemy.orm import Session
+
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
+from app.infrastructure.sql.repository import SQLRepository
 from app.modules.pi.models.beneficiary import Beneficiary
+from app.modules.pi.models.group import Group
 
 
-class BeneficiaryRepository:
+class BeneficiaryRepository(SQLRepository):
     """Repository for Beneficiary model database operations."""
 
     def __init__(self, session: Session):
@@ -13,10 +16,23 @@ class BeneficiaryRepository:
 
     def get_by_id(self, beneficiary_id: int) -> Beneficiary | None:
         """Get beneficiary by ID."""
-        return self.session.query(Beneficiary).filter(Beneficiary.id == beneficiary_id).first()
+        return (
+            self.session.query(Beneficiary)
+            .filter(Beneficiary.id == beneficiary_id)
+            .first()
+        )
+
+    def group_name(self, group_id: int) -> str | None:
+        row = self.session.query(Group.name).filter(Group.id == group_id).first()
+        return row[0] if row else None
 
     def list_all(
-        self, skip: int = 0, limit: int = 100, full_name: str = None, status: str = None, bo_enrolled: bool = None
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        full_name: str | None = None,
+        status: str | None = None,
+        bo_enrolled: bool | None = None,
     ) -> list[Beneficiary]:
         """List beneficiaries with optional filters."""
         query = self.session.query(Beneficiary)
@@ -31,7 +47,10 @@ class BeneficiaryRepository:
         return query.order_by(Beneficiary.full_name).offset(skip).limit(limit).all()
 
     def count(
-        self, full_name: str = None, status: str = None, bo_enrolled: bool = None
+        self,
+        full_name: str | None = None,
+        status: str | None = None,
+        bo_enrolled: bool | None = None,
     ) -> int:
         """Count beneficiaries with optional filters."""
         query = self.session.query(func.count(Beneficiary.id))

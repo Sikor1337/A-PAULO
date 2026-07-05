@@ -4,11 +4,12 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
+from app.infrastructure.sql.repository import SQLRepository
 from app.modules.calendar.models import CalendarEvent
 from app.modules.calendar.models.constants import ORGANIZATION_VISIBILITY
 
 
-class CalendarEventRepository:
+class CalendarEventRepository(SQLRepository):
     def __init__(self, session: Session):
         self.session = session
 

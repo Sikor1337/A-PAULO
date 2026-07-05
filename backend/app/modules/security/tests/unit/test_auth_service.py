@@ -31,7 +31,11 @@ def service(
     token_service: MagicMock,
     session: MagicMock,
 ) -> AuthService:
-    return AuthService(repo, token_service, session)
+    repo.flush = session.flush
+    repo.refresh = session.refresh
+    repo.commit = session.commit
+    repo.rollback = session.rollback
+    return AuthService(repo, token_service, MagicMock())
 
 
 def test_register_normalizes_fields_hashes_password_and_commits(

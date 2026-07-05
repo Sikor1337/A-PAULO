@@ -1,19 +1,17 @@
 """Authentication service for users."""
 
 from datetime import datetime, timedelta
-from typing import Optional
 
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.errors import AuthenticationError, ConflictError, NotFoundError
 from app.modules.core_data.models.user import User
 from app.modules.core_data.repositories.users import UserRepository
-from app.modules.security.services.permissions import PermissionService
 from app.modules.security.services.password import hash_password
+from app.modules.security.services.permissions import PermissionService
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -22,9 +20,13 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 class UserService:
     """Service for user authentication operations."""
 
-    def __init__(self, session: Session):
-        self.session = session
-        self.user_repo = UserRepository(session)
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        permissions: PermissionService,
+    ):
+        self.user_repo = user_repo
+        self.permissions = permissions
         self.settings = get_settings()
 
     def hash_password(self, password: str) -> str:
@@ -64,13 +66,13 @@ class UserService:
                 last_name=last_name,
                 status=status,
             )
-            self.session.flush()
-            self.session.refresh(user)
-            PermissionService(self.session).assign_default_group(user)
-            self.session.commit()
+            self.user_repo.flush()
+            self.user_repo.refresh(user)
+            self.permissions.assign_default_group(user)
+            self.user_repo.commit()
             return user
         except Exception:
-            self.session.rollback()
+            self.user_repo.rollback()
             raise
 
     def authenticate_user(self, username: str, password: str) -> User:
@@ -97,12 +99,11 @@ class UserService:
         expires_delta = timedelta(minutes=self.settings.access_token_expire_minutes)
         expire = datetime.utcnow() + expires_delta
         data["exp"] = expire
-        encoded_jwt = jwt.encode(
+        return jwt.encode(
             data,
             self.settings.secret_key,
             algorithm=self.settings.algorithm,
         )
-        return encoded_jwt
 
     def verify_token(self, token: str) -> int:
         """Verify JWT token and return user_id."""
@@ -117,7 +118,7 @@ class UserService:
                 raise AuthenticationError("Invalid token")
             return int(user_id)
         except JWTError:
-            raise AuthenticationError("Invalid token")
+            raise AuthenticationError("Invalid token") from None
 
     def get_current_user(self, token: str) -> User:
         """Get current user from token."""
@@ -186,13 +187,13 @@ class UserService:
                 status=status,
                 is_active=is_active,
             )
-            self.session.flush()
-            self.session.refresh(user)
-            PermissionService(self.session).assign_default_group(user)
-            self.session.commit()
+            self.user_repo.flush()
+            self.user_repo.refresh(user)
+            self.permissions.assign_default_group(user)
+            self.user_repo.commit()
             return user
         except Exception:
-            self.session.rollback()
+            self.user_repo.rollback()
             raise
 
     def update_user(self, user_id: int, **kwargs) -> User:
@@ -222,12 +223,12 @@ class UserService:
                 update_data["hashed_password"] = hash_password(password)
 
             user = self.user_repo.update(user, **update_data)
-            self.session.flush()
-            self.session.refresh(user)
-            self.session.commit()
+            self.user_repo.flush()
+            self.user_repo.refresh(user)
+            self.user_repo.commit()
             return user
         except Exception:
-            self.session.rollback()
+            self.user_repo.rollback()
             raise
 
     def delete_user(self, user_id: int, current_user_id: int | None = None) -> None:
@@ -241,7 +242,7 @@ class UserService:
         try:
             user = self.get_user_by_id(user_id)
             self.user_repo.delete(user)
-            self.session.commit()
+            self.user_repo.commit()
         except Exception:
-            self.session.rollback()
+            self.user_repo.rollback()
             raise

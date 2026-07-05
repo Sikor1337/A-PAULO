@@ -8,6 +8,12 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_db
 from app.core.errors import register_error_handlers
 from app.modules.pi.api.volunteers import router as volunteers_router
+from app.modules.pi.repositories import (
+    BeneficiaryRepository,
+    FunctionRepository,
+    GroupRepository,
+    VolunteerRepository,
+)
 from app.modules.pi.services.beneficiaries import BeneficiaryService
 from app.modules.pi.services.functions import FunctionService
 from app.modules.pi.services.groups import GroupService
@@ -17,10 +23,10 @@ from app.modules.pi.services.volunteers import VolunteerService
 def test_services_create_group_assignments_and_enriched_volunteer(
     db_session: Session,
 ) -> None:
-    function_service = FunctionService(db_session)
-    volunteer_service = VolunteerService(db_session)
-    beneficiary_service = BeneficiaryService(db_session)
-    group_service = GroupService(db_session)
+    function_service = FunctionService(FunctionRepository(db_session))
+    volunteer_service = VolunteerService(VolunteerRepository(db_session))
+    beneficiary_service = BeneficiaryService(BeneficiaryRepository(db_session))
+    group_service = GroupService(GroupRepository(db_session))
 
     function = function_service.create_function(name="Odwiedziny")
     volunteer = volunteer_service.create_volunteer(
@@ -149,9 +155,7 @@ def test_pi_api_exposes_resource_flow(api_client) -> None:
     assert assignment["beneficiary_id"] == beneficiary["id"]
     assert assignment["volunteer_id"] == volunteer["id"]
 
-    volunteer_detail_response = api_client.get(
-        f"/api/v1/volunteers/{volunteer['id']}"
-    )
+    volunteer_detail_response = api_client.get(f"/api/v1/volunteers/{volunteer['id']}")
     assert volunteer_detail_response.status_code == 200
     volunteer_detail = volunteer_detail_response.json()
     assert volunteer_detail["assigned_groups"] == "Grupa Centrum"

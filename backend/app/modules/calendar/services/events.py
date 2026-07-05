@@ -2,8 +2,6 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy.orm import Session
-
 from app.core.errors import NotFoundError, ValidationException
 from app.modules.calendar.models import CalendarEvent
 from app.modules.calendar.models.constants import (
@@ -21,11 +19,15 @@ from app.modules.security.services.permissions import PermissionService
 
 
 class CalendarEventService:
-    def __init__(self, session: Session):
-        self.session = session
-        self.events = CalendarEventRepository(session)
-        self.audit = CalendarAuditRepository(session)
-        self.permissions = PermissionService(session)
+    def __init__(
+        self,
+        events: CalendarEventRepository,
+        audit: CalendarAuditRepository,
+        permissions: PermissionService,
+    ):
+        self.events = events
+        self.audit = audit
+        self.permissions = permissions
 
     def _can_view(self, event: CalendarEvent, user: User) -> bool:
         return event.visibility != ADMIN_VISIBILITY or self.permissions.has_permission(
@@ -51,18 +53,18 @@ class CalendarEventService:
     def create_event(self, data: EventCreateRequest, actor: User) -> CalendarEvent:
         try:
             event = self.events.create(author_id=actor.id, **data.model_dump())
-            self.session.flush()
+            self.events.flush()
             self.audit.add(
                 actor_id=actor.id,
                 event_id=event.id,
                 action="created",
                 entity_type="event",
             )
-            self.session.commit()
-            self.session.refresh(event)
+            self.events.commit()
+            self.events.refresh(event)
             return event
         except Exception:
-            self.session.rollback()
+            self.events.rollback()
             raise
 
     def update_event(
@@ -102,11 +104,11 @@ class CalendarEventService:
                 entity_type="event",
                 changes=changes,
             )
-            self.session.commit()
-            self.session.refresh(event)
+            self.events.commit()
+            self.events.refresh(event)
             return event
         except Exception:
-            self.session.rollback()
+            self.events.rollback()
             raise
 
     def cancel_event(self, event_id: int, actor: User) -> CalendarEvent:
@@ -126,11 +128,11 @@ class CalendarEventService:
                 action="cancelled",
                 entity_type="event",
             )
-            self.session.commit()
-            self.session.refresh(event)
+            self.events.commit()
+            self.events.refresh(event)
             return event
         except Exception:
-            self.session.rollback()
+            self.events.rollback()
             raise
 
     def delete_event(self, event_id: int, actor: User) -> None:
@@ -144,9 +146,9 @@ class CalendarEventService:
                 changes={"uid": event.uid, "title": event.title},
             )
             self.events.delete(event)
-            self.session.commit()
+            self.events.commit()
         except Exception:
-            self.session.rollback()
+            self.events.rollback()
             raise
 
     @staticmethod

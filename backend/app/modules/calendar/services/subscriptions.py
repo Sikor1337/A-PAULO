@@ -4,8 +4,6 @@ import hashlib
 import secrets
 from datetime import UTC, datetime
 
-from sqlalchemy.orm import Session
-
 from app.core.errors import NotFoundError
 from app.modules.calendar.models import CalendarFeedToken
 from app.modules.calendar.models.constants import PUBLISHED_STATUS
@@ -24,12 +22,17 @@ def hash_feed_token(token: str) -> str:
 
 
 class CalendarSubscriptionService:
-    def __init__(self, session: Session):
-        self.session = session
-        self.tokens = CalendarFeedTokenRepository(session)
-        self.events = CalendarEventRepository(session)
-        self.audit = CalendarAuditRepository(session)
-        self.permissions = PermissionService(session)
+    def __init__(
+        self,
+        tokens: CalendarFeedTokenRepository,
+        events: CalendarEventRepository,
+        audit: CalendarAuditRepository,
+        permissions: PermissionService,
+    ):
+        self.tokens = tokens
+        self.events = events
+        self.audit = audit
+        self.permissions = permissions
 
     def status(self, user: User) -> CalendarFeedToken | None:
         token = self.tokens.get_by_user_id(user.id)
@@ -52,11 +55,11 @@ class CalendarSubscriptionService:
                 action="generated",
                 entity_type="feed_token",
             )
-            self.session.commit()
-            self.session.refresh(record)
+            self.tokens.commit()
+            self.tokens.refresh(record)
             return plain_token, record
         except Exception:
-            self.session.rollback()
+            self.tokens.rollback()
             raise
 
     def revoke(self, user: User) -> None:
@@ -70,9 +73,9 @@ class CalendarSubscriptionService:
                     action="revoked",
                     entity_type="feed_token",
                 )
-                self.session.commit()
+                self.tokens.commit()
         except Exception:
-            self.session.rollback()
+            self.tokens.rollback()
             raise
 
     def events_for_token(self, plain_token: str):

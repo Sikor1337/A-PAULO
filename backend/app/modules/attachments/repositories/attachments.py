@@ -6,7 +6,12 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.core.constants import BO_CARD_CONTEXT, BOCardSortKey, SortDirection
+from app.infrastructure.sql.repository import SQLRepository
 from app.modules.attachments.models import Attachment
+from app.modules.attachments.schemas import (
+    BOCardArchiveQuery,
+    BOCardAttachmentListQuery,
+)
 from app.modules.pi.models.beneficiary import Beneficiary
 from app.modules.pi.models.group import Group
 from app.modules.pi.models.volunteer import Volunteer
@@ -14,7 +19,7 @@ from app.modules.pi.models.volunteer import Volunteer
 BOCardOverviewRow = tuple[Attachment, str | None, str | None, str | None]
 
 
-class AttachmentRepository:
+class AttachmentRepository(SQLRepository):
     """Repository for attachment metadata."""
 
     def __init__(self, session: Session):
@@ -26,67 +31,27 @@ class AttachmentRepository:
 
     def list_bo_cards_overview(
         self,
-        *,
-        group_id: int | None = None,
-        beneficiary_id: int | None = None,
-        volunteer_id: int | None = None,
-        period: str | None = None,
-        period_from: str | None = None,
-        period_to: str | None = None,
-        search: str | None = None,
-        has_comment: bool | None = None,
-        sort_by: BOCardSortKey = "created_at",
-        sort_direction: SortDirection = "desc",
-        skip: int = 0,
-        limit: int = 100,
+        filters: BOCardAttachmentListQuery,
     ) -> tuple[list[BOCardOverviewRow], int]:
         """List BO-card metadata from all groups with joined display names."""
         query = self._bo_cards_overview_query()
-        query = self._apply_bo_card_filters(
-            query,
-            group_id=group_id,
-            beneficiary_id=beneficiary_id,
-            volunteer_id=volunteer_id,
-            period=period,
-            period_from=period_from,
-            period_to=period_to,
-            search=search,
-            has_comment=has_comment,
-        )
+        query = self._apply_bo_card_filters(query, filters)
         total = (
             query.with_entities(func.count(Attachment.id)).order_by(None).scalar() or 0
         )
         ordered_query = query.order_by(
-            self._sort_expression(sort_by, sort_direction),
+            self._sort_expression(filters.sort_by, filters.sort_direction),
             Attachment.id.desc(),
         )
-        return ordered_query.offset(skip).limit(limit).all(), total
+        return ordered_query.offset(filters.skip).limit(filters.limit).all(), total
 
     def list_bo_cards_for_archive(
         self,
-        *,
-        group_id: int | None = None,
-        beneficiary_id: int | None = None,
-        volunteer_id: int | None = None,
-        period: str | None = None,
-        period_from: str | None = None,
-        period_to: str | None = None,
-        search: str | None = None,
-        has_comment: bool | None = None,
+        filters: BOCardArchiveQuery,
     ) -> Iterable[BOCardOverviewRow]:
         """Stream filtered BO-card rows for archive generation."""
         query = self._bo_cards_overview_query()
-        query = self._apply_bo_card_filters(
-            query,
-            group_id=group_id,
-            beneficiary_id=beneficiary_id,
-            volunteer_id=volunteer_id,
-            period=period,
-            period_from=period_from,
-            period_to=period_to,
-            search=search,
-            has_comment=has_comment,
-        )
+        query = self._apply_bo_card_filters(query, filters)
         return query.order_by(
             Attachment.period.desc(),
             func.lower(Group.name).asc(),
@@ -128,34 +93,26 @@ class AttachmentRepository:
     def _apply_bo_card_filters(
         self,
         query,
-        *,
-        group_id: int | None,
-        beneficiary_id: int | None,
-        volunteer_id: int | None,
-        period: str | None,
-        period_from: str | None,
-        period_to: str | None,
-        search: str | None,
-        has_comment: bool | None,
+        filters: BOCardArchiveQuery | BOCardAttachmentListQuery,
     ):
-        if group_id is not None:
-            query = query.filter(Attachment.group_id == group_id)
-        if beneficiary_id is not None:
-            query = query.filter(Attachment.beneficiary_id == beneficiary_id)
-        if volunteer_id is not None:
-            query = query.filter(Attachment.volunteer_id == volunteer_id)
-        if period is not None:
-            query = query.filter(Attachment.period == period)
-        if period_from is not None:
-            query = query.filter(Attachment.period >= period_from)
-        if period_to is not None:
-            query = query.filter(Attachment.period <= period_to)
-        if has_comment is True:
+        if filters.group_id is not None:
+            query = query.filter(Attachment.group_id == filters.group_id)
+        if filters.beneficiary_id is not None:
+            query = query.filter(Attachment.beneficiary_id == filters.beneficiary_id)
+        if filters.volunteer_id is not None:
+            query = query.filter(Attachment.volunteer_id == filters.volunteer_id)
+        if filters.period is not None:
+            query = query.filter(Attachment.period == filters.period)
+        if filters.period_from is not None:
+            query = query.filter(Attachment.period >= filters.period_from)
+        if filters.period_to is not None:
+            query = query.filter(Attachment.period <= filters.period_to)
+        if filters.has_comment is True:
             query = query.filter(Attachment.description != "")
-        elif has_comment is False:
+        elif filters.has_comment is False:
             query = query.filter(Attachment.description == "")
-        if search:
-            pattern = f"%{search.strip()}%"
+        if filters.search:
+            pattern = f"%{filters.search.strip()}%"
             query = query.filter(
                 or_(
                     Attachment.display_name.ilike(pattern),

@@ -3,6 +3,7 @@
 from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session
 
+from app.infrastructure.sql.repository import SQLRepository
 from app.modules.security.models import (
     Permission,
     UserGroup,
@@ -10,7 +11,7 @@ from app.modules.security.models import (
 )
 
 
-class PermissionRepository:
+class PermissionRepository(SQLRepository):
     def __init__(self, session: Session):
         self.session = session
 

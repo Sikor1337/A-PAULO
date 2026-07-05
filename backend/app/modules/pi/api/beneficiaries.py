@@ -1,14 +1,13 @@
 """Beneficiaries API endpoints for PI domain."""
-from typing import Optional
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_db
+from fastapi import APIRouter, Depends, Query
+
 from app.modules.core_data.models import User
+from app.modules.pi.dependencies import get_beneficiary_service
 from app.modules.pi.schemas.beneficiaries import (
     BeneficiaryCreateRequest,
-    BeneficiaryUpdateRequest,
     BeneficiaryResponse,
+    BeneficiaryUpdateRequest,
 )
 from app.modules.pi.services.beneficiaries import BeneficiaryService
 from app.modules.security.dependencies import require_permission
@@ -24,14 +23,13 @@ router = APIRouter(prefix="/beneficiaries", tags=["beneficiaries"])
 def list_beneficiaries(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    full_name: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    bo_enrolled: Optional[bool] = Query(None),
-    session: Session = Depends(get_db),
+    full_name: str | None = Query(None),
+    status: str | None = Query(None),
+    bo_enrolled: bool | None = Query(None),
+    service: BeneficiaryService = Depends(get_beneficiary_service),
     _user: User = Depends(require_permission(CAN_VIEW_BENEFICIARIES)),
 ):
     """List all beneficiaries with optional filters."""
-    service = BeneficiaryService(session)
     beneficiaries, _ = service.list_beneficiaries(
         skip=skip,
         limit=limit,
@@ -45,49 +43,42 @@ def list_beneficiaries(
 @router.post("", response_model=BeneficiaryResponse)
 def create_beneficiary(
     request: BeneficiaryCreateRequest,
-    session: Session = Depends(get_db),
+    service: BeneficiaryService = Depends(get_beneficiary_service),
     _user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
 ):
     """Create new beneficiary."""
-    service = BeneficiaryService(session)
-    beneficiary = service.create_beneficiary(**request.model_dump())
-    return beneficiary
+    return service.create_beneficiary(**request.model_dump())
 
 
 @router.get("/{beneficiary_id}", response_model=BeneficiaryResponse)
 def get_beneficiary(
     beneficiary_id: int,
-    session: Session = Depends(get_db),
+    service: BeneficiaryService = Depends(get_beneficiary_service),
     _user: User = Depends(require_permission(CAN_VIEW_BENEFICIARIES)),
 ):
     """Get beneficiary by ID."""
-    service = BeneficiaryService(session)
-    beneficiary = service.get_beneficiary_by_id(beneficiary_id)
-    return beneficiary
+    return service.get_beneficiary_by_id(beneficiary_id)
 
 
 @router.patch("/{beneficiary_id}", response_model=BeneficiaryResponse)
 def update_beneficiary(
     beneficiary_id: int,
     request: BeneficiaryUpdateRequest,
-    session: Session = Depends(get_db),
+    service: BeneficiaryService = Depends(get_beneficiary_service),
     _user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
 ):
     """Update beneficiary."""
-    service = BeneficiaryService(session)
     # Only update provided fields
     update_data = request.model_dump(exclude_unset=True)
-    beneficiary = service.update_beneficiary(beneficiary_id, **update_data)
-    return beneficiary
+    return service.update_beneficiary(beneficiary_id, **update_data)
 
 
 @router.delete("/{beneficiary_id}")
 def delete_beneficiary(
     beneficiary_id: int,
-    session: Session = Depends(get_db),
+    service: BeneficiaryService = Depends(get_beneficiary_service),
     _user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
 ):
     """Delete beneficiary."""
-    service = BeneficiaryService(session)
     service.delete_beneficiary(beneficiary_id)
     return {"message": "Beneficiary deleted successfully"}

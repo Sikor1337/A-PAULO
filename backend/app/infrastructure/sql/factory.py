@@ -54,9 +54,7 @@ class SQLConnectionFactory:
                 # SET executed only when a physical connection is opened can be lost
                 # between requests and make one request read another schema. Apply
                 # the schema to every transaction instead.
-                connection.exec_driver_sql(
-                    f"SET LOCAL search_path TO {schema_sql}"
-                )
+                connection.exec_driver_sql(f"SET LOCAL search_path TO {schema_sql}")
 
             event.listen(engine, "begin", _on_begin)
 
@@ -70,7 +68,7 @@ class SQLConnectionFactory:
         autoflush: bool = False,
         use_scoped_session: bool = True,
     ) -> sessionmaker | scoped_session:
-        """Create session factory bound to the given engine."""
+        """Create a request-safe session factory bound to the engine."""
         factory = sessionmaker(
             autocommit=autocommit,
             autoflush=autoflush,

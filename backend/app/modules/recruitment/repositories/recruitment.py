@@ -3,11 +3,12 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload, selectinload
 
+from app.infrastructure.sql.repository import SQLRepository
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
 
 
-class RecruitmentRepository:
+class RecruitmentRepository(SQLRepository):
     def __init__(self, session: Session):
         self.session = session
 

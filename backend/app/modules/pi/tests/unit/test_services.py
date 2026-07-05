@@ -17,8 +17,11 @@ def session() -> MagicMock:
 
 def build_service(service_cls, session: MagicMock, repo: MagicMock):
     service = service_cls.__new__(service_cls)
-    service.session = session
     service.repo = repo
+    repo.flush = session.flush
+    repo.refresh = session.refresh
+    repo.commit = session.commit
+    repo.rollback = session.rollback
     return service
 
 
