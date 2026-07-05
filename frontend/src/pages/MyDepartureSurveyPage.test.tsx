@@ -1,13 +1,21 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import { useMyDepartureSurvey } from '@/hooks/useDepartures';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useDepartureFields, useMyDepartureSurvey } from '@/hooks/useDepartures';
 import MyDepartureSurveyPage from './MyDepartureSurveyPage';
+
+const authState = vi.hoisted(() => ({ status: 'regular' }));
 
 vi.mock('@/components/layout/PageShell', () => ({
   default: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
 }));
 vi.mock('@/hooks/useDepartures', () => ({
+  useDepartureFields: vi.fn(),
   useMyDepartureSurvey: vi.fn(),
+}));
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: (selector: (state: object) => unknown) => selector({
+    user: { status: authState.status },
+  }),
 }));
 
 const field = {
@@ -42,6 +50,17 @@ const mockSurvey = (interview: object | null = null) => {
 };
 
 describe('MyDepartureSurveyPage', () => {
+  beforeEach(() => {
+    authState.status = 'regular';
+    vi.mocked(useDepartureFields).mockReturnValue({
+      data: [field],
+      isLoading: false,
+      isError: false,
+      error: null,
+      save: { mutate: vi.fn() },
+    } as unknown as ReturnType<typeof useDepartureFields>);
+  });
+
   it('lets the volunteer submit their own answers', () => {
     const mutate = mockSurvey();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
@@ -74,5 +93,18 @@ describe('MyDepartureSurveyPage', () => {
     expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
       departure_reason: 'Poprawiony powód',
     }));
+  });
+
+  it('shows administrators a read-only preview without loading a personal survey', () => {
+    authState.status = 'admin';
+    mockSurvey();
+
+    render(<MyDepartureSurveyPage />);
+
+    expect(useMyDepartureSurvey).toHaveBeenCalledWith(false);
+    expect(useDepartureFields).toHaveBeenCalledWith(true);
+    expect(screen.getByText(/Tryb podglądu administratora/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Dlaczego odchodzisz/)).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /Wyślij ankietę/ })).not.toBeInTheDocument();
   });
 });

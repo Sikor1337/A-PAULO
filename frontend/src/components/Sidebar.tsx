@@ -42,7 +42,7 @@ const sections: SidebarSection[] = [
     items: [
       { name: 'Wydarzenia', icon: '📅', path: '/events', permission: 'CAN_VIEW_EVENTS' },
       { name: 'Zadania', icon: '📋', path: '/tasks' },
-      { name: 'Ankieta odejścia', icon: 'A', path: '/departure-survey', statuses: ['regular'] },
+      { name: 'Ankieta odejścia', icon: 'A', path: '/departure-survey', statuses: ['regular', 'admin'] },
     ],
   },
   {

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import PageShell from '@/components/layout/PageShell';
-import { useMyDepartureSurvey } from '@/hooks/useDepartures';
+import { useDepartureFields, useMyDepartureSurvey } from '@/hooks/useDepartures';
 import { parseApiError } from '@/lib/errors';
+import { useAuthStore } from '@/stores/authStore';
 import type { DepartureAnswer, DepartureField } from '@/types';
 
 const inputClass = 'mt-1 min-h-11 w-full rounded-lg border border-gray-200 px-3 outline-none focus:border-indigo-500';
@@ -89,14 +90,23 @@ const FieldControl = ({ field, value, onChange }: FieldControlProps) => {
 };
 
 const MyDepartureSurveyPage = () => {
-  const survey = useMyDepartureSurvey();
+  const user = useAuthStore((state) => state.user);
+  const isAdminPreview = user?.status === 'admin';
+  const survey = useMyDepartureSurvey(!isAdminPreview);
+  const fieldsPreview = useDepartureFields(isAdminPreview);
   const [draftAnswers, setDraftAnswers] = useState<Record<string, unknown> | null>(null);
   const interview = survey.data?.interview;
-  const formFields = interview?.answers ?? survey.data?.fields ?? [];
+  const formFields = isAdminPreview
+    ? fieldsPreview.data ?? []
+    : interview?.answers ?? survey.data?.fields ?? [];
   const savedAnswers = interview
     ? Object.fromEntries(interview.answers.map((answer) => [answer.key, answer.value]))
     : { departure_date: today() };
   const answers = draftAnswers ?? savedAnswers;
+  const isLoading = isAdminPreview ? fieldsPreview.isLoading : survey.isLoading;
+  const isError = isAdminPreview ? fieldsPreview.isError : survey.isError;
+  const error = isAdminPreview ? fieldsPreview.error : survey.error;
+  const hasData = isAdminPreview ? Boolean(fieldsPreview.data) : Boolean(survey.data);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -107,58 +117,74 @@ const MyDepartureSurveyPage = () => {
   return (
     <PageShell cardClassName="mx-auto min-h-[calc(100dvh-88px)] max-w-3xl rounded-xl bg-white p-4 shadow-lg sm:p-8 lg:min-h-[calc(100dvh-48px)]">
       <header className="mb-8 border-b pb-5">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600">Moje konto</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600">
+          {isAdminPreview ? 'Panel administratora' : 'Moje konto'}
+        </p>
         <h1 className="mt-2 text-2xl font-bold text-gray-900">Ankieta odejścia</h1>
-        <p className="mt-2 text-sm text-gray-500">Wypełnij ankietę przed zakończeniem wolontariatu.</p>
+        <p className="mt-2 text-sm text-gray-500">
+          {isAdminPreview
+            ? 'Podgląd formularza widocznego dla wolontariusza.'
+            : 'Wypełnij ankietę przed zakończeniem wolontariatu.'}
+        </p>
       </header>
 
-      {survey.isLoading ? (
+      {isLoading ? (
         <p className="py-12 text-center text-gray-500">Ładowanie ankiety…</p>
-      ) : survey.isError ? (
+      ) : isError ? (
         <p className="rounded-xl bg-rose-50 p-4 text-rose-700">
-          {parseApiError(survey.error, 'Nie udało się pobrać ankiety odejścia.')}
+          {parseApiError(error, 'Nie udało się pobrać ankiety odejścia.')}
         </p>
-      ) : survey.data ? (
+      ) : hasData ? (
         <form onSubmit={submit} className="space-y-6">
-          <div className="rounded-xl bg-indigo-50 p-4 text-sm text-indigo-900">
-            Ankietę wypełnia: <strong>{survey.data.volunteer.full_name}</strong>
-          </div>
-          {interview && (
+          {isAdminPreview ? (
+            <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
+              Tryb podglądu administratora. Odpowiedzi nie zostaną zapisane.
+            </div>
+          ) : survey.data ? (
+            <div className="rounded-xl bg-indigo-50 p-4 text-sm text-indigo-900">
+              Ankietę wypełnia: <strong>{survey.data.volunteer.full_name}</strong>
+            </div>
+          ) : null}
+          {!isAdminPreview && interview && (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
               Ankieta została wysłana. Możesz nadal poprawiać odpowiedzi.
             </div>
           )}
-          {formFields.map((field) => (
-            <label key={field.key} className="block text-sm font-semibold text-gray-700">
-              <span>
-                {field.label} {field.required && <span className="text-rose-600">*</span>}
-              </span>
-              <FieldControl
-                field={field}
-                value={answers[field.key]}
-                onChange={(value) => setDraftAnswers((current) => ({
-                  ...(current ?? answers),
-                  [field.key]: value,
-                }))}
-              />
-            </label>
-          ))}
-          {survey.save.isError && (
+          <fieldset disabled={isAdminPreview} className="space-y-6 disabled:opacity-75">
+            {formFields.map((field) => (
+              <label key={field.key} className="block text-sm font-semibold text-gray-700">
+                <span>
+                  {field.label} {field.required && <span className="text-rose-600">*</span>}
+                </span>
+                <FieldControl
+                  field={field}
+                  value={answers[field.key]}
+                  onChange={(value) => setDraftAnswers((current) => ({
+                    ...(current ?? answers),
+                    [field.key]: value,
+                  }))}
+                />
+              </label>
+            ))}
+          </fieldset>
+          {!isAdminPreview && survey.save.isError && (
             <p className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">
               {parseApiError(survey.save.error, 'Nie udało się zapisać ankiety odejścia.')}
             </p>
           )}
-          <div className="flex justify-end border-t pt-5">
-            <button
-              type="submit"
-              disabled={survey.save.isPending}
-              className="min-h-11 rounded-lg bg-indigo-600 px-6 py-2 font-bold text-white disabled:opacity-50"
-            >
-              {survey.save.isPending
-                ? 'Zapisywanie…'
-                : interview ? 'Zapisz zmiany' : 'Wyślij ankietę'}
-            </button>
-          </div>
+          {!isAdminPreview && (
+            <div className="flex justify-end border-t pt-5">
+              <button
+                type="submit"
+                disabled={survey.save.isPending}
+                className="min-h-11 rounded-lg bg-indigo-600 px-6 py-2 font-bold text-white disabled:opacity-50"
+              >
+                {survey.save.isPending
+                  ? 'Zapisywanie…'
+                  : interview ? 'Zapisz zmiany' : 'Wyślij ankietę'}
+              </button>
+            </div>
+          )}
         </form>
       ) : null}
     </PageShell>

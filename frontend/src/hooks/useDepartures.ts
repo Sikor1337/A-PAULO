@@ -2,11 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { departureService } from '@/services/departureService';
 import type { DepartureFieldDraft, DepartureSelfService } from '@/types';
 
-export const useDepartureFields = () => {
+export const useDepartureFields = (enabled = true) => {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ['departure-fields'],
     queryFn: departureService.getFields,
+    enabled,
   });
   const save = useMutation({
     mutationFn: (fields: DepartureFieldDraft[]) => departureService.saveFields(fields),
@@ -22,12 +23,13 @@ export const useDepartureInterviews = () => useQuery({
   queryFn: departureService.getAll,
 });
 
-export const useMyDepartureSurvey = () => {
+export const useMyDepartureSurvey = (enabled = true) => {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ['my-departure-survey'],
     queryFn: departureService.getMine,
     retry: false,
+    enabled,
   });
   const save = useMutation({
     mutationFn: (answers: Record<string, unknown>) => (
