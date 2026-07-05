@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSecurityGroups } from '@/hooks/usePermissions';
 import SecurityGroupsPanel from './SecurityGroupsPanel';
 
+vi.mock('@/hooks/useUnsavedChanges', () => ({
+  useUnsavedChanges: () => () => true,
+}));
+
 vi.mock('@/hooks/usePermissions', () => ({
   useSecurityGroups: vi.fn(),
 }));

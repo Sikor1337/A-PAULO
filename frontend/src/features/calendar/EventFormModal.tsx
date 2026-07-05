@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import Modal from '@/components/ui/Modal';
 import type { CalendarEvent, CalendarEventInput, CalendarEventStatus, CalendarEventVisibility } from '@/types';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 interface Props {
   event: CalendarEvent | null;
@@ -50,9 +51,13 @@ const defaults = (event: CalendarEvent | null, initialDate?: Date): FormValues =
 };
 
 const EventFormModal = ({ event, initialDate, isPending, onClose, onSave }: Props) => {
-  const { control, register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
+  const { control, register, handleSubmit, setValue, formState: { errors, isDirty } } = useForm<FormValues>({
     defaultValues: defaults(event, initialDate),
   });
+  const confirmDiscard = useUnsavedChanges(isDirty && !isPending);
+  const close = () => {
+    if (confirmDiscard()) onClose();
+  };
   const isAllDay = useWatch({ control, name: 'isAllDay' });
   const recurrenceRule = useWatch({ control, name: 'recurrenceRule' });
 
@@ -93,7 +98,7 @@ const EventFormModal = ({ event, initialDate, isPending, onClose, onSave }: Prop
 
   const inputClass = 'mt-1 h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-indigo-500';
   return (
-    <Modal onClose={onClose} maxWidth="max-w-2xl">
+    <Modal onClose={close} maxWidth="max-w-2xl">
       <form onSubmit={submit}>
         <h2 className="text-xl font-bold text-gray-900">{event ? 'Edytuj wydarzenie' : 'Nowe wydarzenie'}</h2>
         <div className="mt-5 space-y-4">
@@ -170,7 +175,7 @@ const EventFormModal = ({ event, initialDate, isPending, onClose, onSave }: Prop
           </div>
         </div>
         <div className="mt-6 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Anuluj</button>
+          <button type="button" onClick={close} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Anuluj</button>
           <button disabled={isPending} className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-bold text-white disabled:opacity-50">
             {isPending ? 'Zapisywanie…' : 'Zapisz'}
           </button>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
 import type { RecruitmentFieldDraft, RecruitmentFieldType } from '@/types';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 interface Props {
   field: RecruitmentFieldDraft | null;
@@ -29,6 +30,15 @@ const RecruitmentFieldModal = ({ field, onClose, onSave, excludedTypes = [], sys
   const [placeholder, setPlaceholder] = useState(field?.placeholder ?? '');
   const [optionsText, setOptionsText] = useState(field?.options.join('\n') ?? '');
   const hasOptions = fieldType === 'select' || fieldType === 'radio' || fieldType === 'multiselect';
+  const isDirty = label !== (field?.label ?? '')
+    || fieldType !== (field?.field_type ?? 'text')
+    || required !== (field?.required ?? false)
+    || placeholder !== (field?.placeholder ?? '')
+    || optionsText !== (field?.options.join('\n') ?? '');
+  const confirmDiscard = useUnsavedChanges(isDirty);
+  const close = () => {
+    if (confirmDiscard()) onClose();
+  };
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -47,7 +57,7 @@ const RecruitmentFieldModal = ({ field, onClose, onSave, excludedTypes = [], sys
   };
 
   return (
-    <Modal onClose={onClose} maxWidth="max-w-xl">
+    <Modal onClose={close} maxWidth="max-w-xl">
       <form onSubmit={submit} className="space-y-5">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Kreator formularza</p>
@@ -116,7 +126,7 @@ const RecruitmentFieldModal = ({ field, onClose, onSave, excludedTypes = [], sys
         )}
 
         <div className="flex justify-end gap-3 border-t pt-4">
-          <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 font-semibold text-gray-500">Anuluj</button>
+          <button type="button" onClick={close} className="rounded-lg px-4 py-2 font-semibold text-gray-500">Anuluj</button>
           <button className="rounded-lg bg-indigo-600 px-5 py-2 font-bold text-white">
             Zastosuj zmianę
           </button>

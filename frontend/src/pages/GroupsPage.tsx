@@ -5,6 +5,7 @@ import { useGroups, useGroupDetail } from '@/hooks/useGroups';
 import { useVolunteerList } from '@/hooks/useVolunteers';
 import { useBeneficiaryList } from '@/hooks/useBeneficiaries';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useBOCardAttachmentActions, useBOCardAttachments } from '@/hooks/useAttachments';
 import { attachmentService, BO_CARD_ACCEPT, BO_CARD_MAX_SIZE_BYTES, BO_CARD_SUPPORTED_LABEL } from '@/services/attachmentService';
 import { volunteerDetailFields } from '@/features/volunteers/volunteerDetail';
@@ -61,6 +62,7 @@ const GroupsPage: React.FC = () => {
   const [previousGroupId, setPreviousGroupId] = useState<number | null>(null);
   const [showKartyBO, setShowKartyBO] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
 
   const [detailBeneficiary, setDetailBeneficiary] = useState<Beneficiary | null>(null);
   const [detailVolunteer, setDetailVolunteer] = useState<Volunteer | null>(null);
@@ -79,6 +81,7 @@ const GroupsPage: React.FC = () => {
   const { data: groupDetail } = useGroupDetail(selectedGroupId);
   const { data: boCardAttachments = [], isFetching: isFetchingBOCards } = useBOCardAttachments(selectedGroupId, showKartyBO);
   const { uploadBOCard, updateAttachment, deleteAttachment } = useBOCardAttachmentActions(selectedGroupId);
+  const confirmDiscard = useUnsavedChanges(formDirty && !saveGroup.isPending);
 
   const isNewGroup = selectedGroupId === null;
 
@@ -117,6 +120,7 @@ const GroupsPage: React.FC = () => {
   if (selectedGroupId !== prevSelectedGroupId) {
     setPrevSelectedGroupId(selectedGroupId);
     setIsEditing(false);
+    setFormDirty(false);
     setShowKartyBO(false);
   }
 
@@ -127,6 +131,7 @@ const GroupsPage: React.FC = () => {
     setFormName(groupDetail.name);
     setFormLeader(groupDetail.leader || '');
     setBenRows(buildRowsFromDetail(groupDetail));
+    setFormDirty(false);
   }
 
   // Clear form when switching into "new group" mode
@@ -137,6 +142,7 @@ const GroupsPage: React.FC = () => {
       setFormName('');
       setFormLeader('');
       setBenRows([]);
+      setFormDirty(false);
     }
   }
 
@@ -148,10 +154,12 @@ const GroupsPage: React.FC = () => {
   };
 
   const cancelNewGroup = () => {
+    if (!confirmDiscard()) return;
     setShowKartyBO(false);
     setIsEditing(false);
     setSelectedGroupId(previousGroupId ?? groups?.[0]?.id ?? null);
     setPreviousGroupId(null);
+    setFormDirty(false);
   };
 
   const enterEditMode = () => {
@@ -162,6 +170,7 @@ const GroupsPage: React.FC = () => {
     }
     setShowKartyBO(false);
     setIsEditing(true);
+    setFormDirty(false);
   };
 
   const handleDeleteGroup = () => {
@@ -172,6 +181,7 @@ const GroupsPage: React.FC = () => {
         onSuccess: () => {
           setPreviousGroupId(null);
           setIsEditing(false);
+          setFormDirty(false);
           setShowKartyBO(false);
           setSelectedGroupId(groups?.find((g) => g.id !== selectedGroupId)?.id ?? null);
         },
@@ -200,6 +210,7 @@ const GroupsPage: React.FC = () => {
         onSuccess: (saved) => {
           setPreviousGroupId(null);
           setIsEditing(false);
+          setFormDirty(false);
           setShowKartyBO(false);
           if (saved?.id) setSelectedGroupId(saved.id);
         },
@@ -207,10 +218,13 @@ const GroupsPage: React.FC = () => {
     );
   };
 
-  const addVolunteer = (benId: string) =>
+  const addVolunteer = (benId: string) => {
+    setFormDirty(true);
     setBenRows((prev) => prev.map((r) => (r.localId === benId ? { ...r, volunteers: [...r.volunteers, emptyVolunteer()] } : r)));
+  };
 
-  const removeVolunteer = (benId: string, volId: string) =>
+  const removeVolunteer = (benId: string, volId: string) => {
+    setFormDirty(true);
     setBenRows((prev) =>
       prev.map((r) =>
         r.localId === benId
@@ -218,17 +232,24 @@ const GroupsPage: React.FC = () => {
           : r,
       ),
     );
+  };
 
-  const removeBenRow = (benId: string) => setBenRows((prev) => prev.filter((r) => r.localId !== benId));
+  const removeBenRow = (benId: string) => {
+    setFormDirty(true);
+    setBenRows((prev) => prev.filter((r) => r.localId !== benId));
+  };
 
-  const updateVolunteer = (benId: string, volId: string, patch: Partial<VolunteerEntry>) =>
+  const updateVolunteer = (benId: string, volId: string, patch: Partial<VolunteerEntry>) => {
+    setFormDirty(true);
     setBenRows((prev) =>
       prev.map((r) =>
         r.localId === benId ? { ...r, volunteers: r.volunteers.map((v) => (v.localId === volId ? { ...v, ...patch } : v)) } : r,
       ),
     );
+  };
 
-  const toggleMain = (benId: string, volId: string) =>
+  const toggleMain = (benId: string, volId: string) => {
+    setFormDirty(true);
     setBenRows((prev) =>
       prev.map((r) => {
         if (r.localId !== benId) return r;
@@ -236,6 +257,7 @@ const GroupsPage: React.FC = () => {
         return { ...r, volunteers: r.volunteers.map((v) => ({ ...v, isMain: v.localId === volId ? nowMain : false })) };
       }),
     );
+  };
 
   const showForm = isNewGroup || isEditing;
   const showCardsView = showKartyBO && !showForm && !isNewGroup;
@@ -689,7 +711,7 @@ const GroupsPage: React.FC = () => {
 
       {/* ── EDIT / CREATE FORM ── */}
       {showForm && (
-        <form onSubmit={handleFormSubmit} className="flex flex-1 flex-col">
+        <form onSubmit={handleFormSubmit} onChange={() => setFormDirty(true)} className="flex flex-1 flex-col">
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {/* Name + Leader */}
             <div className="mb-6 grid grid-cols-1 gap-4 sm:mb-8 sm:grid-cols-2 sm:gap-6">
@@ -995,6 +1017,7 @@ const GroupsPage: React.FC = () => {
                               key={b.id}
                               type="button"
                               onClick={() => {
+                                setFormDirty(true);
                                 setBenRows((prev) => [...prev, { localId: newRowId(), beneficiaryId: b.id, volunteers: [emptyVolunteer()] }]);
                                 setShowBeneficiaryPicker(false);
                               }}
@@ -1030,8 +1053,10 @@ const GroupsPage: React.FC = () => {
               <button
                 type="button"
                 onClick={isNewGroup ? cancelNewGroup : () => {
+                  if (!confirmDiscard()) return;
                   setIsEditing(false);
                   setShowKartyBO(false);
+                  setFormDirty(false);
                 }}
                 className="min-h-10 px-3 text-sm font-bold text-gray-400 transition-colors hover:text-gray-600"
               >

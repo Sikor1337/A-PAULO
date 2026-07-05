@@ -7,6 +7,7 @@ import { parseApiError } from '@/lib/errors';
 import { rules } from '@/lib/validation';
 import { authService } from '@/services/authService';
 import { useAuthStore } from '@/stores/authStore';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 interface ProfileFormData {
   email: string;
@@ -37,7 +38,7 @@ const ProfilePage = () => {
     handleSubmit,
     reset,
     watch,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<ProfileFormData>({
     defaultValues: { email: '', first_name: '', last_name: '', ...EMPTY_PASSWORDS },
   });
@@ -54,8 +55,10 @@ const ProfilePage = () => {
   }, [isEditing, profile, reset]);
 
   const newPassword = watch('new_password');
+  const confirmDiscard = useUnsavedChanges(isEditing && isDirty && !isSaving);
 
   const cancelEdit = () => {
+    if (!confirmDiscard()) return;
     if (profile) {
       reset({
         email: profile.email,

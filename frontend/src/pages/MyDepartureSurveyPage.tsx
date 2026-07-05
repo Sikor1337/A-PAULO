@@ -3,6 +3,7 @@ import PageShell from '@/components/layout/PageShell';
 import { useDepartureFields, useMyDepartureSurvey } from '@/hooks/useDepartures';
 import { parseApiError } from '@/lib/errors';
 import { useAuthStore } from '@/stores/authStore';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import type { DepartureAnswer, DepartureField } from '@/types';
 
 const inputClass = 'mt-1 min-h-11 w-full rounded-lg border border-gray-200 px-3 outline-none focus:border-indigo-500';
@@ -95,6 +96,7 @@ const MyDepartureSurveyPage = () => {
   const survey = useMyDepartureSurvey(!isAdminPreview);
   const fieldsPreview = useDepartureFields(isAdminPreview);
   const [draftAnswers, setDraftAnswers] = useState<Record<string, unknown> | null>(null);
+  useUnsavedChanges(draftAnswers !== null && !survey.save.isPending);
   const interview = survey.data?.interview;
   const formFields = isAdminPreview
     ? fieldsPreview.data ?? []

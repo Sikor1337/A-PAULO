@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useSecurityGroups } from '@/hooks/usePermissions';
 import type { AdminUser, PermissionCode } from '@/types';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 interface Props {
   users: AdminUser[];
@@ -16,6 +17,7 @@ const SecurityGroupsPanel = ({ users, canManage }: Props) => {
     permissionCodes: PermissionCode[];
     userIds: number[];
   }>>({});
+  useUnsavedChanges(Object.keys(drafts).length > 0 && !saveGroup.isPending);
 
   const effectiveSelectedId = selectedId ?? groups.data?.[0]?.id ?? null;
   const selected = groups.data?.find((group) => group.id === effectiveSelectedId) ?? null;
