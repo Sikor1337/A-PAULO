@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import RecruitmentFieldModal from '@/features/recruitment/RecruitmentFieldModal';
+import SurveyFieldModal from '@/features/surveys/SurveyFieldModal';
 import { useRecruitmentAccessLink, useRecruitmentFields } from '@/hooks/useRecruitment';
 import { useHasPermission } from '@/hooks/usePermissions';
 import type { RecruitmentFieldDraft, RecruitmentFieldType } from '@/types';
@@ -171,7 +171,7 @@ const RecruitmentFormBuilderPage = () => {
       )}
 
       {canManage && editingIndex !== undefined && (
-        <RecruitmentFieldModal
+        <SurveyFieldModal
           field={editingField}
           onClose={() => setEditingIndex(undefined)}
           onSave={applyField}
