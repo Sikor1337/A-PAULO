@@ -4,11 +4,10 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from app.infrastructure.sql.factory import SQLConnectionFactory
+from app.infrastructure.sql.factory import SQLConnectionFactory, AuditAwareSession
 from app.modules.audit.exceptions import MissingAuditRecordError
 from app.modules.audit.models import AuditEvent
 from app.modules.audit.repositories.audit import AuditRepository
-from app.modules.audit.session import AuditAwareSession
 
 
 @pytest.fixture
