@@ -9,6 +9,7 @@ from app.modules.calendar.models import CalendarEvent
 from app.modules.calendar.models.constants import (
     ADMIN_VISIBILITY,
     CANCELLED_STATUS,
+    DRAFT_STATUS,
 )
 from app.modules.calendar.repositories import (
     CalendarAuditRepository,
@@ -28,8 +29,9 @@ class CalendarEventService:
         self.permissions = PermissionService(session)
 
     def _can_view(self, event: CalendarEvent, user: User) -> bool:
-        return event.visibility != ADMIN_VISIBILITY or self.permissions.has_permission(
-            user, CAN_MANAGE_EVENTS
+        can_manage = self.permissions.has_permission(user, CAN_MANAGE_EVENTS)
+        return can_manage or (
+            event.visibility != ADMIN_VISIBILITY and event.status != DRAFT_STATUS
         )
 
     def list_events(
