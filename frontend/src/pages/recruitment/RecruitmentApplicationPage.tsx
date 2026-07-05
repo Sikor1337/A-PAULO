@@ -5,6 +5,7 @@ import { parseApiError } from '@/lib/errors';
 import { recruitmentService } from '@/services/recruitmentService';
 import { recruitmentStatusLabel } from '@/features/recruitment/recruitmentStatus';
 import type { RecruitmentField } from '@/types';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 interface FieldControlProps {
   field: RecruitmentField;
@@ -82,6 +83,7 @@ const RecruitmentApplicationPage = ({ accessToken }: RecruitmentApplicationPageP
     mutationFn: (answers: Record<string, unknown>) =>
       recruitmentService.submit(answers, accessToken),
   });
+  useUnsavedChanges(Object.keys(answers).length > 0 && !submit.isSuccess && !submit.isPending);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();

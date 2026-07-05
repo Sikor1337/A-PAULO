@@ -9,6 +9,7 @@ import type {
   DepartureInterview,
   RecruitmentFieldDraft,
 } from '@/types';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 const displayAnswer = (value: unknown) => {
   if (typeof value === 'boolean') return value ? 'Tak' : 'Nie';
@@ -23,6 +24,7 @@ const DepartureSurveyPage = () => {
   const [draft, setDraft] = useState<DepartureFieldDraft[] | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null | undefined>(undefined);
   const [selected, setSelected] = useState<DepartureInterview | null>(null);
+  const confirmDiscard = useUnsavedChanges(draft !== null && !fieldsQuery.save.isPending);
   const fields = draft ?? fieldsQuery.data ?? [];
   const editingField = useMemo(() => {
     if (editingIndex === undefined || editingIndex === null || !draft) return null;
@@ -78,7 +80,7 @@ const DepartureSurveyPage = () => {
           {canManage && draft ? (
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => setEditingIndex(null)} className="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">+ Dodaj pytanie</button>
-              <button type="button" onClick={() => setDraft(null)} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Anuluj</button>
+              <button type="button" onClick={() => confirmDiscard() && setDraft(null)} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Anuluj</button>
               <button type="button" onClick={save} disabled={fieldsQuery.save.isPending} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Zapisz</button>
             </div>
           ) : canManage ? (

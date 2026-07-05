@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import PageShell from '@/components/layout/PageShell';
 import { useBOCardOverview, useBOCardOverviewActions } from '@/hooks/useAttachments';
 import { useGroupList } from '@/hooks/useGroups';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { formatDate } from '@/lib/date';
 import { parseApiError } from '@/lib/errors';
 import { attachmentService } from '@/services/attachmentService';
@@ -42,13 +43,19 @@ interface CommentEditorProps {
   attachment: BOCardOverviewAttachment;
   disabled: boolean;
   onSave: (attachment: BOCardOverviewAttachment, description: string) => void;
+  onDirtyChange: (attachmentId: number, dirty: boolean) => void;
 }
 
-const CommentEditor = ({ attachment, disabled, onSave }: CommentEditorProps) => {
+const CommentEditor = ({ attachment, disabled, onSave, onDirtyChange }: CommentEditorProps) => {
   const [value, setValue] = useState(attachment.description);
 
   const normalizedValue = value.trim();
   const isDirty = normalizedValue !== attachment.description;
+
+  useEffect(() => {
+    onDirtyChange(attachment.id, isDirty);
+    return () => onDirtyChange(attachment.id, false);
+  }, [attachment.id, isDirty, onDirtyChange]);
 
   return (
     <div className="min-w-[220px] space-y-2">
@@ -86,6 +93,7 @@ const BOCardsPage: React.FC = () => {
   const [sortValue, setSortValue] = useState(SORT_OPTIONS[0].value);
   const [limit, setLimit] = useState(25);
   const [page, setPage] = useState(1);
+  const [dirtyComments, setDirtyComments] = useState<Set<number>>(() => new Set());
 
   const { data: groups } = useGroupList();
   const selectedSort = SORT_OPTIONS.find((option) => option.value === sortValue) ?? SORT_OPTIONS[0];
@@ -115,6 +123,15 @@ const BOCardsPage: React.FC = () => {
 
   const { data, error, isError, isFetching, isLoading } = useBOCardOverview(filters);
   const { updateAttachment, deleteAttachment, downloadArchive } = useBOCardOverviewActions(filters);
+  useUnsavedChanges(dirtyComments.size > 0 && !updateAttachment.isPending);
+  const setCommentDirty = useCallback((attachmentId: number, dirty: boolean) => {
+    setDirtyComments((current) => {
+      const next = new Set(current);
+      if (dirty) next.add(attachmentId);
+      else next.delete(attachmentId);
+      return next;
+    });
+  }, []);
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -315,6 +332,7 @@ const BOCardsPage: React.FC = () => {
                   attachment={attachment}
                   disabled={actionDisabled}
                   onSave={saveComment}
+                  onDirtyChange={setCommentDirty}
                 />
               </div>
 
@@ -382,6 +400,7 @@ const BOCardsPage: React.FC = () => {
                       attachment={attachment}
                       disabled={actionDisabled}
                       onSave={saveComment}
+                      onDirtyChange={setCommentDirty}
                     />
                   </td>
                   <td className="px-3 py-3">
