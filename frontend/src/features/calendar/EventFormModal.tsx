@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import Modal from '@/components/ui/Modal';
 import type { CalendarEvent, CalendarEventInput, CalendarEventStatus, CalendarEventVisibility } from '@/types';
@@ -19,6 +20,7 @@ interface FormValues {
   isAllDay: boolean;
   location: string;
   recurrenceRule: string;
+  recurrenceUntil: string;
   status: CalendarEventStatus;
   visibility: CalendarEventVisibility;
 }
@@ -41,16 +43,25 @@ const defaults = (event: CalendarEvent | null, initialDate?: Date): FormValues =
     isAllDay: event?.is_all_day ?? false,
     location: event?.location ?? '',
     recurrenceRule: event?.recurrence_rule ?? '',
+    recurrenceUntil: event?.recurrence_rule?.match(/UNTIL=(\d{4})(\d{2})(\d{2})/)?.slice(1, 4).join('-') ?? '',
     status: event?.status ?? 'published',
     visibility: event?.visibility ?? 'organization',
   };
 };
 
 const EventFormModal = ({ event, initialDate, isPending, onClose, onSave }: Props) => {
-  const { control, register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const { control, register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
     defaultValues: defaults(event, initialDate),
   });
   const isAllDay = useWatch({ control, name: 'isAllDay' });
+  const recurrenceRule = useWatch({ control, name: 'recurrenceRule' });
+
+  useEffect(() => {
+    if (!isAllDay || event) return;
+    const day = localDateTime(initialDate ?? new Date(), true);
+    setValue('startsAt', day);
+    setValue('endsAt', day);
+  }, [event, initialDate, isAllDay, setValue]);
 
   const submit = handleSubmit((values) => {
     const start = new Date(isAllDay ? `${values.startsAt}T00:00:00` : values.startsAt);
@@ -59,6 +70,13 @@ const EventFormModal = ({ event, initialDate, isPending, onClose, onSave }: Prop
       alert('Data zakończenia nie może być wcześniejsza od rozpoczęcia.');
       return;
     }
+    const baseRule = values.recurrenceRule
+      .split(';')
+      .filter((part) => part && !part.startsWith('UNTIL='))
+      .join(';');
+    const recurrence = baseRule && values.recurrenceUntil
+      ? `${baseRule};UNTIL=${values.recurrenceUntil.replaceAll('-', '')}T235959Z`
+      : baseRule;
     onSave({
       title: values.title.trim(),
       description: values.description.trim(),
@@ -67,7 +85,7 @@ const EventFormModal = ({ event, initialDate, isPending, onClose, onSave }: Prop
       timezone: values.timezone,
       is_all_day: values.isAllDay,
       location: values.location.trim(),
-      recurrence_rule: values.recurrenceRule || null,
+      recurrence_rule: recurrence || null,
       status: values.status,
       visibility: values.visibility,
     });
@@ -127,6 +145,12 @@ const EventFormModal = ({ event, initialDate, isPending, onClose, onSave }: Prop
               )}
             </select>
           </label>
+          {recurrenceRule && (
+            <label className="block text-sm font-bold text-gray-700">
+              Powtarzaj do
+              <input type="date" {...register('recurrenceUntil')} className={inputClass} />
+            </label>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-bold text-gray-700">
               Status

@@ -6,6 +6,7 @@ EVENT_STATUSES = ("draft", "published", "cancelled")
 EVENT_VISIBILITIES = ("organization", "admins")
 
 PUBLISHED_STATUS = "published"
+DRAFT_STATUS = "draft"
 CANCELLED_STATUS = "cancelled"
 ORGANIZATION_VISIBILITY = "organization"
 ADMIN_VISIBILITY = "admins"

@@ -10,12 +10,12 @@ export function parseApiError(error: unknown, fallback = 'Błąd zapisu.'): stri
     if (typeof data.detail === 'string') return data.detail;
     if (Array.isArray(data.detail)) {
       const messages = data.detail
-        .map((item) => {
-          if (!item || typeof item !== 'object') return null;
-          const detail = item as { msg?: unknown };
-          return typeof detail.msg === 'string' ? detail.msg : null;
-        })
-        .filter((message): message is string => Boolean(message));
+        .map((item) => (
+          item && typeof item === 'object' && 'msg' in item
+            ? String(item.msg)
+            : null
+        ))
+        .filter(Boolean);
       if (messages.length) return messages.join(' ');
     }
     return JSON.stringify(data.detail ?? data);

@@ -1,11 +1,13 @@
 """Function repository for data access."""
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.infrastructure.sql.repository import SQLRepository
 from app.modules.pi.models.function import Function
 
 
-class FunctionRepository:
+class FunctionRepository(SQLRepository):
     """Repository for Function model database operations."""
 
     def __init__(self, session: Session):
@@ -20,7 +22,13 @@ class FunctionRepository:
         stmt = select(Function).where(func.lower(Function.name) == name.lower())
         return self.session.execute(stmt).scalar_one_or_none()
 
-    def list_all(self, skip: int = 0, limit: int = 100, name: str = None, is_active: bool = None) -> list[Function]:
+    def list_all(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        name: str | None = None,
+        is_active: bool | None = None,
+    ) -> list[Function]:
         """List functions with optional filters."""
         query = self.session.query(Function)
 
@@ -31,7 +39,7 @@ class FunctionRepository:
 
         return query.order_by(Function.name).offset(skip).limit(limit).all()
 
-    def count(self, name: str = None, is_active: bool = None) -> int:
+    def count(self, name: str | None = None, is_active: bool | None = None) -> int:
         """Count functions with optional filters."""
         query = self.session.query(func.count(Function.id))
 

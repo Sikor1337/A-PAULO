@@ -41,7 +41,7 @@ def list_bo_card_attachments(
     _user: User = Depends(require_permission(CAN_VIEW_ATTACHMENTS)),
 ):
     """List BO-card metadata with optional filters, sorting, and paging."""
-    items, total = service.list_bo_cards(**filters.model_dump())
+    items, total = service.list_bo_cards(filters)
     return {
         "items": items,
         "total": total,
@@ -57,7 +57,7 @@ def download_bo_card_attachments(
     _user: User = Depends(require_permission(CAN_VIEW_ATTACHMENTS)),
 ):
     """Download a ZIP archive with all BO cards matching filters."""
-    archive, included_count = service.build_bo_cards_archive(**filters.model_dump())
+    archive, included_count = service.build_bo_cards_archive(filters)
     filename = service.archive_filename()
     return StreamingResponse(
         _iter_file(archive),

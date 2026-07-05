@@ -12,8 +12,16 @@ from app.core.errors import register_error_handlers
 from app.infrastructure.storage import LocalAttachmentStorage
 from app.modules.attachments.api import router as attachments_router
 from app.modules.attachments.dependencies import get_attachment_service
+from app.modules.attachments.repositories import AttachmentRepository
 from app.modules.attachments.services import AttachmentService
 from app.modules.core_data.models import User
+from app.modules.pi.repositories import (
+    BeneficiaryAssignmentRepository,
+    BeneficiaryRepository,
+    FunctionRepository,
+    GroupRepository,
+    VolunteerRepository,
+)
 from app.modules.pi.services.beneficiaries import BeneficiaryService
 from app.modules.pi.services.functions import FunctionService
 from app.modules.pi.services.groups import GroupService
@@ -26,21 +34,26 @@ def test_bo_card_attachment_api_flow(
     admin_user: User,
     tmp_path,
 ) -> None:
-    function = FunctionService(db_session).create_function(name="Odwiedziny")
-    volunteer = VolunteerService(db_session).create_volunteer(
+    function = FunctionService(FunctionRepository(db_session)).create_function(
+        name="Odwiedziny"
+    )
+    volunteer = VolunteerService(VolunteerRepository(db_session)).create_volunteer(
         full_name="Anna Wolontariusz",
         email="anna.bo@example.com",
         join_date=datetime(2026, 1, 10, 9, 0),
         function_ids=[function.id],
     )
-    group = GroupService(db_session).create_group(name="Grupa BO")
-    beneficiary = BeneficiaryService(db_session).create_beneficiary(
+    group_service = GroupService(GroupRepository(db_session))
+    group = group_service.create_group(name="Grupa BO")
+    beneficiary = BeneficiaryService(
+        BeneficiaryRepository(db_session)
+    ).create_beneficiary(
         full_name="Jan BO",
         address="ul. Testowa 1",
         group_id=group["id"],
         bo_enrolled=True,
     )
-    GroupService(db_session).update_group(
+    group_service.update_group(
         group["id"],
         assignments=[
             {
@@ -60,7 +73,11 @@ def test_bo_card_attachment_api_flow(
 
     def override_service() -> AttachmentService:
         return AttachmentService(
-            session=db_session,
+            repo=AttachmentRepository(db_session),
+            group_repo=GroupRepository(db_session),
+            beneficiary_repo=BeneficiaryRepository(db_session),
+            volunteer_repo=VolunteerRepository(db_session),
+            assignment_repo=BeneficiaryAssignmentRepository(db_session),
             storage=LocalAttachmentStorage(tmp_path),
             max_size_bytes=10 * 1024,
         )
@@ -160,7 +177,7 @@ def test_bo_card_attachment_api_flow(
             assert names[0].endswith("Karta czerwiec.pdf")
             assert archive.read(names[0]) == b"%PDF-1.4"
 
-        GroupService(db_session).delete_group(group["id"])
+        group_service.delete_group(group["id"])
         db_session.expire_all()
         retained_response = client.get(f"/api/v1/attachments/{uploaded['id']}")
         assert retained_response.status_code == 200

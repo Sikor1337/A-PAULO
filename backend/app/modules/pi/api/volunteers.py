@@ -1,14 +1,13 @@
 """Volunteers API endpoints for PI domain."""
-from typing import Optional
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_db
+from fastapi import APIRouter, Depends, Query
+
 from app.modules.core_data.models import User
+from app.modules.pi.dependencies import get_volunteer_service
 from app.modules.pi.schemas.volunteers import (
     VolunteerCreateRequest,
-    VolunteerUpdateRequest,
     VolunteerResponse,
+    VolunteerUpdateRequest,
 )
 from app.modules.pi.services.volunteers import VolunteerService
 from app.modules.security.dependencies import require_permission
@@ -24,14 +23,13 @@ router = APIRouter(prefix="/volunteers", tags=["volunteers"])
 def list_volunteers(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    full_name: Optional[str] = Query(None),
-    email: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    session: Session = Depends(get_db),
+    full_name: str | None = Query(None),
+    email: str | None = Query(None),
+    status: str | None = Query(None),
+    service: VolunteerService = Depends(get_volunteer_service),
     _user: User = Depends(require_permission(CAN_VIEW_VOLUNTEERS)),
 ):
     """List all volunteers with optional filters."""
-    service = VolunteerService(session)
     volunteers, _ = service.list_volunteers(
         skip=skip,
         limit=limit,
@@ -45,49 +43,42 @@ def list_volunteers(
 @router.post("", response_model=VolunteerResponse)
 def create_volunteer(
     request: VolunteerCreateRequest,
-    session: Session = Depends(get_db),
+    service: VolunteerService = Depends(get_volunteer_service),
     _user: User = Depends(require_permission(CAN_MANAGE_VOLUNTEERS)),
 ):
     """Create new volunteer."""
-    service = VolunteerService(session)
-    volunteer = service.create_volunteer(**request.model_dump())
-    return volunteer
+    return service.create_volunteer(**request.model_dump())
 
 
 @router.get("/{volunteer_id}", response_model=VolunteerResponse)
 def get_volunteer(
     volunteer_id: int,
-    session: Session = Depends(get_db),
+    service: VolunteerService = Depends(get_volunteer_service),
     _user: User = Depends(require_permission(CAN_VIEW_VOLUNTEERS)),
 ):
     """Get volunteer by ID."""
-    service = VolunteerService(session)
-    volunteer = service.get_volunteer_by_id(volunteer_id)
-    return volunteer
+    return service.get_volunteer_by_id(volunteer_id)
 
 
 @router.patch("/{volunteer_id}", response_model=VolunteerResponse)
 def update_volunteer(
     volunteer_id: int,
     request: VolunteerUpdateRequest,
-    session: Session = Depends(get_db),
+    service: VolunteerService = Depends(get_volunteer_service),
     _user: User = Depends(require_permission(CAN_MANAGE_VOLUNTEERS)),
 ):
     """Update volunteer."""
-    service = VolunteerService(session)
     # Only update provided fields
     update_data = request.model_dump(exclude_unset=True)
-    volunteer = service.update_volunteer(volunteer_id, **update_data)
-    return volunteer
+    return service.update_volunteer(volunteer_id, **update_data)
 
 
 @router.delete("/{volunteer_id}")
 def delete_volunteer(
     volunteer_id: int,
-    session: Session = Depends(get_db),
+    service: VolunteerService = Depends(get_volunteer_service),
     _user: User = Depends(require_permission(CAN_MANAGE_VOLUNTEERS)),
 ):
     """Delete volunteer."""
-    service = VolunteerService(session)
     service.delete_volunteer(volunteer_id)
     return {"message": "Volunteer deleted successfully"}

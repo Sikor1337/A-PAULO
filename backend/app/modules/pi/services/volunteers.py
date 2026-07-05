@@ -1,96 +1,26 @@
 """Volunteer service for PI domain."""
-from sqlalchemy import delete, insert
-from sqlalchemy.orm import Session
 
-from app.core.errors import NotFoundError, ConflictError
-from app.modules.pi.models.function import Function, volunteer_function
+from app.core.errors import ConflictError, NotFoundError
 from app.modules.pi.models.volunteer import Volunteer
-from app.modules.pi.models.group import Group, BeneficiaryAssignment
-from app.modules.pi.models.beneficiary import Beneficiary
 from app.modules.pi.repositories.volunteers import VolunteerRepository
 
 
 class VolunteerService:
     """Service for volunteer operations."""
 
-    def __init__(self, session: Session):
-        self.session = session
-        self.repo = VolunteerRepository(session)
+    def __init__(self, repo: VolunteerRepository):
+        self.repo = repo
 
     def _enrich_volunteer(self, volunteer: Volunteer) -> Volunteer:
         """Enrich volunteer with computed fields from database."""
-        manual_functions = (
-            self.session.query(Function)
-            .join(volunteer_function, Function.id == volunteer_function.c.function_id)
-            .filter(
-                volunteer_function.c.volunteer_id == volunteer.id,
-                Function.is_active == True,
-            )
-            .order_by(Function.name)
-            .all()
-        )
-        volunteer.function_ids = [function.id for function in manual_functions]
-        volunteer.manual_functions = [function.name for function in manual_functions]
-
-        # led_group: name of group where volunteer is leader
-        led_group = self.session.query(Group.name).filter(Group.leader_id == volunteer.id).first()
-        volunteer.led_group = led_group[0] if led_group else None
-
-        # assigned_groups: comma-joined group names from assigned beneficiaries
-        assigned_group_rows = (
-            self.session.query(Group.name)
-            .join(Beneficiary, Beneficiary.group_id == Group.id)
-            .join(
-                BeneficiaryAssignment,
-                BeneficiaryAssignment.beneficiary_id == Beneficiary.id,
-            )
-            .filter(BeneficiaryAssignment.volunteer_id == volunteer.id)
-            .distinct()
-            .order_by(Group.name)
-            .all()
-        )
-        volunteer.assigned_groups = ", ".join(row[0] for row in assigned_group_rows)
-
-        # main_for_beneficiaries: list of beneficiary names where is_main=True
-        main_beneficiaries = self.session.query(Beneficiary.full_name).join(
-            BeneficiaryAssignment
-        ).filter(
-            BeneficiaryAssignment.volunteer_id == volunteer.id,
-            BeneficiaryAssignment.is_main == True
-        ).all()
-        volunteer.main_for_beneficiaries = [b[0] for b in main_beneficiaries] if main_beneficiaries else []
-
-        derived_functions = []
-        if volunteer.led_group:
-            derived_functions.append("Przewodnik")
-        if volunteer.main_for_beneficiaries:
-            derived_functions.append("Lider Podopiecznego")
-        volunteer.derived_functions = derived_functions
-        volunteer.functions = list(dict.fromkeys([*volunteer.manual_functions, *derived_functions]))
-
-        return volunteer
+        return self.repo.enrich(volunteer)
 
     def _sync_functions(self, volunteer_id: int, function_ids: list[int]) -> None:
         """Replace manually assigned functions for a volunteer."""
-        unique_ids = list(dict.fromkeys(function_ids or []))
-
-        if unique_ids:
-            existing_count = (
-                self.session.query(Function.id)
-                .filter(Function.id.in_(unique_ids), Function.is_active == True)
-                .count()
-            )
-            if existing_count != len(unique_ids):
-                raise NotFoundError("One or more functions were not found")
-
-        self.session.execute(
-            delete(volunteer_function).where(volunteer_function.c.volunteer_id == volunteer_id)
-        )
-        if unique_ids:
-            self.session.execute(
-                insert(volunteer_function),
-                [{"volunteer_id": volunteer_id, "function_id": function_id} for function_id in unique_ids],
-            )
+        try:
+            self.repo.replace_functions(volunteer_id, function_ids)
+        except ValueError as error:
+            raise NotFoundError("One or more functions were not found") from error
 
     def get_volunteer_by_id(self, volunteer_id: int) -> Volunteer:
         """Get volunteer by ID or raise NotFoundError."""
@@ -100,14 +30,19 @@ class VolunteerService:
         return self._enrich_volunteer(volunteer)
 
     def list_volunteers(
-        self, skip: int = 0, limit: int = 100, full_name: str = None, email: str = None, status: str = None
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        full_name: str | None = None,
+        email: str | None = None,
+        status: str | None = None,
     ):
         """List volunteers with pagination and filters."""
         volunteers = self.repo.list_all(
             skip=skip, limit=limit, full_name=full_name, email=email, status=status
         )
         count = self.repo.count(full_name=full_name, email=email, status=status)
-        
+
         # Enrich each volunteer with computed fields
         volunteers = [self._enrich_volunteer(v) for v in volunteers]
         return volunteers, count
@@ -118,16 +53,18 @@ class VolunteerService:
             function_ids = kwargs.pop("function_ids", [])
             # Check if email already exists
             if self.repo.exists(kwargs.get("email")):
-                raise ConflictError(f"Volunteer with email '{kwargs.get('email')}' already exists")
+                raise ConflictError(
+                    f"Volunteer with email '{kwargs.get('email')}' already exists"
+                )
 
             volunteer = self.repo.create(**kwargs)
-            self.session.flush()
+            self.repo.flush()
             self._sync_functions(volunteer.id, function_ids)
-            self.session.refresh(volunteer)
-            self.session.commit()
+            self.repo.refresh(volunteer)
+            self.repo.commit()
             return self._enrich_volunteer(volunteer)
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def update_volunteer(self, volunteer_id: int, **kwargs) -> Volunteer:
@@ -137,19 +74,24 @@ class VolunteerService:
             volunteer = self.get_volunteer_by_id(volunteer_id)
 
             # If email is being updated, check uniqueness (excluding current volunteer)
-            if "email" in kwargs and kwargs["email"] != volunteer.email:
-                if self.repo.exists(kwargs["email"]):
-                    raise ConflictError(f"Volunteer with email '{kwargs['email']}' already exists")
+            if (
+                "email" in kwargs
+                and kwargs["email"] != volunteer.email
+                and self.repo.exists(kwargs["email"])
+            ):
+                raise ConflictError(
+                    f"Volunteer with email '{kwargs['email']}' already exists"
+                )
 
             volunteer = self.repo.update(volunteer, **kwargs)
-            self.session.flush()
+            self.repo.flush()
             if function_ids is not None:
                 self._sync_functions(volunteer.id, function_ids)
-            self.session.refresh(volunteer)
-            self.session.commit()
+            self.repo.refresh(volunteer)
+            self.repo.commit()
             return self._enrich_volunteer(volunteer)
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def delete_volunteer(self, volunteer_id: int) -> None:
@@ -157,7 +99,7 @@ class VolunteerService:
         try:
             volunteer = self.get_volunteer_by_id(volunteer_id)
             self.repo.delete(volunteer)
-            self.session.commit()
+            self.repo.commit()
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise

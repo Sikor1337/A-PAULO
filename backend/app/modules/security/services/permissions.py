@@ -1,7 +1,6 @@
 """Permission resolution and user-group management rules."""
 
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
 
 from app.core.errors import ConflictError, NotFoundError
 from app.modules.core_data.models import User
@@ -16,10 +15,9 @@ from app.modules.security.repositories import PermissionRepository
 
 
 class PermissionService:
-    def __init__(self, session: Session):
-        self.session = session
-        self.repo = PermissionRepository(session)
-        self.users = UserRepository(session)
+    def __init__(self, repo: PermissionRepository, users: UserRepository):
+        self.repo = repo
+        self.users = users
 
     def permissions_for_user(self, user: User) -> set[str]:
         return self.repo.permission_codes_for_user(user.id)
@@ -54,11 +52,11 @@ class PermissionService:
                 raise ConflictError("Grupa o tej nazwie już istnieje")
             group = self.repo.create_group(name=name, description=description)
             group.permissions = self._resolve_permissions(permission_codes)
-            self.session.commit()
-            self.session.refresh(group)
+            self.repo.commit()
+            self.repo.refresh(group)
             return self._serialize_group(group)
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def update_group(self, group_id: int, **values) -> dict:
@@ -76,11 +74,11 @@ class PermissionService:
             for key, value in values.items():
                 if value is not None:
                     setattr(group, key, value)
-            self.session.commit()
-            self.session.refresh(group)
+            self.repo.commit()
+            self.repo.refresh(group)
             return self._serialize_group(group)
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def replace_group_permissions(self, group_id: int, codes: list[str]) -> dict:
@@ -88,11 +86,11 @@ class PermissionService:
             group = self.get_group(group_id)
             self._ensure_custom_group(group)
             group.permissions = self._resolve_permissions(codes)
-            self.session.commit()
-            self.session.refresh(group)
+            self.repo.commit()
+            self.repo.refresh(group)
             return self._serialize_group(group)
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def save_group(
@@ -136,11 +134,11 @@ class PermissionService:
                 group.permissions = self._resolve_permissions(permission_codes)
 
             self.repo.replace_group_users(group.id, member_ids)
-            self.session.commit()
-            self.session.refresh(group)
+            self.repo.commit()
+            self.repo.refresh(group)
             return self._serialize_group(group)
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def replace_group_users(self, group_id: int, user_ids: list[int]) -> dict:
@@ -150,10 +148,10 @@ class PermissionService:
             self._validate_users(ids)
             self._protect_last_admin(group, ids)
             self.repo.replace_group_users(group_id, ids)
-            self.session.commit()
+            self.repo.commit()
             return self._serialize_group(group)
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def replace_user_groups(self, user_id: int, group_ids: list[int]) -> list[int]:
@@ -177,10 +175,10 @@ class PermissionService:
                         detail="Nie można usunąć ostatniego użytkownika z grupy Admin",
                     )
             self.repo.replace_user_groups(user_id, ids)
-            self.session.commit()
+            self.repo.commit()
             return sorted(ids)
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def assign_default_group(self, user: User) -> None:
@@ -213,9 +211,9 @@ class PermissionService:
             group = self.get_group(group_id)
             self._ensure_custom_group(group)
             self.repo.delete_group(group)
-            self.session.commit()
+            self.repo.commit()
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def group_ids_for_user(self, user_id: int) -> list[int]:

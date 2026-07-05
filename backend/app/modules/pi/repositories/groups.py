@@ -1,11 +1,15 @@
 """Group and assignment repositories for PI domain."""
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.modules.pi.models.group import Group, BeneficiaryAssignment
+from app.infrastructure.sql.repository import SQLRepository
+from app.modules.pi.models.beneficiary import Beneficiary
+from app.modules.pi.models.group import BeneficiaryAssignment, Group
+from app.modules.pi.models.volunteer import Volunteer
 
 
-class GroupRepository:
+class GroupRepository(SQLRepository):
     """Repository for Group model database operations."""
 
     def __init__(self, session: Session):
@@ -15,7 +19,9 @@ class GroupRepository:
         """Get group by ID."""
         return self.session.query(Group).filter(Group.id == group_id).first()
 
-    def list_all(self, skip: int = 0, limit: int = 100, name: str = None) -> list[Group]:
+    def list_all(
+        self, skip: int = 0, limit: int = 100, name: str | None = None
+    ) -> list[Group]:
         """List groups with optional filters."""
         query = self.session.query(Group)
 
@@ -24,7 +30,7 @@ class GroupRepository:
 
         return query.order_by(Group.name).offset(skip).limit(limit).all()
 
-    def count(self, name: str = None) -> int:
+    def count(self, name: str | None = None) -> int:
         """Count groups with optional filters."""
         query = self.session.query(func.count(Group.id))
 
@@ -50,8 +56,98 @@ class GroupRepository:
         """Delete group."""
         self.session.delete(group)
 
+    def detail(self, group: Group) -> dict:
+        leader = (
+            self.session.query(Volunteer)
+            .filter(Volunteer.id == group.leader_id)
+            .first()
+            if group.leader_id
+            else None
+        )
+        beneficiaries = (
+            self.session.query(Beneficiary)
+            .filter(Beneficiary.group_id == group.id)
+            .order_by(Beneficiary.full_name)
+            .all()
+        )
+        assignments: dict[int, list[dict]] = {item.id: [] for item in beneficiaries}
+        beneficiary_ids = [item.id for item in beneficiaries]
+        if beneficiary_ids:
+            rows = (
+                self.session.query(BeneficiaryAssignment, Volunteer)
+                .join(Volunteer, Volunteer.id == BeneficiaryAssignment.volunteer_id)
+                .filter(BeneficiaryAssignment.beneficiary_id.in_(beneficiary_ids))
+                .order_by(BeneficiaryAssignment.beneficiary_id, Volunteer.full_name)
+                .all()
+            )
+            for assignment, volunteer in rows:
+                assignments[assignment.beneficiary_id].append(
+                    {
+                        "id": volunteer.id,
+                        "full_name": volunteer.full_name,
+                        "is_main": assignment.is_main,
+                        "additional_info": assignment.additional_info or "",
+                    }
+                )
+        return {
+            "id": group.id,
+            "name": group.name,
+            "leader_id": group.leader_id,
+            "leader_name": leader.full_name if leader else None,
+            "beneficiaries": [
+                {
+                    "id": item.id,
+                    "full_name": item.full_name,
+                    "volunteers": assignments[item.id],
+                }
+                for item in beneficiaries
+            ],
+            "created_at": group.created_at,
+            "updated_at": group.updated_at,
+        }
 
-class BeneficiaryAssignmentRepository:
+    def replace_assignments(self, group: Group, rows: list[dict]) -> None:
+        submitted_ids = {row["beneficiary"] for row in rows}
+        current_ids = {
+            item.id
+            for item in self.session.query(Beneficiary)
+            .filter(Beneficiary.group_id == group.id)
+            .all()
+        }
+        removed_ids = current_ids - submitted_ids
+        if removed_ids:
+            self.session.query(Beneficiary).filter(
+                Beneficiary.id.in_(removed_ids)
+            ).update({"group_id": None}, synchronize_session=False)
+            self.session.query(BeneficiaryAssignment).filter(
+                BeneficiaryAssignment.beneficiary_id.in_(removed_ids)
+            ).delete(synchronize_session=False)
+
+        for row in rows:
+            beneficiary_id = row["beneficiary"]
+            beneficiary = self.session.get(Beneficiary, beneficiary_id)
+            if beneficiary is None:
+                raise LookupError(f"beneficiary:{beneficiary_id}")
+            beneficiary.group_id = group.id
+            self.session.query(BeneficiaryAssignment).filter(
+                BeneficiaryAssignment.beneficiary_id == beneficiary_id
+            ).delete(synchronize_session=False)
+            main_volunteer = row.get("main_volunteer")
+            for volunteer_row in row.get("volunteers", []):
+                volunteer_id = volunteer_row["id"]
+                if self.session.get(Volunteer, volunteer_id) is None:
+                    raise LookupError(f"volunteer:{volunteer_id}")
+                self.session.add(
+                    BeneficiaryAssignment(
+                        beneficiary_id=beneficiary_id,
+                        volunteer_id=volunteer_id,
+                        is_main=main_volunteer == volunteer_id,
+                        additional_info=volunteer_row.get("additional_info", ""),
+                    )
+                )
+
+
+class BeneficiaryAssignmentRepository(SQLRepository):
     """Repository for BeneficiaryAssignment model database operations."""
 
     def __init__(self, session: Session):
@@ -59,18 +155,24 @@ class BeneficiaryAssignmentRepository:
 
     def get_by_id(self, assignment_id: int) -> BeneficiaryAssignment | None:
         """Get assignment by ID."""
-        return self.session.query(BeneficiaryAssignment).filter(
-            BeneficiaryAssignment.id == assignment_id
-        ).first()
+        return (
+            self.session.query(BeneficiaryAssignment)
+            .filter(BeneficiaryAssignment.id == assignment_id)
+            .first()
+        )
 
     def get_by_beneficiary_volunteer(
         self, beneficiary_id: int, volunteer_id: int
     ) -> BeneficiaryAssignment | None:
         """Get assignment by beneficiary and volunteer IDs."""
-        return self.session.query(BeneficiaryAssignment).filter(
-            BeneficiaryAssignment.beneficiary_id == beneficiary_id,
-            BeneficiaryAssignment.volunteer_id == volunteer_id,
-        ).first()
+        return (
+            self.session.query(BeneficiaryAssignment)
+            .filter(
+                BeneficiaryAssignment.beneficiary_id == beneficiary_id,
+                BeneficiaryAssignment.volunteer_id == volunteer_id,
+            )
+            .first()
+        )
 
     def list_all(self, skip: int = 0, limit: int = 100) -> list[BeneficiaryAssignment]:
         """List all assignments."""
@@ -88,15 +190,14 @@ class BeneficiaryAssignmentRepository:
         self.session.add(assignment)
         return assignment
 
-    def update(self, assignment: BeneficiaryAssignment, **kwargs) -> BeneficiaryAssignment:
+    def update(
+        self, assignment: BeneficiaryAssignment, **kwargs
+    ) -> BeneficiaryAssignment:
         """Update assignment."""
         for key, value in kwargs.items():
             if hasattr(assignment, key):
                 setattr(assignment, key, value)
-        try:
-            self.session.commit()
-            self.session.refresh(assignment)
-            return assignment
-        except Exception:
-            self.session.rollback()
-            raise
+        return assignment
+
+    def delete(self, assignment: BeneficiaryAssignment) -> None:
+        self.session.delete(assignment)

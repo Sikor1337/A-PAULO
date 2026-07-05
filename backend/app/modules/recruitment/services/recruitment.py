@@ -5,7 +5,6 @@ import unicodedata
 from datetime import UTC, datetime
 
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
 from app.core.errors import ConflictError, NotFoundError, ValidationException
 from app.modules.core_data.models import User
@@ -37,9 +36,13 @@ def _slugify(value: str) -> str:
 
 
 class RecruitmentService:
-    def __init__(self, session: Session):
-        self.session = session
-        self.repo = RecruitmentRepository(session)
+    def __init__(
+        self,
+        repo: RecruitmentRepository,
+        permissions: PermissionService,
+    ):
+        self.repo = repo
+        self.permissions = permissions
 
     def _ensure_default_fields(self) -> None:
         current = self.repo.list_fields()
@@ -95,7 +98,7 @@ class RecruitmentService:
             if field.position != position:
                 field.position = position
 
-        self.session.commit()
+        self.repo.commit()
 
     def list_fields(self, *, active_only: bool = False) -> list[RecruitmentField]:
         self._ensure_default_fields()
@@ -162,10 +165,10 @@ class RecruitmentService:
                 if field.id not in submitted_ids:
                     self.repo.delete_field(field)
 
-            self.session.commit()
+            self.repo.commit()
             return self.repo.list_fields()
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def get_submission_for_user(self, user_id: int) -> RecruitmentSubmission | None:
@@ -214,16 +217,16 @@ class RecruitmentService:
                 submission = existing
             else:
                 submission = self.repo.create_submission(**values)
-            self.session.commit()
-            self.session.refresh(submission)
+            self.repo.commit()
+            self.repo.refresh(submission)
             return submission
         except IntegrityError as error:
-            self.session.rollback()
+            self.repo.rollback()
             raise ConflictError(
                 "Formularz dla tego konta lub adresu e-mail został już wysłany"
             ) from error
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def list_submissions(self, **filters) -> list[RecruitmentSubmission]:
@@ -247,10 +250,10 @@ class RecruitmentService:
             submission.decision_comment = None
             submission.status_changed_at = datetime.now(UTC)
             self._ensure_onboarding_meetings(submission)
-            self.session.commit()
+            self.repo.commit()
             return self.get_submission(submission.id)
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def set_onboarding_attendance(
@@ -272,10 +275,10 @@ class RecruitmentService:
                 meeting.attended_at = datetime.now(UTC)
             elif not attended:
                 meeting.attended_at = None
-            self.session.commit()
+            self.repo.commit()
             return self.get_submission(submission.id)
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def return_submission(
@@ -291,11 +294,11 @@ class RecruitmentService:
             submission.return_reason = reason
             submission.decision_comment = None
             submission.status_changed_at = datetime.now(UTC)
-            self.session.commit()
-            self.session.refresh(submission)
+            self.repo.commit()
+            self.repo.refresh(submission)
             return submission
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def reject(
@@ -344,8 +347,8 @@ class RecruitmentService:
                     social_link=submission.social_link or None,
                     status="Aktywny",
                     join_date=datetime.now(UTC),
-                    notes="Utworzono po zakończeniu procesu rekrutacji.",
-                    history="Rekrutacja zakończona pomyślnie.",
+                    notes="",
+                    history="",
                 )
             else:
                 volunteer.full_name = submission.full_name
@@ -353,20 +356,17 @@ class RecruitmentService:
                 volunteer.phone = submission.phone
                 volunteer.social_link = submission.social_link or None
                 volunteer.status = "Aktywny"
-                volunteer.history = (
-                    f"{volunteer.history}\nPonownie zakończono proces rekrutacji."
-                ).strip()
             submission.volunteer_id = volunteer.id
             submission.status = "ACCEPTED"
             submission.decision_comment = comment
             submission.status_changed_at = datetime.now(UTC)
             submission.user.status = "regular"
-            PermissionService(self.session).assign_default_group(submission.user)
-            self.session.commit()
-            self.session.refresh(submission)
+            self.permissions.assign_default_group(submission.user)
+            self.repo.commit()
+            self.repo.refresh(submission)
             return submission
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def restore_to_onboarding(self, submission_id: int) -> RecruitmentSubmission:
@@ -379,22 +379,19 @@ class RecruitmentService:
             if submission.volunteer_id is not None:
                 volunteer = self.repo.get_volunteer(submission.volunteer_id)
                 if volunteer:
-                    volunteer.status = "Były"
-                    volunteer.history = (
-                        f"{volunteer.history}\nCofnięto do etapu wdrażania."
-                    ).strip()
+                    submission.volunteer_id = None
+                    self.session.flush()
+                    self.repo.delete_volunteer(volunteer)
             submission.user.status = NEW_VOLUNTEER_STATUS
-            PermissionService(self.session).remove_system_group(
-                submission.user, STAFF_GROUP_KEY
-            )
+            self.permissions.remove_system_group(submission.user, STAFF_GROUP_KEY)
             submission.status = "ONBOARDING"
             submission.decision_comment = None
             submission.status_changed_at = datetime.now(UTC)
             self._ensure_onboarding_meetings(submission)
-            self.session.commit()
+            self.repo.commit()
             return self.get_submission(submission.id)
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def _ensure_onboarding_meetings(self, submission: RecruitmentSubmission) -> None:
@@ -404,7 +401,7 @@ class RecruitmentService:
                 submission.onboarding_meetings.append(
                     RecruitmentOnboardingMeeting(meeting_type=meeting_type)
                 )
-        self.session.flush()
+        self.repo.flush()
 
     def _transition(
         self,
@@ -423,9 +420,9 @@ class RecruitmentService:
             submission.status = target
             submission.decision_comment = decision_comment
             submission.status_changed_at = datetime.now(UTC)
-            self.session.commit()
-            self.session.refresh(submission)
+            self.repo.commit()
+            self.repo.refresh(submission)
             return submission
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise

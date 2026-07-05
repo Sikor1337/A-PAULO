@@ -3,22 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { parseApiError } from './errors';
 
 describe('parseApiError', () => {
-  it('shows validation messages instead of raw JSON', () => {
-    const error = new AxiosError('validation');
-    error.response = {
-      data: {
-        detail: [{
-          type: 'too_short',
-          loc: ['body', 'fields'],
-          msg: 'Lista pytań jest zbyt krótka.',
-        }],
-      },
+  it('turns FastAPI validation details into readable text', () => {
+    const error = new AxiosError('validation', 'ERR_BAD_REQUEST', undefined, undefined, {
+      data: { detail: [{ msg: 'Hasło jest zbyt krótkie' }] },
       status: 422,
       statusText: 'Unprocessable Content',
       headers: {},
-      config: {} as never,
-    };
+      config: { headers: {} } as never,
+    });
 
-    expect(parseApiError(error)).toBe('Lista pytań jest zbyt krótka.');
+    expect(parseApiError(error)).toBe('Hasło jest zbyt krótkie');
   });
 });

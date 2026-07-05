@@ -27,7 +27,10 @@ def _create_sql_engine() -> Engine:
 
 # Initialize SQL engine and session factory
 _sql_engine = _create_sql_engine()
-_sql_session_factory = sql_factory.create_session_factory(_sql_engine)
+_sql_session_factory = sql_factory.create_session_factory(
+    _sql_engine,
+    use_scoped_session=False,
+)
 
 # FastAPI dependency for SQL sessions
 get_sql_session = sql_factory.get_session_dependency(_sql_session_factory)

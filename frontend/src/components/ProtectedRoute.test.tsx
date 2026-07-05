@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -100,11 +100,43 @@ describe('ProtectedRoute', () => {
             <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_USERS" />}>
               <Route path="/private" element={<h1>Private page</h1>} />
             </Route>
+            <Route path="/login" element={<h1>Login page</h1>} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>,
     );
 
     expect(await screen.findByRole('heading', { name: 'Brak dostępu' })).toBeInTheDocument();
+    expect(screen.getByText('To konto nie ma uprawnienia wymaganego do tej sekcji.')).toBeVisible();
+  });
+
+  it('lets a blocked user log out and change account', async () => {
+    localStorage.setItem('access_token', 'access');
+    localStorage.setItem('refresh_token', 'refresh');
+    useAuthStore.setState({
+      user: { id: 1, email: 'anna@example.org', first_name: 'Anna', last_name: 'Nowak', status: 'regular' },
+      isAuthenticated: true,
+    });
+    vi.spyOn(permissionService, 'getMine').mockResolvedValue({ permissions: [], group_ids: [] });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/private']}>
+          <Routes>
+            <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_USERS" />}>
+              <Route path="/private" element={<h1>Private page</h1>} />
+            </Route>
+            <Route path="/login" element={<h1>Login page</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Wyloguj i zmień konto' }));
+
+    expect(await screen.findByRole('heading', { name: 'Login page' })).toBeInTheDocument();
+    expect(localStorage.getItem('access_token')).toBeNull();
+    expect(localStorage.getItem('refresh_token')).toBeNull();
   });
 });

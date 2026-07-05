@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { AxiosError } from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../stores/authStore';
 import { authService } from '../services/authService';
+import { parseApiError } from '../lib/errors';
 import {
   destinationForUser,
   getStoredRecruitmentAccessToken,
@@ -20,6 +20,7 @@ interface RegisterFormData {
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAuthenticated, user } = useAuthStore();
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -52,7 +53,9 @@ const RegisterPage = () => {
         password: data.password,
         first_name: data.first_name,
         last_name: data.last_name,
-        recruitment_token: getStoredRecruitmentAccessToken(),
+        recruitment_token: searchParams.get('recruitment') === '1'
+          ? getStoredRecruitmentAccessToken()
+          : undefined,
       });
 
       // Redirect to login after successful registration
@@ -61,14 +64,7 @@ const RegisterPage = () => {
       });
     } catch (err) {
       console.error('Registration error:', err);
-      const axiosError = err as AxiosError<{ detail?: string }>;
-      if (axiosError.response?.status === 409) {
-        setError(axiosError.response.data?.detail || 'Ta nazwa użytkownika lub email już istnieje');
-      } else if (axiosError.response?.data?.detail) {
-        setError(axiosError.response.data.detail);
-      } else {
-        setError('Wystąpił błąd podczas rejestracji. Spróbuj ponownie.');
-      }
+      setError(parseApiError(err, 'Wystąpił błąd podczas rejestracji. Spróbuj ponownie.'));
     } finally {
       setIsLoading(false);
     }

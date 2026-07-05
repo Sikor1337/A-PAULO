@@ -1,11 +1,13 @@
 """User repository for data access."""
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from app.infrastructure.sql.repository import SQLRepository
 from app.modules.core_data.models.user import User
 
 
-class UserRepository:
+class UserRepository(SQLRepository):
     """Repository for User model database operations."""
 
     def __init__(self, session: Session):
@@ -114,7 +116,7 @@ class UserRepository:
                 setattr(user, key, value)
         return user
 
-    def exists(self, username: str = None, email: str = None) -> bool:
+    def exists(self, username: str | None = None, email: str | None = None) -> bool:
         """Check if user exists by username or email."""
         if username:
             return self.get_by_username(username) is not None

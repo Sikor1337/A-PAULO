@@ -12,14 +12,23 @@ from app.modules.recruitment.constants import (
     NEW_VOLUNTEER_STATUS,
     RECRUITMENT_TOKEN_HEADER,
 )
+from app.modules.recruitment.repositories import RecruitmentRepository
 from app.modules.recruitment.services import RecruitmentService
-from app.modules.security.dependencies import get_current_user
+from app.modules.security.dependencies import get_current_user, get_permission_service
+from app.modules.security.services.permissions import PermissionService
+
+
+def get_recruitment_repository(
+    session: Session = Depends(get_db),
+) -> RecruitmentRepository:
+    return RecruitmentRepository(session)
 
 
 def get_recruitment_service(
-    session: Session = Depends(get_db),
+    repo: RecruitmentRepository = Depends(get_recruitment_repository),
+    permissions: PermissionService = Depends(get_permission_service),
 ) -> RecruitmentService:
-    return RecruitmentService(session)
+    return RecruitmentService(repo, permissions)
 
 
 def require_recruitment_access(

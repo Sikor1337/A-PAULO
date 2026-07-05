@@ -14,6 +14,7 @@ import ProfilePage from './pages/ProfilePage';
 import MyDepartureSurveyPage from './pages/MyDepartureSurveyPage';
 import SettingsPage from './pages/SettingsPage';
 import EventsPage from './pages/EventsPage';
+import PapCalendarPage from './pages/PapCalendarPage';
 import RecruitmentLayout from './pages/recruitment/RecruitmentLayout';
 import RecruitmentFormBuilderPage from './pages/recruitment/RecruitmentFormBuilderPage';
 import RecruitmentResponsesPage from './pages/recruitment/RecruitmentResponsesPage';
@@ -94,6 +95,7 @@ function App() {
               <Route path="/groups" element={<GroupsPage />} />
             </Route>
             <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_EVENTS" />}>
+              <Route path="/pap-calendar" element={<PapCalendarPage />} />
               <Route path="/events" element={<EventsPage />} />
             </Route>
             <Route element={<ProtectedRoute />}>
