@@ -69,7 +69,7 @@ class UserService:
             self.user_repo.flush()
             self.user_repo.refresh(user)
             self.permissions.assign_default_group(user)
-            self.user_repo.commit()
+            self.user_repo.commit(skip_audit=True)
             return user
         except Exception:
             self.user_repo.rollback()
@@ -190,7 +190,7 @@ class UserService:
             self.user_repo.flush()
             self.user_repo.refresh(user)
             self.permissions.assign_default_group(user)
-            self.user_repo.commit()
+            self.user_repo.commit(skip_audit=True)
             return user
         except Exception:
             self.user_repo.rollback()
@@ -225,7 +225,7 @@ class UserService:
             user = self.user_repo.update(user, **update_data)
             self.user_repo.flush()
             self.user_repo.refresh(user)
-            self.user_repo.commit()
+            self.user_repo.commit(skip_audit=True)
             return user
         except Exception:
             self.user_repo.rollback()
@@ -242,7 +242,7 @@ class UserService:
         try:
             user = self.get_user_by_id(user_id)
             self.user_repo.delete(user)
-            self.user_repo.commit()
+            self.user_repo.commit(skip_audit=True)
         except Exception:
             self.user_repo.rollback()
             raise

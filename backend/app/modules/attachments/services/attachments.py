@@ -214,7 +214,7 @@ class AttachmentService:
             )
             self.repo.flush()
             self.repo.refresh(attachment)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return attachment
         except Exception:
             self.repo.rollback()
@@ -261,7 +261,7 @@ class AttachmentService:
             attachment = self.repo.update(attachment, **patch)
             self.repo.flush()
             self.repo.refresh(attachment)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return attachment
         except Exception:
             self.repo.rollback()
@@ -282,7 +282,7 @@ class AttachmentService:
 
         try:
             self.repo.delete(attachment)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
         except Exception:
             self.repo.rollback()
             if backup is not None:

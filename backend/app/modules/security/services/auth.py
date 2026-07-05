@@ -103,7 +103,7 @@ class AuthService:
             self.repo.flush()
             self.repo.refresh(user)
             self.permissions.assign_default_group(user)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return user
         except HTTPException:
             self.repo.rollback()
@@ -169,7 +169,7 @@ class AuthService:
                 update_fields["hashed_password"] = hash_password(data.new_password)
 
             user = self.repo.update(user, **update_fields)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             self.repo.refresh(user)
             return user
         except HTTPException:

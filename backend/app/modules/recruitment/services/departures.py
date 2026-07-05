@@ -85,7 +85,7 @@ class DepartureService:
             if field.position != position:
                 field.position = position
 
-        self.session.commit()
+        self.repo.commit(skip_audit=True)
 
     def list_fields(self, *, active_only: bool = False) -> list[DepartureField]:
         self._ensure_default_fields()
@@ -133,7 +133,7 @@ class DepartureService:
             for field in current:
                 if field.id not in submitted_ids:
                     self.repo.delete_field(field)
-            self.session.commit()
+            self.repo.commit(skip_audit=True)
             return self.repo.list_fields()
         except Exception:
             self.session.rollback()
@@ -262,7 +262,7 @@ class DepartureService:
                 answers=validated,
                 completed_by_id=completed_by_id,
             )
-            self.session.commit()
+            self.repo.commit(skip_audit=True)
             return self.get_interview(interview.id)
         except IntegrityError as error:
             self.session.rollback()
@@ -307,7 +307,7 @@ class DepartureService:
             interview.departure_reason = str(indexed["departure_reason"])
             interview.stay_in_contact = bool(indexed.get("stay_in_contact"))
             interview.answers = validated
-            self.session.commit()
+            self.repo.commit(skip_audit=True)
             return self.get_interview(interview.id)
         except Exception:
             self.session.rollback()

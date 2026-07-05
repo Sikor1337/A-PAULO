@@ -55,7 +55,7 @@ class CalendarSubscriptionService:
                 action="generated",
                 entity_type="feed_token",
             )
-            self.tokens.commit()
+            self.tokens.commit(skip_audit=True)
             self.tokens.refresh(record)
             return plain_token, record
         except Exception:
@@ -73,7 +73,7 @@ class CalendarSubscriptionService:
                     action="revoked",
                     entity_type="feed_token",
                 )
-                self.tokens.commit()
+                self.tokens.commit(skip_audit=True)
         except Exception:
             self.tokens.rollback()
             raise

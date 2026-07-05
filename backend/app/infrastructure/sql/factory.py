@@ -4,6 +4,8 @@ from collections.abc import Callable, Generator
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
+from app.modules.audit.session import AuditAwareSession
+
 logger = logging.getLogger(__name__)
 
 
@@ -74,6 +76,7 @@ class SQLConnectionFactory:
             autoflush=autoflush,
             expire_on_commit=False,
             bind=engine,
+            class_=AuditAwareSession,
         )
         if use_scoped_session:
             return scoped_session(factory)

@@ -3,6 +3,7 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
+from app.infrastructure.sql.repository import SQLRepository
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.models import (
     DepartureField,
@@ -11,9 +12,9 @@ from app.modules.recruitment.models import (
 )
 
 
-class DepartureRepository:
+class DepartureRepository(SQLRepository):
     def __init__(self, session: Session):
-        self.session = session
+        super().__init__(session)
 
     def list_fields(self, *, active_only: bool = False) -> list[DepartureField]:
         query = self.session.query(DepartureField)
