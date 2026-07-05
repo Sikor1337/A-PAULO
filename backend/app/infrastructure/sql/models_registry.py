@@ -6,6 +6,8 @@ from app.modules.pi.models.function import Function
 from app.modules.pi.models.group import BeneficiaryAssignment, Group
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.models import (
+    DepartureField,
+    DepartureInterview,
     RecruitmentField,
     RecruitmentOnboardingMeeting,
     RecruitmentSubmission,
@@ -19,6 +21,8 @@ __all__ = [
     "CalendarAudit",
     "CalendarEvent",
     "CalendarFeedToken",
+    "DepartureField",
+    "DepartureInterview",
     "Function",
     "Group",
     "Permission",
@@ -29,4 +33,3 @@ __all__ = [
     "UserGroup",
     "Volunteer",
 ]
-

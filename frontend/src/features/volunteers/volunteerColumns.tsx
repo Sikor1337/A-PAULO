@@ -42,8 +42,7 @@ const renderFunctionList = (functions: string[]) => {
 
 export function buildVolunteerColumns({ onSelect, onEdit, onDelete, canManage }: Handlers): Column<Volunteer>[] {
   const columns: Column<Volunteer>[] = [
-  ];
-  if (canManage) columns.push({
+    {
       id: 'full_name',
       header: 'Imię i nazwisko',
       widthClass: 'w-[18%]',
@@ -90,7 +89,9 @@ export function buildVolunteerColumns({ onSelect, onEdit, onDelete, canManage }:
       sortKey: 'status',
       render: (v) => <StatusBadge status={v.status} colorClass={statusColor(v.status)} />,
     },
-    {
+  ];
+  if (canManage) {
+    columns.push({
       id: 'actions',
       header: 'Akcje',
       widthClass: 'w-[8%] min-w-[100px]',
@@ -100,16 +101,19 @@ export function buildVolunteerColumns({ onSelect, onEdit, onDelete, canManage }:
           <button onClick={() => onEdit(v)} className="bg-[#6366f1] text-white p-1.5 rounded hover:opacity-80">
             ✏️
           </button>
-          <button
-            onClick={() => {
-              if (confirm('Usunąć?')) onDelete(v.id);
-            }}
-            className="bg-[#ef4444] text-white p-1.5 rounded hover:opacity-80"
-          >
-            🗑️
-          </button>
+          {v.status === 'Aktywny' && (
+            <button
+              onClick={() => {
+                if (confirm('Usunąć?')) onDelete(v.id);
+              }}
+              className="bg-[#ef4444] text-white p-1.5 rounded hover:opacity-80"
+            >
+              🗑️
+            </button>
+          )}
         </div>
       ),
     });
+  }
   return columns;
 }

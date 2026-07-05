@@ -42,6 +42,13 @@ export type {
   RecruitmentSubmission,
 } from './recruitment';
 export type {
+  DepartureAnswer,
+  DepartureField,
+  DepartureFieldDraft,
+  DepartureInterview,
+  DepartureSelfService,
+} from './departure';
+export type {
   CalendarEvent,
   CalendarEventInput,
   CalendarEventStatus,

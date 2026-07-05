@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useMyPermissions } from '@/hooks/usePermissions';
-import type { PermissionCode } from '@/types';
+import type { PermissionCode, UserStatus } from '@/types';
 
 interface SidebarProps {
   groupsSlot?: ReactNode;
@@ -17,6 +17,7 @@ interface SidebarItem {
   path: string;
   permission?: PermissionCode;
   anyPermissions?: PermissionCode[];
+  statuses?: UserStatus[];
 }
 
 interface SidebarSection {
@@ -42,6 +43,7 @@ const sections: SidebarSection[] = [
       { name: 'Kalendarz PAP', icon: 'K', path: '/pap-calendar', permission: 'CAN_VIEW_EVENTS' },
       { name: 'Wydarzenia', icon: '📅', path: '/events', permission: 'CAN_VIEW_EVENTS' },
       { name: 'Zadania', icon: '📋', path: '/tasks' },
+      { name: 'Ankieta odejścia', icon: 'A', path: '/departure-survey', statuses: ['regular', 'admin'] },
     ],
   },
   {
@@ -109,6 +111,7 @@ const Sidebar = ({ groupsSlot, isOpen = true, onClose }: SidebarProps) => {
             <nav className="space-y-0.5">
               {section.items
                 .filter((item) => {
+                  if (item.statuses && (!user || !item.statuses.includes(user.status))) return false;
                   if (item.permission && !permissions.includes(item.permission)) return false;
                   if (item.anyPermissions && !item.anyPermissions.some((code) => permissions.includes(code))) return false;
                   return true;

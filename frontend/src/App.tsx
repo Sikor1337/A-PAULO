@@ -11,6 +11,7 @@ import BOCardsPage from './pages/BOCardsPage';
 import VolunteersPage from './pages/VolunteersPage';
 import GroupsPage from './pages/GroupsPage';
 import ProfilePage from './pages/ProfilePage';
+import MyDepartureSurveyPage from './pages/MyDepartureSurveyPage';
 import SettingsPage from './pages/SettingsPage';
 import EventsPage from './pages/EventsPage';
 import PapCalendarPage from './pages/PapCalendarPage';
@@ -18,6 +19,7 @@ import RecruitmentLayout from './pages/recruitment/RecruitmentLayout';
 import RecruitmentFormBuilderPage from './pages/recruitment/RecruitmentFormBuilderPage';
 import RecruitmentResponsesPage from './pages/recruitment/RecruitmentResponsesPage';
 import RecruitmentOnboardingPage from './pages/recruitment/RecruitmentOnboardingPage';
+import DepartureSurveyPage from './pages/recruitment/DepartureSurveyPage';
 import RecruitmentEntryPage from './pages/recruitment/RecruitmentEntryPage';
 import RecruitmentAccessRequiredPage from './pages/recruitment/RecruitmentAccessRequiredPage';
 import { queryClient } from './lib/queryClient';
@@ -98,6 +100,7 @@ function App() {
             </Route>
             <Route element={<ProtectedRoute />}>
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/departure-survey" element={<MyDepartureSurveyPage />} />
             </Route>
             <Route element={<ProtectedRoute requiredAnyPermission={['CAN_VIEW_USERS', 'CAN_VIEW_SECURITY']} />}>
               <Route path="/settings" element={<SettingsPage />} />
@@ -108,6 +111,7 @@ function App() {
                 <Route path="form" element={<RecruitmentFormBuilderPage />} />
                 <Route path="responses" element={<RecruitmentResponsesPage />} />
                 <Route path="onboarding" element={<RecruitmentOnboardingPage />} />
+                <Route path="departures" element={<DepartureSurveyPage />} />
               </Route>
             </Route>
           </Route>
