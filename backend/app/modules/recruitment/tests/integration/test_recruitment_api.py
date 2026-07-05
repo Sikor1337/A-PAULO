@@ -113,6 +113,9 @@ def test_account_form_submission_and_onboarding_flow(
     assert accepted.json()["decision_comment"].startswith("Świetnie")
     volunteer_id = accepted.json()["volunteer_id"]
     assert volunteer_id is not None
+    volunteer = db_session.get(Volunteer, volunteer_id)
+    assert volunteer.history == ""
+    assert volunteer.notes == ""
     assert Volunteer.__table__.c.phone.type.length == 30
     assert candidate.status == "regular"
 
@@ -120,16 +123,17 @@ def test_account_form_submission_and_onboarding_flow(
         f"/api/v1/recruitment/submissions/{submission['id']}/restore-onboarding"
     )
     assert restored.status_code == 200
-    assert restored.json()["volunteer_id"] == volunteer_id
-    assert db_session.get(Volunteer, volunteer_id).status == "Były"
+    assert restored.json()["volunteer_id"] is None
+    assert db_session.get(Volunteer, volunteer_id) is None
 
     accepted_again = api_client.post(
         f"/api/v1/recruitment/submissions/{submission['id']}/accept",
         json={"comment": "Decyzja potwierdzona."},
     )
     assert accepted_again.status_code == 200
-    assert accepted_again.json()["volunteer_id"] == volunteer_id
-    assert db_session.get(Volunteer, volunteer_id).status == "Aktywny"
+    recreated_id = accepted_again.json()["volunteer_id"]
+    assert recreated_id is not None
+    assert db_session.get(Volunteer, recreated_id).status == "Aktywny"
 
 
 def test_onboarding_attendance_can_be_corrected(api_client, db_session, admin_user):

@@ -8,6 +8,16 @@ export function parseApiError(error: unknown, fallback = 'Błąd zapisu.'): stri
   if (error instanceof AxiosError && error.response?.data) {
     const data = error.response.data as { detail?: unknown };
     if (typeof data.detail === 'string') return data.detail;
+    if (Array.isArray(data.detail)) {
+      const messages = data.detail
+        .map((item) => (
+          item && typeof item === 'object' && 'msg' in item
+            ? String(item.msg)
+            : null
+        ))
+        .filter(Boolean);
+      if (messages.length) return messages.join(' ');
+    }
     return JSON.stringify(data.detail ?? data);
   }
   return fallback;

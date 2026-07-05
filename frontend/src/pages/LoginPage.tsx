@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { AxiosError } from 'axios';
 import { useAuthStore } from '../stores/authStore';
@@ -17,6 +17,7 @@ interface LoginFormData {
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, isAuthenticated, user: currentUser } = useAuthStore();
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -157,7 +158,10 @@ const LoginPage = () => {
 
         <p className="mt-4 text-center text-sm text-gray-600">
           Nie masz konta?{' '}
-          <Link to="/register" className="text-blue-600 hover:text-blue-700">
+          <Link
+            to={searchParams.get('recruitment') === '1' ? '/register?recruitment=1' : '/register'}
+            className="text-blue-600 hover:text-blue-700"
+          >
             Zarejestruj się
           </Link>
         </p>

@@ -344,8 +344,8 @@ class RecruitmentService:
                     social_link=submission.social_link or None,
                     status="Aktywny",
                     join_date=datetime.now(UTC),
-                    notes="Utworzono po zakończeniu procesu rekrutacji.",
-                    history="Rekrutacja zakończona pomyślnie.",
+                    notes="",
+                    history="",
                 )
             else:
                 volunteer.full_name = submission.full_name
@@ -353,9 +353,6 @@ class RecruitmentService:
                 volunteer.phone = submission.phone
                 volunteer.social_link = submission.social_link or None
                 volunteer.status = "Aktywny"
-                volunteer.history = (
-                    f"{volunteer.history}\nPonownie zakończono proces rekrutacji."
-                ).strip()
             submission.volunteer_id = volunteer.id
             submission.status = "ACCEPTED"
             submission.decision_comment = comment
@@ -379,10 +376,9 @@ class RecruitmentService:
             if submission.volunteer_id is not None:
                 volunteer = self.repo.get_volunteer(submission.volunteer_id)
                 if volunteer:
-                    volunteer.status = "Były"
-                    volunteer.history = (
-                        f"{volunteer.history}\nCofnięto do etapu wdrażania."
-                    ).strip()
+                    submission.volunteer_id = None
+                    self.session.flush()
+                    self.repo.delete_volunteer(volunteer)
             submission.user.status = NEW_VOLUNTEER_STATUS
             PermissionService(self.session).remove_system_group(
                 submission.user, STAFF_GROUP_KEY

@@ -104,3 +104,6 @@ class RecruitmentRepository:
         self.session.add(volunteer)
         self.session.flush()
         return volunteer
+
+    def delete_volunteer(self, volunteer: Volunteer) -> None:
+        self.session.delete(volunteer)
