@@ -2,10 +2,11 @@
 
 from sqlalchemy.orm import Session
 
+from app.infrastructure.sql.repository import SQLRepository
 from app.modules.calendar.models import CalendarAudit, CalendarFeedToken
 
 
-class CalendarFeedTokenRepository:
+class CalendarFeedTokenRepository(SQLRepository):
     def __init__(self, session: Session):
         self.session = session
 
@@ -25,7 +26,7 @@ class CalendarFeedTokenRepository:
         return token
 
 
-class CalendarAuditRepository:
+class CalendarAuditRepository(SQLRepository):
     def __init__(self, session: Session):
         self.session = session
 

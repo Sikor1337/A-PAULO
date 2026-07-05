@@ -1,5 +1,4 @@
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
 
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
@@ -21,11 +20,11 @@ class AuthService:
         self,
         repo: UserRepository,
         token_service: TokenService,
-        session: Session | None = None,
+        permissions: PermissionService,
     ):
         self.repo = repo
         self.token_service = token_service
-        self.session = session or repo.session
+        self.permissions = permissions
 
     def _issue_tokens(self, user: User) -> Token:
         sub = {"sub": str(user.id)}
@@ -101,16 +100,16 @@ class AuthService:
                         else REGULAR_USER_STATUS
                     ),
                 )
-            self.session.flush()
-            self.session.refresh(user)
-            PermissionService(self.session).assign_default_group(user)
-            self.session.commit()
+            self.repo.flush()
+            self.repo.refresh(user)
+            self.permissions.assign_default_group(user)
+            self.repo.commit()
             return user
         except HTTPException:
-            self.session.rollback()
+            self.repo.rollback()
             raise
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def login(self, data: LoginRequest) -> Token:
@@ -170,14 +169,14 @@ class AuthService:
                 update_fields["hashed_password"] = hash_password(data.new_password)
 
             user = self.repo.update(user, **update_fields)
-            self.session.commit()
-            self.session.refresh(user)
+            self.repo.commit()
+            self.repo.refresh(user)
             return user
         except HTTPException:
-            self.session.rollback()
+            self.repo.rollback()
             raise
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def refresh(self, refresh_token: str) -> Token:

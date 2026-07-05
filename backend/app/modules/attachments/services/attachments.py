@@ -11,8 +11,6 @@ from typing import BinaryIO, cast
 from urllib.parse import unquote
 from zipfile import ZIP_DEFLATED, ZipFile
 
-from sqlalchemy.orm import Session
-
 from app.core.constants import (
     ATTACHMENT_ALLOWED_CONTENT_TYPES,
     ATTACHMENT_ALLOWED_EXTENSIONS,
@@ -33,6 +31,10 @@ from app.modules.attachments.repositories import (
     AttachmentRepository,
     BOCardOverviewRow,
 )
+from app.modules.attachments.schemas import (
+    BOCardArchiveQuery,
+    BOCardAttachmentListQuery,
+)
 from app.modules.core_data.models import User
 from app.modules.pi.repositories import (
     BeneficiaryAssignmentRepository,
@@ -49,87 +51,70 @@ class AttachmentService:
 
     def __init__(
         self,
-        session: Session,
+        repo: AttachmentRepository,
+        group_repo: GroupRepository,
+        beneficiary_repo: BeneficiaryRepository,
+        volunteer_repo: VolunteerRepository,
+        assignment_repo: BeneficiaryAssignmentRepository,
         storage: AttachmentStorage,
         max_size_bytes: int,
     ):
-        self.session = session
         self.storage = storage
         self.max_size_bytes = max_size_bytes
-        self.repo = AttachmentRepository(session)
-        self.group_repo = GroupRepository(session)
-        self.beneficiary_repo = BeneficiaryRepository(session)
-        self.volunteer_repo = VolunteerRepository(session)
-        self.assignment_repo = BeneficiaryAssignmentRepository(session)
+        self.repo = repo
+        self.group_repo = group_repo
+        self.beneficiary_repo = beneficiary_repo
+        self.volunteer_repo = volunteer_repo
+        self.assignment_repo = assignment_repo
 
     def list_bo_cards(
         self,
-        *,
-        group_id: int | None = None,
-        beneficiary_id: int | None = None,
-        volunteer_id: int | None = None,
-        period: str | None = None,
-        period_from: str | None = None,
-        period_to: str | None = None,
-        search: str | None = None,
-        has_comment: bool | None = None,
-        sort_by: str = "created_at",
-        sort_direction: str = "desc",
-        skip: int = 0,
-        limit: int = 100,
+        filters: BOCardAttachmentListQuery,
     ) -> tuple[list[dict], int]:
         """List BO-card metadata across all or selected groups."""
-        normalized_period = self._normalize_period(period) if period else None
+        normalized_period = (
+            self._normalize_period(filters.period) if filters.period else None
+        )
         normalized_from, normalized_to = self._normalize_period_range(
-            period_from,
-            period_to,
+            filters.period_from,
+            filters.period_to,
         )
-        normalized_sort_by = self._normalize_sort_by(sort_by)
-        normalized_direction = self._normalize_sort_direction(sort_direction)
-        rows, total = self.repo.list_bo_cards_overview(
-            group_id=group_id,
-            beneficiary_id=beneficiary_id,
-            volunteer_id=volunteer_id,
-            period=normalized_period,
-            period_from=normalized_from,
-            period_to=normalized_to,
-            search=self._normalize_search(search),
-            has_comment=has_comment,
-            sort_by=normalized_sort_by,
-            sort_direction=normalized_direction,
-            skip=skip,
-            limit=limit,
+        normalized = filters.model_copy(
+            update={
+                "period": normalized_period,
+                "period_from": normalized_from,
+                "period_to": normalized_to,
+                "search": self._normalize_search(filters.search),
+                "sort_by": self._normalize_sort_by(filters.sort_by),
+                "sort_direction": self._normalize_sort_direction(
+                    filters.sort_direction
+                ),
+            }
         )
+        rows, total = self.repo.list_bo_cards_overview(normalized)
         return [self._serialize_overview_row(row) for row in rows], total
 
     def build_bo_cards_archive(
         self,
-        *,
-        group_id: int | None = None,
-        beneficiary_id: int | None = None,
-        volunteer_id: int | None = None,
-        period: str | None = None,
-        period_from: str | None = None,
-        period_to: str | None = None,
-        search: str | None = None,
-        has_comment: bool | None = None,
+        filters: BOCardArchiveQuery,
     ) -> tuple[BinaryIO, int]:
         """Build a bounded, disk-spooled ZIP archive for matching BO cards."""
-        normalized_period = self._normalize_period(period) if period else None
+        normalized_period = (
+            self._normalize_period(filters.period) if filters.period else None
+        )
         normalized_from, normalized_to = self._normalize_period_range(
-            period_from,
-            period_to,
+            filters.period_from,
+            filters.period_to,
         )
-        rows = self.repo.list_bo_cards_for_archive(
-            group_id=group_id,
-            beneficiary_id=beneficiary_id,
-            volunteer_id=volunteer_id,
-            period=normalized_period,
-            period_from=normalized_from,
-            period_to=normalized_to,
-            search=self._normalize_search(search),
-            has_comment=has_comment,
+        normalized = filters.model_copy(
+            update={
+                "period": normalized_period,
+                "period_from": normalized_from,
+                "period_to": normalized_to,
+                "search": self._normalize_search(filters.search),
+            }
         )
+        rows = self.repo.list_bo_cards_for_archive(normalized)
         return self._create_bo_cards_archive(rows)
 
     def _create_bo_cards_archive(
@@ -227,12 +212,12 @@ class AttachmentService:
                 updated_by_id=actor.id,
                 updated_by_username=actor.username,
             )
-            self.session.flush()
-            self.session.refresh(attachment)
-            self.session.commit()
+            self.repo.flush()
+            self.repo.refresh(attachment)
+            self.repo.commit()
             return attachment
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             try:
                 self.storage.delete(stored.storage_key)
             except Exception:
@@ -274,12 +259,12 @@ class AttachmentService:
             if description is not None:
                 patch["description"] = description.strip()
             attachment = self.repo.update(attachment, **patch)
-            self.session.flush()
-            self.session.refresh(attachment)
-            self.session.commit()
+            self.repo.flush()
+            self.repo.refresh(attachment)
+            self.repo.commit()
             return attachment
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def delete_attachment(self, attachment_id: int) -> None:
@@ -297,9 +282,9 @@ class AttachmentService:
 
         try:
             self.repo.delete(attachment)
-            self.session.commit()
+            self.repo.commit()
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             if backup is not None:
                 try:
                     self.storage.restore(storage_key, backup)

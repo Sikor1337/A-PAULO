@@ -1,5 +1,4 @@
 """Service for function operations."""
-from sqlalchemy.orm import Session
 
 from app.core.errors import ConflictError, NotFoundError, ValidationException
 from app.modules.pi.models.function import Function
@@ -9,9 +8,8 @@ from app.modules.pi.repositories.functions import FunctionRepository
 class FunctionService:
     """Service for volunteer function catalog operations."""
 
-    def __init__(self, session: Session):
-        self.session = session
-        self.repo = FunctionRepository(session)
+    def __init__(self, repo: FunctionRepository):
+        self.repo = repo
 
     def get_function_by_id(self, function_id: int) -> Function:
         """Get function by ID or raise NotFoundError."""
@@ -20,9 +18,17 @@ class FunctionService:
             raise NotFoundError(f"Function with ID {function_id} not found")
         return function
 
-    def list_functions(self, skip: int = 0, limit: int = 100, name: str = None, is_active: bool = None):
+    def list_functions(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        name: str | None = None,
+        is_active: bool | None = None,
+    ):
         """List functions with pagination and filters."""
-        functions = self.repo.list_all(skip=skip, limit=limit, name=name, is_active=is_active)
+        functions = self.repo.list_all(
+            skip=skip, limit=limit, name=name, is_active=is_active
+        )
         count = self.repo.count(name=name, is_active=is_active)
         return functions, count
 
@@ -36,12 +42,12 @@ class FunctionService:
                 raise ConflictError(f"Function '{name}' already exists")
 
             function = self.repo.create(name=name)
-            self.session.flush()
-            self.session.refresh(function)
-            self.session.commit()
+            self.repo.flush()
+            self.repo.refresh(function)
+            self.repo.commit()
             return function
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def update_function(self, function_id: int, **kwargs) -> Function:
@@ -59,12 +65,12 @@ class FunctionService:
                 kwargs["name"] = name
 
             function = self.repo.update(function, **kwargs)
-            self.session.flush()
-            self.session.refresh(function)
-            self.session.commit()
+            self.repo.flush()
+            self.repo.refresh(function)
+            self.repo.commit()
             return function
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def delete_function(self, function_id: int) -> None:
@@ -74,7 +80,7 @@ class FunctionService:
             if function.is_system:
                 raise ConflictError("System functions cannot be deleted")
             self.repo.delete(function)
-            self.session.commit()
+            self.repo.commit()
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise

@@ -21,8 +21,12 @@ def repo() -> MagicMock:
 @pytest.fixture
 def service(session: MagicMock, repo: MagicMock) -> UserService:
     service = UserService.__new__(UserService)
-    service.session = session
     service.user_repo = repo
+    service.permissions = MagicMock()
+    repo.flush = session.flush
+    repo.refresh = session.refresh
+    repo.commit = session.commit
+    repo.rollback = session.rollback
     service.settings = SimpleNamespace(
         secret_key="test-secret",
         algorithm="HS256",

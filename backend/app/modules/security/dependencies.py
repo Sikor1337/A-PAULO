@@ -11,6 +11,7 @@ from app.modules.security.models.constants import (
     ALL_PERMISSION_CODES,
     CAN_MANAGE_SECURITY,
 )
+from app.modules.security.repositories import PermissionRepository
 from app.modules.security.services.auth import AuthService
 from app.modules.security.services.permissions import PermissionService
 from app.modules.security.services.token import TokenService
@@ -30,17 +31,31 @@ def get_user_repo(session: Session = Depends(get_db)) -> UserRepository:
     return UserRepository(session)
 
 
-def get_auth_service(
+def get_permission_repo(
     session: Session = Depends(get_db),
+) -> PermissionRepository:
+    return PermissionRepository(session)
+
+
+def get_permission_service(
+    repo: PermissionRepository = Depends(get_permission_repo),
+    users: UserRepository = Depends(get_user_repo),
+) -> PermissionService:
+    return PermissionService(repo, users)
+
+
+def get_auth_service(
+    repo: UserRepository = Depends(get_user_repo),
     token_service: TokenService = Depends(get_token_service),
+    permissions: PermissionService = Depends(get_permission_service),
 ) -> AuthService:
-    repo = UserRepository(session)
-    return AuthService(repo, token_service, session)
+    return AuthService(repo, token_service, permissions)
 
 
 def get_current_user(
     authorization: str = Header(None),
-    session: Session = Depends(get_db),
+    repo: UserRepository = Depends(get_user_repo),
+    token_service: TokenService = Depends(get_token_service),
 ) -> User:
     """Get current authenticated user from Authorization header."""
     if not authorization or not authorization.startswith("Bearer "):
@@ -51,13 +66,6 @@ def get_current_user(
         )
 
     token = authorization.split(" ", 1)[1]
-    repo = UserRepository(session)
-    token_service = TokenService(
-        secret_key=get_settings().secret_key,
-        algorithm=get_settings().algorithm,
-        access_token_expire_minutes=get_settings().access_token_expire_minutes,
-    )
-
     payload = token_service.decode_token(token)
     if not payload or payload.get("type") != "access":
         raise HTTPException(
@@ -94,14 +102,14 @@ def get_current_user(
     return user
 
 
-def require_permission(permission_code: str) -> Callable[[User, Session], User]:
+def require_permission(permission_code: str) -> Callable[..., User]:
     """Require a permission inherited from any user security group."""
 
     def dependency(
         user: User = Depends(get_current_user),
-        session: Session = Depends(get_db),
+        permissions: PermissionService = Depends(get_permission_service),
     ) -> User:
-        if not PermissionService(session).has_permission(user, permission_code):
+        if not permissions.has_permission(user, permission_code):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions",
@@ -111,14 +119,14 @@ def require_permission(permission_code: str) -> Callable[[User, Session], User]:
     return dependency
 
 
-def require_any_permission(*permission_codes: str) -> Callable[[User, Session], User]:
+def require_any_permission(*permission_codes: str) -> Callable[..., User]:
     """Require at least one of the supplied permissions."""
 
     def dependency(
         user: User = Depends(get_current_user),
-        session: Session = Depends(get_db),
+        permissions: PermissionService = Depends(get_permission_service),
     ) -> User:
-        effective = PermissionService(session).permissions_for_user(user)
+        effective = permissions.permissions_for_user(user)
         if not effective.intersection(permission_codes):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

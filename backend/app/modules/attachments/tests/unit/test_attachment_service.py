@@ -39,7 +39,11 @@ class FakeStorage:
 
 def build_service(repo: MagicMock, storage: FakeStorage) -> AttachmentService:
     service = AttachmentService.__new__(AttachmentService)
-    service.session = MagicMock()
+    transaction = MagicMock()
+    repo.commit = transaction.commit
+    repo.rollback = transaction.rollback
+    repo.refresh = transaction.refresh
+    service.session = transaction
     service.storage = storage
     service.max_size_bytes = 10
     service.repo = repo
