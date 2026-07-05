@@ -4,7 +4,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.modules.audit.session import AuditAwareSession
+from app.infrastructure.sql.factory import AuditAwareSession
 
 
 class SQLRepository:
