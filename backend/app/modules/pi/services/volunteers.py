@@ -1,6 +1,9 @@
 """Volunteer service for PI domain."""
 
+from app.core.audit import AuditEntry, AuditPort, EntityType, calculate_delta
 from app.core.errors import ConflictError, NotFoundError
+from app.modules.core_data.models import User
+from app.modules.pi.audit_state import volunteer_audit_state
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.pi.repositories.volunteers import VolunteerRepository
 
@@ -8,8 +11,28 @@ from app.modules.pi.repositories.volunteers import VolunteerRepository
 class VolunteerService:
     """Service for volunteer operations."""
 
-    def __init__(self, repo: VolunteerRepository):
+    def __init__(self, repo: VolunteerRepository, audit: AuditPort):
         self.repo = repo
+        self.audit = audit
+
+    def _record(
+        self,
+        action: str,
+        volunteer_id: int,
+        actor: User,
+        old_state: dict,
+        new_state: dict,
+    ) -> None:
+        self.audit.record(
+            AuditEntry(
+                entity_type=EntityType.PI_VOLUNTEER.value,
+                entity_id=str(volunteer_id),
+                action=action,
+                actor_id=str(actor.id),
+                actor_display_name=actor.email,
+                changes=calculate_delta(old_state, new_state),
+            )
+        )
 
     def _enrich_volunteer(self, volunteer: Volunteer) -> Volunteer:
         """Enrich volunteer with computed fields from database."""
@@ -47,7 +70,7 @@ class VolunteerService:
         volunteers = [self._enrich_volunteer(v) for v in volunteers]
         return volunteers, count
 
-    def create_volunteer(self, **kwargs) -> Volunteer:
+    def create_volunteer(self, actor: User, **kwargs) -> Volunteer:
         """Create new volunteer."""
         try:
             function_ids = kwargs.pop("function_ids", [])
@@ -61,17 +84,22 @@ class VolunteerService:
             self.repo.flush()
             self._sync_functions(volunteer.id, function_ids)
             self.repo.refresh(volunteer)
-            self.repo.commit(skip_audit=True)
-            return self._enrich_volunteer(volunteer)
+            volunteer = self._enrich_volunteer(volunteer)
+            self._record(
+                "CREATE", volunteer.id, actor, {}, volunteer_audit_state(volunteer)
+            )
+            self.repo.commit()
+            return volunteer
         except Exception:
             self.repo.rollback()
             raise
 
-    def update_volunteer(self, volunteer_id: int, **kwargs) -> Volunteer:
+    def update_volunteer(self, volunteer_id: int, actor: User, **kwargs) -> Volunteer:
         """Update volunteer."""
         try:
             function_ids = kwargs.pop("function_ids", None)
             volunteer = self.get_volunteer_by_id(volunteer_id)
+            old_state = volunteer_audit_state(volunteer)
 
             # If email is being updated, check uniqueness (excluding current volunteer)
             if (
@@ -88,18 +116,27 @@ class VolunteerService:
             if function_ids is not None:
                 self._sync_functions(volunteer.id, function_ids)
             self.repo.refresh(volunteer)
-            self.repo.commit(skip_audit=True)
-            return self._enrich_volunteer(volunteer)
+            volunteer = self._enrich_volunteer(volunteer)
+            new_state = volunteer_audit_state(volunteer)
+            changes = calculate_delta(old_state, new_state)
+            if not changes:
+                self.repo.rollback()
+                return self.get_volunteer_by_id(volunteer_id)
+            self._record("UPDATE", volunteer.id, actor, old_state, new_state)
+            self.repo.commit()
+            return volunteer
         except Exception:
             self.repo.rollback()
             raise
 
-    def delete_volunteer(self, volunteer_id: int) -> None:
+    def delete_volunteer(self, volunteer_id: int, actor: User) -> None:
         """Delete volunteer."""
         try:
             volunteer = self.get_volunteer_by_id(volunteer_id)
+            old_state = volunteer_audit_state(volunteer)
             self.repo.delete(volunteer)
-            self.repo.commit(skip_audit=True)
+            self._record("DELETE", volunteer.id, actor, old_state, {})
+            self.repo.commit()
         except Exception:
             self.repo.rollback()
             raise

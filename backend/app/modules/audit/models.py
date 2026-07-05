@@ -1,6 +1,7 @@
 """Append-only audit persistence model."""
 
-from datetime import datetime
+import secrets
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
@@ -54,6 +55,7 @@ class AuditEvent(Base):
         DateTime(timezone=True),
         primary_key=True,
         nullable=False,
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
     )
 
@@ -62,5 +64,13 @@ def _reject_mutation(mapper: Mapper, connection, target: AuditEvent) -> None:
     raise RuntimeError("Audit events are append-only")
 
 
+def _assign_sqlite_id(mapper: Mapper, connection, target: AuditEvent) -> None:
+    # SQLite cannot autoincrement one column of a composite primary key. The
+    # production PostgreSQL path continues to use its BIGINT identity.
+    if connection.dialect.name == "sqlite" and target.id is None:
+        target.id = secrets.randbits(63)
+
+
+event.listen(AuditEvent, "before_insert", _assign_sqlite_id)
 event.listen(AuditEvent, "before_update", _reject_mutation)
 event.listen(AuditEvent, "before_delete", _reject_mutation)

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSecurityGroups } from '@/hooks/usePermissions';
+import HistoryButton from '@/features/audit/HistoryButton';
 import type { AdminUser, PermissionCode } from '@/types';
 
 interface Props {
@@ -153,6 +154,10 @@ const SecurityGroupsPanel = ({ users, canManage }: Props) => {
 
           {canManage && (
             <div className="flex flex-wrap justify-end gap-2">
+              <HistoryButton
+                path={`v1/security/groups/${selected.id}/audit`}
+                entityName={`Grupa uprawnień: ${selected.name}`}
+              />
               {!selected.is_system && (
                 <button
                   type="button"
@@ -170,6 +175,14 @@ const SecurityGroupsPanel = ({ users, canManage }: Props) => {
               >
                 {saveGroup.isPending ? 'Zapisywanie…' : 'Zapisz zmiany'}
               </button>
+            </div>
+          )}
+          {!canManage && (
+            <div className="flex justify-end">
+              <HistoryButton
+                path={`v1/security/groups/${selected.id}/audit`}
+                entityName={`Grupa uprawnień: ${selected.name}`}
+              />
             </div>
           )}
         </section>

@@ -1,6 +1,7 @@
 """Stable audit contracts shared by business modules."""
 
 from dataclasses import dataclass
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Any, Protocol
 
@@ -59,6 +60,30 @@ class AuditReaderPort(Protocol):
         offset: int = 0,
     ) -> list[Any]: ...
 
+    def get_logs_for_entity_or_context(
+        self,
+        entity_type: str,
+        entity_id: str,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[Any]: ...
+
+
+def audit_value(value: Any) -> Any:
+    """Convert common domain values into deterministic JSON-compatible values."""
+
+    if isinstance(value, datetime | date):
+        return value.isoformat()
+    if isinstance(value, StrEnum):
+        return value.value
+    if isinstance(value, dict):
+        return {str(key): audit_value(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [audit_value(item) for item in value]
+    if isinstance(value, set):
+        return [audit_value(item) for item in sorted(value, key=str)]
+    return value
+
 
 def calculate_delta(
     old_state: dict[str, Any], new_state: dict[str, Any]
@@ -71,5 +96,8 @@ def calculate_delta(
         old_value = old_state.get(key)
         new_value = new_state.get(key)
         if key not in old_state or key not in new_state or old_value != new_value:
-            delta[key] = {"old": old_value, "new": new_value}
+            delta[key] = {
+                "old": audit_value(old_value),
+                "new": audit_value(new_value),
+            }
     return delta

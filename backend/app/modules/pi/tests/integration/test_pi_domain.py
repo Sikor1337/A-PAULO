@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from datetime import datetime
+from types import SimpleNamespace
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -7,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db
 from app.core.errors import register_error_handlers
+from app.modules.audit.repositories import AuditRepository
+from app.modules.audit.services import SqlAuditService
 from app.modules.pi.api.volunteers import router as volunteers_router
 from app.modules.pi.repositories import (
     BeneficiaryRepository,
@@ -23,13 +26,16 @@ from app.modules.pi.services.volunteers import VolunteerService
 def test_services_create_group_assignments_and_enriched_volunteer(
     db_session: Session,
 ) -> None:
+    audit = SqlAuditService(AuditRepository(db_session))
+    actor = SimpleNamespace(id=999, email="system@example.com")
     function_service = FunctionService(FunctionRepository(db_session))
-    volunteer_service = VolunteerService(VolunteerRepository(db_session))
-    beneficiary_service = BeneficiaryService(BeneficiaryRepository(db_session))
-    group_service = GroupService(GroupRepository(db_session))
+    volunteer_service = VolunteerService(VolunteerRepository(db_session), audit)
+    beneficiary_service = BeneficiaryService(BeneficiaryRepository(db_session), audit)
+    group_service = GroupService(GroupRepository(db_session), audit)
 
     function = function_service.create_function(name="Odwiedziny")
     volunteer = volunteer_service.create_volunteer(
+        actor=actor,
         full_name="Anna Wolontariusz",
         email="anna.w@example.com",
         phone="+48 123 456 789",
@@ -37,10 +43,12 @@ def test_services_create_group_assignments_and_enriched_volunteer(
         function_ids=[function.id],
     )
     group = group_service.create_group(
+        actor=actor,
         name="Grupa Północ",
         leader_id=volunteer.id,
     )
     beneficiary = beneficiary_service.create_beneficiary(
+        actor=actor,
         full_name="Jan Podopieczny",
         address="ul. Testowa 1",
         group_id=group["id"],
@@ -49,6 +57,7 @@ def test_services_create_group_assignments_and_enriched_volunteer(
 
     detail = group_service.update_group(
         group["id"],
+        actor=actor,
         assignments=[
             {
                 "beneficiary": beneficiary.id,

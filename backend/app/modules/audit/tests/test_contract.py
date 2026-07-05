@@ -1,3 +1,5 @@
+from datetime import date
+
 from app.core.audit import calculate_delta
 
 
@@ -21,4 +23,10 @@ def test_calculate_delta_returns_empty_mapping_for_identical_state() -> None:
 def test_calculate_delta_detects_nullable_key_removal() -> None:
     assert calculate_delta({"optional": None}, {}) == {
         "optional": {"old": None, "new": None}
+    }
+
+
+def test_calculate_delta_serializes_domain_dates() -> None:
+    assert calculate_delta({}, {"joined": date(2026, 7, 5)}) == {
+        "joined": {"old": None, "new": "2026-07-05"}
     }

@@ -4,6 +4,7 @@ import DataTable from '@/components/ui/DataTable';
 import SecurityGroupsPanel from '@/features/settings/SecurityGroupsPanel';
 import UserFormModal from '@/features/settings/UserFormModal';
 import UserGroupsModal from '@/features/settings/UserGroupsModal';
+import HistoryButton from '@/features/audit/HistoryButton';
 import { useMyPermissions, useSecurityGroups } from '@/hooks/usePermissions';
 import { useTableControls } from '@/hooks/useTableControls';
 import { useUsers } from '@/hooks/useUsers';
@@ -60,6 +61,12 @@ const SettingsPage = () => {
       id: 'actions', header: 'Akcje', align: 'center',
       render: (user) => (
         <div className="flex flex-wrap justify-center gap-2">
+          <HistoryButton
+            path={`v1/users/${user.id}/audit`}
+            entityName={`${user.first_name} ${user.last_name}`.trim() || user.email}
+            compact
+            className="rounded bg-indigo-100 px-3 py-1.5 text-xs font-bold text-indigo-700"
+          />
           {canManageSecurity && (
             <button type="button" onClick={() => setGroupEditingUser(user)} className="rounded bg-slate-600 px-3 py-1.5 text-xs font-bold text-white">
               Grupy
