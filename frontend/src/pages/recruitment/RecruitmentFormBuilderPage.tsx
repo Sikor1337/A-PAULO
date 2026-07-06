@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import RecruitmentFieldModal from '@/features/recruitment/RecruitmentFieldModal';
+import SurveyFieldModal from '@/features/surveys/SurveyFieldModal';
 import { useRecruitmentAccessLink, useRecruitmentFields } from '@/hooks/useRecruitment';
 import { useHasPermission } from '@/hooks/usePermissions';
 import type { RecruitmentFieldDraft, RecruitmentFieldType } from '@/types';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 const typeLabels: Record<RecruitmentFieldType, string> = {
   text: 'Krótka odpowiedź',
@@ -27,6 +28,7 @@ const RecruitmentFormBuilderPage = () => {
     ? `${window.location.origin}${accessLink.data}`
     : '';
   const fields = draft ?? data;
+  const confirmDiscard = useUnsavedChanges(draft !== null && !save.isPending);
 
   const editingField = useMemo(() => {
     if (editingIndex === undefined || editingIndex === null || !draft) return null;
@@ -124,7 +126,7 @@ const RecruitmentFormBuilderPage = () => {
         {draft ? (
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setEditingIndex(null)} className="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">+ Dodaj pole</button>
-            <button type="button" onClick={() => setDraft(null)} disabled={save.isPending} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Anuluj</button>
+            <button type="button" onClick={() => confirmDiscard() && setDraft(null)} disabled={save.isPending} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Anuluj</button>
             <button type="button" onClick={saveDraft} disabled={save.isPending} className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-bold text-white disabled:opacity-50">
               {save.isPending ? 'Zapisywanie…' : 'Zapisz formularz'}
             </button>
@@ -169,7 +171,7 @@ const RecruitmentFormBuilderPage = () => {
       )}
 
       {canManage && editingIndex !== undefined && (
-        <RecruitmentFieldModal
+        <SurveyFieldModal
           field={editingField}
           onClose={() => setEditingIndex(undefined)}
           onSave={applyField}

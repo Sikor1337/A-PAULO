@@ -40,6 +40,19 @@
   przez technologie asystujące bez przejmowania fokusu.
 - Pozostałe zasady układu opisuje `frontend-responsive-layout.md`.
 
+## Moduł ankiet
+
+- Wspólne elementy ankiet znajdują się w `frontend/src/features/surveys` i nie
+  zależą od API rekrutacji ani odejść.
+- `SurveyFieldBuilder` odpowiada za roboczą edycję, kolejność i aktywność pól,
+  a `SurveyFieldModal` za konfigurację jednego pytania.
+- `SurveyResponses` zapewnia jednolitą listę, wyszukiwanie i podgląd pełnych
+  odpowiedzi. Moduły biznesowe mapują swoje dane do jego neutralnego kontraktu.
+- Nowe ankiety powinny składać te komponenty z własnymi hookami i serwisami,
+  zamiast kopiować ekrany rekrutacji.
+- Nawigacja rekrutacji rozdziela proces (`Ankiety`, `Wdrażanie`), rodzaj ankiety
+  oraz widok (`Edycja`, `Odpowiedzi`). Stare adresy pozostają przekierowaniami.
+
 ## Testowanie
 
 - Logout należy testować zarówno bezpośrednio w store, jak i przez automatyczną

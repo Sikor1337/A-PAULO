@@ -8,6 +8,9 @@ const authState = vi.hoisted(() => ({ status: 'regular' }));
 vi.mock('@/components/layout/PageShell', () => ({
   default: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
 }));
+vi.mock('@/hooks/useUnsavedChanges', () => ({
+  useUnsavedChanges: () => () => true,
+}));
 vi.mock('@/hooks/useDepartures', () => ({
   useDepartureFields: vi.fn(),
   useMyDepartureSurvey: vi.fn(),

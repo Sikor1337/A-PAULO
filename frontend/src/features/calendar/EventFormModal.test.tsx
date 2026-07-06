@@ -2,6 +2,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import EventFormModal from './EventFormModal';
 
+vi.mock('@/hooks/useUnsavedChanges', () => ({
+  useUnsavedChanges: () => () => true,
+}));
+
 describe('EventFormModal', () => {
   it('sets both dates to the clicked day for an all-day event', async () => {
     render(
