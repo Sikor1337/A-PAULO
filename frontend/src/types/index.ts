@@ -9,6 +9,7 @@ export type {
   SecurityPermission,
 } from './security';
 export type { Volunteer, VolunteerStatus, VolunteerInput, VolunteerFunction, VolunteerFunctionInput } from './volunteer';
+export type { ImportEntity, ImportReport, ImportRowIssue } from './imports';
 export type { Beneficiary, BeneficiaryStatus, BeneficiaryInput } from './beneficiary';
 export type {
   AttachmentUpdateInput,

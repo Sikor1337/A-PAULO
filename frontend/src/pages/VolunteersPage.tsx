@@ -9,6 +9,7 @@ import { useHasPermission } from '@/hooks/usePermissions';
 import { buildVolunteerColumns } from '@/features/volunteers/volunteerColumns';
 import { volunteerDetailFields } from '@/features/volunteers/volunteerDetail';
 import VolunteerFormModal from '@/features/volunteers/VolunteerFormModal';
+import CsvImportModal from '@/features/imports/CsvImportModal';
 import { exportRowsToCsv } from '@/lib/csv';
 import type { Volunteer, VolunteerStatus } from '@/types';
 
@@ -17,6 +18,7 @@ const VolunteersPage: React.FC = () => {
   const [editing, setEditing] = useState<Volunteer | null>(null);
   const [details, setDetails] = useState<Volunteer | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [filterGroup, setFilterGroup] = useState('');
   const [filterStatus, setFilterStatus] = useState<'' | VolunteerStatus>('');
 
@@ -76,6 +78,15 @@ const VolunteersPage: React.FC = () => {
           >
             Eksport CSV
           </button>
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => setIsImporting(true)}
+              className="min-h-10 rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold text-gray-600 transition-all hover:bg-gray-50"
+            >
+              Import CSV
+            </button>
+          )}
           {canManage && (
             <button
               onClick={() => setIsAdding(true)}
@@ -155,6 +166,10 @@ const VolunteersPage: React.FC = () => {
 
       {canManage && (editing || isAdding) && (
         <VolunteerFormModal volunteer={editing} onClose={closeForm} onSave={save.mutate} isPending={save.isPending} />
+      )}
+
+      {canManage && isImporting && (
+        <CsvImportModal entity="volunteers" entityLabel="wolontariuszy" onClose={() => setIsImporting(false)} />
       )}
     </PageShell>
   );

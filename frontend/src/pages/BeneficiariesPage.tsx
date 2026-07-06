@@ -9,6 +9,7 @@ import { useHasPermission } from '@/hooks/usePermissions';
 import { buildBeneficiaryColumns } from '@/features/beneficiaries/beneficiaryColumns';
 import { beneficiaryDetailFields } from '@/features/beneficiaries/beneficiaryDetail';
 import BeneficiaryFormModal from '@/features/beneficiaries/BeneficiaryFormModal';
+import CsvImportModal from '@/features/imports/CsvImportModal';
 import { exportRowsToCsv } from '@/lib/csv';
 import type { Beneficiary } from '@/types';
 
@@ -17,6 +18,7 @@ const BeneficiariesPage: React.FC = () => {
   const [editing, setEditing] = useState<Beneficiary | null>(null);
   const [details, setDetails] = useState<Beneficiary | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [filterGroup, setFilterGroup] = useState<number | ''>('');
   const [filterBO, setFilterBO] = useState<'' | 'yes' | 'no'>('');
 
@@ -81,6 +83,15 @@ const BeneficiariesPage: React.FC = () => {
           >
             Eksport CSV
           </button>}
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => setIsImporting(true)}
+              className="min-h-10 rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold text-gray-600 transition-all hover:bg-gray-50"
+            >
+              Import CSV
+            </button>
+          )}
           <button
             onClick={() => setIsAdding(true)}
             className="flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#10b981] px-6 py-2 text-sm font-bold text-white transition-all hover:opacity-90"
@@ -157,6 +168,10 @@ const BeneficiariesPage: React.FC = () => {
 
       {canManage && (editing || isAdding) && (
         <BeneficiaryFormModal beneficiary={editing} onClose={closeForm} onSave={save.mutate} isPending={save.isPending} />
+      )}
+
+      {canManage && isImporting && (
+        <CsvImportModal entity="beneficiaries" entityLabel="podopiecznych" onClose={() => setIsImporting(false)} />
       )}
     </PageShell>
   );
