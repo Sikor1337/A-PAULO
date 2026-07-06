@@ -16,7 +16,9 @@ export type PermissionCode =
   | 'CAN_VIEW_EVENTS'
   | 'CAN_MANAGE_EVENTS'
   | 'CAN_VIEW_SECURITY'
-  | 'CAN_MANAGE_SECURITY';
+  | 'CAN_MANAGE_SECURITY'
+  | 'CAN_VIEW_DEPARTMENTS'
+  | 'CAN_MANAGE_DEPARTMENTS';
 
 export interface SecurityPermission {
   id: number;

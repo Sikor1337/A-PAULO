@@ -11,6 +11,12 @@ export type {
 export type { Volunteer, VolunteerStatus, VolunteerInput, VolunteerFunction, VolunteerFunctionInput } from './volunteer';
 export type { Beneficiary, BeneficiaryStatus, BeneficiaryInput } from './beneficiary';
 export type {
+  DepartmentDetail,
+  DepartmentInput,
+  DepartmentListItem,
+  DepartmentMember,
+} from './department';
+export type {
   AttachmentUpdateInput,
   BOCardAttachment,
   BOCardOverviewAttachment,
