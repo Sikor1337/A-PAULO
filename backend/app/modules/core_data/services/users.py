@@ -34,7 +34,7 @@ class UserService:
         self.settings = get_settings()
 
     def _state(self, user: User) -> dict:
-        return user_audit_state(user, self.permissions.group_ids_for_user(user.id))
+        return user_audit_state(user)
 
     def _record(
         self,

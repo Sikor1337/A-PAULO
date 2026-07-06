@@ -31,7 +31,7 @@ class AuthService:
         self.audit = audit
 
     def _state(self, user: User) -> dict:
-        return user_audit_state(user, self.permissions.group_ids_for_user(user.id))
+        return user_audit_state(user)
 
     def _record_user(
         self,
