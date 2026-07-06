@@ -62,7 +62,7 @@ class CalendarEventService:
                 action="created",
                 entity_type="event",
             )
-            self.events.commit()
+            self.events.commit(skip_audit=True)
             self.events.refresh(event)
             return event
         except Exception:
@@ -106,7 +106,7 @@ class CalendarEventService:
                 entity_type="event",
                 changes=changes,
             )
-            self.events.commit()
+            self.events.commit(skip_audit=True)
             self.events.refresh(event)
             return event
         except Exception:
@@ -130,7 +130,7 @@ class CalendarEventService:
                 action="cancelled",
                 entity_type="event",
             )
-            self.events.commit()
+            self.events.commit(skip_audit=True)
             self.events.refresh(event)
             return event
         except Exception:
@@ -148,7 +148,7 @@ class CalendarEventService:
                 changes={"uid": event.uid, "title": event.title},
             )
             self.events.delete(event)
-            self.events.commit()
+            self.events.commit(skip_audit=True)
         except Exception:
             self.events.rollback()
             raise

@@ -52,7 +52,7 @@ class PermissionService:
                 raise ConflictError("Grupa o tej nazwie już istnieje")
             group = self.repo.create_group(name=name, description=description)
             group.permissions = self._resolve_permissions(permission_codes)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             self.repo.refresh(group)
             return self._serialize_group(group)
         except Exception:
@@ -74,7 +74,7 @@ class PermissionService:
             for key, value in values.items():
                 if value is not None:
                     setattr(group, key, value)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             self.repo.refresh(group)
             return self._serialize_group(group)
         except Exception:
@@ -86,7 +86,7 @@ class PermissionService:
             group = self.get_group(group_id)
             self._ensure_custom_group(group)
             group.permissions = self._resolve_permissions(codes)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             self.repo.refresh(group)
             return self._serialize_group(group)
         except Exception:
@@ -134,7 +134,7 @@ class PermissionService:
                 group.permissions = self._resolve_permissions(permission_codes)
 
             self.repo.replace_group_users(group.id, member_ids)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             self.repo.refresh(group)
             return self._serialize_group(group)
         except Exception:
@@ -148,7 +148,7 @@ class PermissionService:
             self._validate_users(ids)
             self._protect_last_admin(group, ids)
             self.repo.replace_group_users(group_id, ids)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return self._serialize_group(group)
         except Exception:
             self.repo.rollback()
@@ -175,7 +175,7 @@ class PermissionService:
                         detail="Nie można usunąć ostatniego użytkownika z grupy Admin",
                     )
             self.repo.replace_user_groups(user_id, ids)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return sorted(ids)
         except Exception:
             self.repo.rollback()
@@ -211,7 +211,7 @@ class PermissionService:
             group = self.get_group(group_id)
             self._ensure_custom_group(group)
             self.repo.delete_group(group)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
         except Exception:
             self.repo.rollback()
             raise

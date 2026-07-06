@@ -61,7 +61,7 @@ class VolunteerService:
             self.repo.flush()
             self._sync_functions(volunteer.id, function_ids)
             self.repo.refresh(volunteer)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return self._enrich_volunteer(volunteer)
         except Exception:
             self.repo.rollback()
@@ -88,7 +88,7 @@ class VolunteerService:
             if function_ids is not None:
                 self._sync_functions(volunteer.id, function_ids)
             self.repo.refresh(volunteer)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return self._enrich_volunteer(volunteer)
         except Exception:
             self.repo.rollback()
@@ -99,7 +99,7 @@ class VolunteerService:
         try:
             volunteer = self.get_volunteer_by_id(volunteer_id)
             self.repo.delete(volunteer)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
         except Exception:
             self.repo.rollback()
             raise

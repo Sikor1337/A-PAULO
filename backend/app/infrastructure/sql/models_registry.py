@@ -1,4 +1,5 @@
 from app.modules.attachments.models.attachment import Attachment
+from app.modules.audit.models import AuditEvent
 from app.modules.calendar.models import CalendarAudit, CalendarEvent, CalendarFeedToken
 from app.modules.core_data.models.user import User
 from app.modules.pi.models.beneficiary import Beneficiary
@@ -16,6 +17,7 @@ from app.modules.security.models import Permission, UserGroup
 
 __all__ = [
     "Attachment",
+    "AuditEvent",
     "Beneficiary",
     "BeneficiaryAssignment",
     "CalendarAudit",

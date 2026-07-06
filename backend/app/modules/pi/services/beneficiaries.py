@@ -56,7 +56,7 @@ class BeneficiaryService:
             beneficiary = self.repo.create(**kwargs)
             self.repo.flush()
             self.repo.refresh(beneficiary)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return self._enrich_beneficiary(beneficiary)
         except Exception:
             self.repo.rollback()
@@ -69,7 +69,7 @@ class BeneficiaryService:
             beneficiary = self.repo.update(beneficiary, **kwargs)
             self.repo.flush()
             self.repo.refresh(beneficiary)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return self._enrich_beneficiary(beneficiary)
         except Exception:
             self.repo.rollback()
@@ -80,7 +80,7 @@ class BeneficiaryService:
         try:
             beneficiary = self.get_beneficiary_by_id(beneficiary_id)
             self.repo.delete(beneficiary)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
         except Exception:
             self.repo.rollback()
             raise

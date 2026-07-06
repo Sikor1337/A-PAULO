@@ -41,7 +41,7 @@ class GroupService:
             self.repo.flush()
             self.repo.refresh(group)
             self._replace_group_assignments(group.id, assignments)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return self.get_group_detail(group.id)
         except Exception:
             self.repo.rollback()
@@ -59,7 +59,7 @@ class GroupService:
             if assignments is not None:
                 self._replace_group_assignments(updated_group.id, assignments)
 
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return self.get_group_detail(updated_group.id)
         except Exception:
             self.repo.rollback()
@@ -70,7 +70,7 @@ class GroupService:
         try:
             group = self.get_group_by_id(group_id)
             self.repo.delete(group)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
         except Exception:
             self.repo.rollback()
             raise
@@ -132,7 +132,7 @@ class BeneficiaryAssignmentService:
             )
             self.repo.flush()
             self.repo.refresh(assignment)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return assignment
         except Exception:
             self.repo.rollback()
@@ -145,7 +145,7 @@ class BeneficiaryAssignmentService:
             assignment = self.repo.update(assignment, **kwargs)
             self.repo.flush()
             self.repo.refresh(assignment)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return assignment
         except Exception:
             self.repo.rollback()
@@ -156,7 +156,7 @@ class BeneficiaryAssignmentService:
         try:
             assignment = self.get_assignment_by_id(assignment_id)
             self.repo.delete(assignment)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
         except Exception:
             self.repo.rollback()
             raise

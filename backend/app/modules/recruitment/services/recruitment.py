@@ -98,7 +98,7 @@ class RecruitmentService:
             if field.position != position:
                 field.position = position
 
-        self.repo.commit()
+        self.repo.commit(skip_audit=True)
 
     def list_fields(self, *, active_only: bool = False) -> list[RecruitmentField]:
         self._ensure_default_fields()
@@ -165,7 +165,7 @@ class RecruitmentService:
                 if field.id not in submitted_ids:
                     self.repo.delete_field(field)
 
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return self.repo.list_fields()
         except Exception:
             self.repo.rollback()
@@ -217,7 +217,7 @@ class RecruitmentService:
                 submission = existing
             else:
                 submission = self.repo.create_submission(**values)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             self.repo.refresh(submission)
             return submission
         except IntegrityError as error:
@@ -250,7 +250,7 @@ class RecruitmentService:
             submission.decision_comment = None
             submission.status_changed_at = datetime.now(UTC)
             self._ensure_onboarding_meetings(submission)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return self.get_submission(submission.id)
         except Exception:
             self.repo.rollback()
@@ -275,7 +275,7 @@ class RecruitmentService:
                 meeting.attended_at = datetime.now(UTC)
             elif not attended:
                 meeting.attended_at = None
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return self.get_submission(submission.id)
         except Exception:
             self.repo.rollback()
@@ -294,7 +294,7 @@ class RecruitmentService:
             submission.return_reason = reason
             submission.decision_comment = None
             submission.status_changed_at = datetime.now(UTC)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             self.repo.refresh(submission)
             return submission
         except Exception:
@@ -362,7 +362,7 @@ class RecruitmentService:
             submission.status_changed_at = datetime.now(UTC)
             submission.user.status = "regular"
             self.permissions.assign_default_group(submission.user)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             self.repo.refresh(submission)
             return submission
         except Exception:
@@ -380,7 +380,7 @@ class RecruitmentService:
                 volunteer = self.repo.get_volunteer(submission.volunteer_id)
                 if volunteer:
                     submission.volunteer_id = None
-                    self.session.flush()
+                    self.repo.flush()
                     self.repo.delete_volunteer(volunteer)
             submission.user.status = NEW_VOLUNTEER_STATUS
             self.permissions.remove_system_group(submission.user, STAFF_GROUP_KEY)
@@ -388,7 +388,7 @@ class RecruitmentService:
             submission.decision_comment = None
             submission.status_changed_at = datetime.now(UTC)
             self._ensure_onboarding_meetings(submission)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return self.get_submission(submission.id)
         except Exception:
             self.repo.rollback()
@@ -420,7 +420,7 @@ class RecruitmentService:
             submission.status = target
             submission.decision_comment = decision_comment
             submission.status_changed_at = datetime.now(UTC)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             self.repo.refresh(submission)
             return submission
         except Exception:

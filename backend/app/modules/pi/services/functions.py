@@ -44,7 +44,7 @@ class FunctionService:
             function = self.repo.create(name=name)
             self.repo.flush()
             self.repo.refresh(function)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return function
         except Exception:
             self.repo.rollback()
@@ -67,7 +67,7 @@ class FunctionService:
             function = self.repo.update(function, **kwargs)
             self.repo.flush()
             self.repo.refresh(function)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
             return function
         except Exception:
             self.repo.rollback()
@@ -80,7 +80,7 @@ class FunctionService:
             if function.is_system:
                 raise ConflictError("System functions cannot be deleted")
             self.repo.delete(function)
-            self.repo.commit()
+            self.repo.commit(skip_audit=True)
         except Exception:
             self.repo.rollback()
             raise
