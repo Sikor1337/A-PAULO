@@ -777,7 +777,7 @@ const GroupsPage: React.FC = () => {
                               </button>
                               <select
                                 value={vol.volunteerId}
-                                onChange={(e) => updateVolunteer(benRow.localId, vol.localId, { volunteerId: Number(e.target.value) || '' })}
+                                onChange={(e) => updateVolunteer(benRow.localId, vol.localId, { volunteerId: Number(e.target.value) || '', additionalInfo: '' })}
                                 className={`min-h-10 min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2 text-sm font-bold outline-none focus:border-indigo-300 ${vol.isMain ? 'text-amber-700' : 'text-gray-700'}`}
                               >
                                 <option value="">— wybierz —</option>
@@ -893,7 +893,7 @@ const GroupsPage: React.FC = () => {
                             </button>
                             <select
                               value={vol.volunteerId}
-                              onChange={(e) => updateVolunteer(benRow.localId, vol.localId, { volunteerId: Number(e.target.value) || '' })}
+                              onChange={(e) => updateVolunteer(benRow.localId, vol.localId, { volunteerId: Number(e.target.value) || '', additionalInfo: '' })}
                               className={`flex-1 h-8 bg-transparent border-0 outline-none text-sm font-bold cursor-pointer hover:bg-white focus:bg-white rounded px-1 focus:border focus:border-indigo-300 ${vol.isMain ? 'text-amber-700' : 'text-gray-700'}`}
                             >
                               <option value="">— wybierz —</option>
