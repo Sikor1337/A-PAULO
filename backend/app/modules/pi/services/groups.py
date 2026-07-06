@@ -109,7 +109,7 @@ class GroupService:
             self.repo.flush()
             detail = self.get_group_detail(group.id)
             self._record_beneficiary_changes(beneficiary_states, group.id, actor)
-            self._record("CREATE", group.id, actor, {}, group_audit_state(detail))
+            self._record("CREATE", group.id, actor, {}, group_audit_state(group))
             self.repo.commit()
             return detail
         except Exception:
@@ -122,9 +122,9 @@ class GroupService:
             assignments = kwargs.pop("assignments", None)
             group = self.get_group_by_id(group_id)
             old_detail = self.get_group_detail(group_id)
-            old_state = group_audit_state(old_detail)
+            old_state = group_audit_state(group)
             affected_beneficiary_ids = {
-                item["beneficiary_id"] for item in old_state["assignments"]
+                item["id"] for item in old_detail.get("beneficiaries", [])
             }
             if assignments is not None:
                 affected_beneficiary_ids.update(
@@ -140,7 +140,7 @@ class GroupService:
 
             self.repo.flush()
             detail = self.get_group_detail(updated_group.id)
-            new_state = group_audit_state(detail)
+            new_state = group_audit_state(updated_group)
             changes = calculate_delta(old_state, new_state)
             if not changes:
                 self.repo.rollback()

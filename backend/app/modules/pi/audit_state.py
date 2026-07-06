@@ -39,7 +39,7 @@ def group_audit_state(group: Group) -> dict:
 	"""Capture group state for audit comparison."""
 	return {
 		"name": audit_value(group.name),
-		"leader_id": audit_value(group.leader_id),
+		"leader_id": audit_value(getattr(group, "leader_id", None)),
 	}
 
 
