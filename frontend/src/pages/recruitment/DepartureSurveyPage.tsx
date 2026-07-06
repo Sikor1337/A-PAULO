@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import DetailModal from '@/components/ui/DetailModal';
-import RecruitmentFieldModal from '@/features/recruitment/RecruitmentFieldModal';
+import SurveyFieldModal from '@/features/surveys/SurveyFieldModal';
 import { useDepartureFields, useDepartureInterviews } from '@/hooks/useDepartures';
 import { useHasPermission } from '@/hooks/usePermissions';
 import { parseApiError } from '@/lib/errors';
@@ -127,7 +127,7 @@ const DepartureSurveyPage = () => {
       </div>
 
       {canManage && editingIndex !== undefined && (
-        <RecruitmentFieldModal
+        <SurveyFieldModal
           field={editingField}
           onClose={() => setEditingIndex(undefined)}
           onSave={applyField}

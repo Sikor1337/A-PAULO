@@ -1,46 +1,41 @@
-import { useMemo, useState } from 'react';
-import SubmissionDetailModal from '@/features/recruitment/SubmissionDetailModal';
-import SubmissionList from '@/features/recruitment/SubmissionList';
+import StatusBadge from '@/components/ui/StatusBadge';
+import { SurveyResponses } from '@/features/surveys';
+import { formatRecruitmentDate, recruitmentStatusClass, recruitmentStatusLabel } from '@/features/recruitment/recruitmentStatus';
 import { useRecruitmentSubmissions } from '@/hooks/useRecruitment';
 import { useHasPermission } from '@/hooks/usePermissions';
-import type { RecruitmentSubmission } from '@/types';
 
 const RecruitmentResponsesPage = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_RECRUITMENT');
   const { data = [], isLoading, action } = useRecruitmentSubmissions();
-  const [selected, setSelected] = useState<RecruitmentSubmission | null>(null);
-  const [search, setSearch] = useState('');
-  const returnSubmission = (submission: RecruitmentSubmission) => {
-    const reason = window.prompt('Powód zwrotu formularza (opcjonalnie):');
-    if (reason === null) return;
-    action.mutate({ id: submission.id, action: 'return', note: reason });
-  };
-  const rows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return data;
-    return data.filter((item) => `${item.full_name} ${item.email} ${item.phone}`.toLowerCase().includes(query));
-  }, [data, search]);
+  const records = data.map((submission) => ({
+    id: submission.id,
+    title: submission.full_name,
+    subtitle: `Wysłano ${formatRecruitmentDate(submission.submitted_at)}`,
+    summary: `${submission.email} ${submission.phone}`,
+    answers: submission.answers,
+    source: submission,
+    badge: <StatusBadge status={recruitmentStatusLabel[submission.status]} colorClass={recruitmentStatusClass[submission.status]} />,
+    notices: [
+      ...(submission.return_reason ? [{ label: 'Powód ostatniego zwrotu', value: submission.return_reason, className: 'border-violet-200 bg-violet-50 text-violet-900' }] : []),
+      ...(submission.decision_comment ? [{ label: 'Komentarz do decyzji', value: submission.decision_comment, className: 'border-blue-200 bg-blue-50 text-blue-950' }] : []),
+    ],
+  }));
 
   return (
-    <section>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div><h2 className="text-xl font-bold text-gray-900">Odpowiedzi z formularza</h2><p className="text-sm text-gray-500">Każdy rekord zawiera pełną migawkę pytań i odpowiedzi.</p></div>
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Szukaj osoby…" className="min-h-10 rounded-lg border border-gray-200 bg-gray-50 px-4 text-sm outline-none focus:border-indigo-500 sm:w-72" />
-      </div>
-      <SubmissionList
-        submissions={rows}
-        isLoading={isLoading}
-        emptyText="Nikt jeszcze nie wypełnił formularza."
-        onSelect={setSelected}
-        actions={canManage ? (submission) => submission.status === 'SUBMITTED' ? (
-          <>
-            <button onClick={() => action.mutate({ id: submission.id, action: 'start-onboarding' })} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Do wdrażania</button>
-            <button onClick={() => returnSubmission(submission)} className="rounded-lg bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700">Zwróć</button>
-          </>
-        ) : undefined : undefined}
-      />
-      {selected && <SubmissionDetailModal submission={selected} onClose={() => setSelected(null)} />}
-    </section>
+    <SurveyResponses
+      title="Odpowiedzi rekrutacyjne"
+      description="Pełne migawki pytań i odpowiedzi kandydatów."
+      records={records}
+      isLoading={isLoading}
+      emptyText="Nikt jeszcze nie wypełnił formularza."
+      actions={canManage ? (record) => record.source.status === 'SUBMITTED' ? <>
+        <button type="button" onClick={() => action.mutate({ id: record.id, action: 'start-onboarding' })} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Do wdrażania</button>
+        <button type="button" onClick={() => {
+          const reason = window.prompt('Powód zwrotu formularza (opcjonalnie):');
+          if (reason !== null) action.mutate({ id: record.id, action: 'return', note: reason });
+        }} className="rounded-lg bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700">Zwróć</button>
+      </> : undefined : undefined}
+    />
   );
 };
 

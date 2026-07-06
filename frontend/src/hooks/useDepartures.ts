@@ -18,9 +18,10 @@ export const useDepartureFields = (enabled = true) => {
   return { ...query, save };
 };
 
-export const useDepartureInterviews = () => useQuery({
+export const useDepartureInterviews = (enabled = true) => useQuery({
   queryKey: ['departure-interviews'],
   queryFn: departureService.getAll,
+  enabled,
 });
 
 export const useMyDepartureSurvey = (enabled = true) => {
