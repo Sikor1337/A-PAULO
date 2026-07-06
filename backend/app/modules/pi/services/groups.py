@@ -15,6 +15,24 @@ from app.modules.pi.repositories.groups import (
 )
 
 
+def _assignments_snapshot(detail: dict) -> list[dict]:
+    """Serialize group assignments from a group detail dict for audit deltas."""
+    return [
+        {
+            "beneficiary": item["full_name"],
+            "volunteers": [
+                {
+                    "volunteer": vol["full_name"],
+                    "is_main": vol["is_main"],
+                    "additional_info": vol["additional_info"],
+                }
+                for vol in item.get("volunteers", [])
+            ],
+        }
+        for item in detail.get("beneficiaries", [])
+    ]
+
+
 class GroupService:
     """Service for group operations."""
 
@@ -109,7 +127,9 @@ class GroupService:
             self.repo.flush()
             detail = self.get_group_detail(group.id)
             self._record_beneficiary_changes(beneficiary_states, group.id, actor)
-            self._record("CREATE", group.id, actor, {}, group_audit_state(group))
+            new_state = group_audit_state(group)
+            new_state["assignments"] = _assignments_snapshot(detail)
+            self._record("CREATE", group.id, actor, {}, new_state)
             self.repo.commit()
             return detail
         except Exception:
@@ -123,6 +143,7 @@ class GroupService:
             group = self.get_group_by_id(group_id)
             old_detail = self.get_group_detail(group_id)
             old_state = group_audit_state(group)
+            old_state["assignments"] = _assignments_snapshot(old_detail)
             affected_beneficiary_ids = {
                 item["id"] for item in old_detail.get("beneficiaries", [])
             }
@@ -141,6 +162,7 @@ class GroupService:
             self.repo.flush()
             detail = self.get_group_detail(updated_group.id)
             new_state = group_audit_state(updated_group)
+            new_state["assignments"] = _assignments_snapshot(detail)
             changes = calculate_delta(old_state, new_state)
             if not changes:
                 self.repo.rollback()
@@ -157,9 +179,11 @@ class GroupService:
         """Delete group."""
         try:
             group = self.get_group_by_id(group_id)
-            old_state = group_audit_state(self.get_group_detail(group_id))
+            old_detail = self.get_group_detail(group_id)
+            old_state = group_audit_state(group)
+            old_state["assignments"] = _assignments_snapshot(old_detail)
             beneficiary_states = self._capture_beneficiaries(
-                {item["beneficiary_id"] for item in old_state["assignments"]}
+                {item["id"] for item in old_detail.get("beneficiaries", [])}
             )
             self.repo.delete(group)
             self.repo.flush()
