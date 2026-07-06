@@ -29,8 +29,11 @@ def _assignments_state(detail: dict) -> dict:
             for vol in volunteers
         ]
         for vol in volunteers:
-            key = f"informacje ({item['full_name']} / {vol['full_name']})"
-            state[key] = vol["additional_info"]
+            # Only track non-empty info; otherwise adding/removing a volunteer
+            # produces noise entries like "informacje (...): — → —".
+            if vol["additional_info"]:
+                key = f"informacje ({item['full_name']} / {vol['full_name']})"
+                state[key] = vol["additional_info"]
     return state
 
 

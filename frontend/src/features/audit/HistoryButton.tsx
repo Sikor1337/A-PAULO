@@ -1,19 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axiosClient from '@/lib/api';
-
-interface AuditEvent {
-  id: number;
-  entity_type: string;
-  entity_id: string;
-  action: string;
-  actor_id: string;
-  actor_display_name: string | null;
-  context_type: string | null;
-  context_id: string | null;
-  changes: Record<string, unknown>;
-  created_at: string;
-}
+import type { AuditEvent } from '@/types';
 
 interface HistoryButtonProps {
   path: string;
@@ -22,7 +10,7 @@ interface HistoryButtonProps {
   className?: string;
 }
 
-const HistoryButton = ({ path, entityName, compact = false, className = '' }: HistoryButtonProps) => {
+const HistoryButton = ({ path, entityName, className = '' }: HistoryButtonProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const { data: events, isLoading } = useQuery({
@@ -97,7 +85,14 @@ const HistoryButton = ({ path, entityName, compact = false, className = '' }: Hi
                     </div>
                     {Object.keys(event.changes).length > 0 && (
                       <div className="mt-2 space-y-1 rounded bg-gray-100 p-2 text-sm dark:bg-slate-600">
-                        {Object.entries(event.changes).map(([field, change]) => (
+                        {Object.entries(event.changes)
+                          .filter(([, change]) => {
+                            if (typeof change === 'object' && change !== null && 'old' in change && 'new' in change) {
+                              return formatValue(change.old) !== formatValue(change.new);
+                            }
+                            return true;
+                          })
+                          .map(([field, change]) => (
                           <div key={field} className="text-gray-700 dark:text-gray-300">
                             <span className="font-medium">{field}:</span>
                             {typeof change === 'object' && change !== null && 'old' in change && 'new' in change ? (
@@ -110,7 +105,7 @@ const HistoryButton = ({ path, entityName, compact = false, className = '' }: Hi
                               <span className="text-gray-600 dark:text-gray-400"> {formatValue(change)}</span>
                             )}
                           </div>
-                        ))}
+                          ))}
                       </div>
                     )}
                   </div>
