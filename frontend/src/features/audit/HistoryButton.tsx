@@ -28,7 +28,7 @@ const HistoryButton = ({ path, entityName, compact = false, className = '' }: Hi
   const { data: events, isLoading } = useQuery({
     queryKey: ['audit-history', path],
     queryFn: async () => {
-      const response = await axiosClient.get<AuditEvent[]>(`/api/v1/${path}`);
+      const response = await axiosClient.get<AuditEvent[]>(path);
       return response.data;
     },
     enabled: isOpen,
