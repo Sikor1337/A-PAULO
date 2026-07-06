@@ -47,6 +47,14 @@ const HistoryButton = ({ path, entityName, compact = false, className = '' }: Hi
     return map[action] || action;
   };
 
+  const formatValue = (value: unknown): string => {
+    if (value === null || value === undefined || value === '') return '—';
+    if (typeof value === 'boolean') return value ? 'tak' : 'nie';
+    if (Array.isArray(value)) return value.length ? value.map(formatValue).join(', ') : '—';
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  };
+
   return (
     <>
       <button
@@ -95,11 +103,11 @@ const HistoryButton = ({ path, entityName, compact = false, className = '' }: Hi
                             {typeof change === 'object' && change !== null && 'old' in change && 'new' in change ? (
                               <span>
                                 {' '}
-                                <span className="text-red-600 dark:text-red-400">{JSON.stringify(change.old)}</span> →{' '}
-                                <span className="text-green-600 dark:text-green-400">{JSON.stringify(change.new)}</span>
+                                <span className="text-red-600 dark:text-red-400">{formatValue(change.old)}</span> →{' '}
+                                <span className="text-green-600 dark:text-green-400">{formatValue(change.new)}</span>
                               </span>
                             ) : (
-                              <span className="text-gray-600 dark:text-gray-400"> {JSON.stringify(change)}</span>
+                              <span className="text-gray-600 dark:text-gray-400"> {formatValue(change)}</span>
                             )}
                           </div>
                         ))}

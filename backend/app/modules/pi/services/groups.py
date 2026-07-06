@@ -15,22 +15,23 @@ from app.modules.pi.repositories.groups import (
 )
 
 
-def _assignments_snapshot(detail: dict) -> list[dict]:
-    """Serialize group assignments from a group detail dict for audit deltas."""
-    return [
-        {
-            "beneficiary": item["full_name"],
-            "volunteers": [
-                {
-                    "volunteer": vol["full_name"],
-                    "is_main": vol["is_main"],
-                    "additional_info": vol["additional_info"],
-                }
-                for vol in item.get("volunteers", [])
-            ],
-        }
-        for item in detail.get("beneficiaries", [])
-    ]
+def _assignments_state(detail: dict) -> dict:
+    """Flatten group assignments into per-beneficiary audit keys.
+
+    One key per beneficiary (volunteer list) and one per beneficiary/volunteer
+    pair (additional info), so the audit delta only surfaces what changed.
+    """
+    state: dict = {}
+    for item in detail.get("beneficiaries", []):
+        volunteers = item.get("volunteers", [])
+        state[f"wolontariusze ({item['full_name']})"] = [
+            vol["full_name"] + (" — główny" if vol["is_main"] else "")
+            for vol in volunteers
+        ]
+        for vol in volunteers:
+            key = f"informacje ({item['full_name']} / {vol['full_name']})"
+            state[key] = vol["additional_info"]
+    return state
 
 
 class GroupService:
@@ -128,7 +129,7 @@ class GroupService:
             detail = self.get_group_detail(group.id)
             self._record_beneficiary_changes(beneficiary_states, group.id, actor)
             new_state = group_audit_state(group)
-            new_state["assignments"] = _assignments_snapshot(detail)
+            new_state.update(_assignments_state(detail))
             self._record("CREATE", group.id, actor, {}, new_state)
             self.repo.commit()
             return detail
@@ -143,7 +144,7 @@ class GroupService:
             group = self.get_group_by_id(group_id)
             old_detail = self.get_group_detail(group_id)
             old_state = group_audit_state(group)
-            old_state["assignments"] = _assignments_snapshot(old_detail)
+            old_state.update(_assignments_state(old_detail))
             affected_beneficiary_ids = {
                 item["id"] for item in old_detail.get("beneficiaries", [])
             }
@@ -162,7 +163,7 @@ class GroupService:
             self.repo.flush()
             detail = self.get_group_detail(updated_group.id)
             new_state = group_audit_state(updated_group)
-            new_state["assignments"] = _assignments_snapshot(detail)
+            new_state.update(_assignments_state(detail))
             changes = calculate_delta(old_state, new_state)
             if not changes:
                 self.repo.rollback()
@@ -181,7 +182,7 @@ class GroupService:
             group = self.get_group_by_id(group_id)
             old_detail = self.get_group_detail(group_id)
             old_state = group_audit_state(group)
-            old_state["assignments"] = _assignments_snapshot(old_detail)
+            old_state.update(_assignments_state(old_detail))
             beneficiary_states = self._capture_beneficiaries(
                 {item["id"] for item in old_detail.get("beneficiaries", [])}
             )
