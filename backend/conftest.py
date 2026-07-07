@@ -21,6 +21,7 @@ from app.core.errors import register_error_handlers  # noqa: E402
 from app.infrastructure.sql.base import Base  # noqa: E402
 from app.infrastructure.sql import models_registry  # noqa: F401, E402
 from app.modules.attachments.api import router as attachments_router  # noqa: E402
+from app.modules.bug_reports.api import router as bug_reports_router  # noqa: E402
 from app.modules.calendar.api import router as calendar_router  # noqa: E402
 from app.modules.core_data.api.users import router as users_router  # noqa: E402
 from app.modules.core_data.models import User  # noqa: E402
@@ -124,6 +125,7 @@ def api_client(
     app.include_router(beneficiaries_router, prefix="/api/v1")
     app.include_router(groups_router, prefix="/api/v1")
     app.include_router(attachments_router, prefix="/api/v1")
+    app.include_router(bug_reports_router, prefix="/api/v1")
     app.include_router(departments_router, prefix="/api/v1")
     app.include_router(recruitment_router, prefix="/api/v1")
     app.include_router(calendar_router, prefix="/api/v1")

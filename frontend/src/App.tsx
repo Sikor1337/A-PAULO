@@ -18,6 +18,7 @@ import BOCardsPage from './pages/BOCardsPage';
 import VolunteersPage from './pages/VolunteersPage';
 import GroupsPage from './pages/GroupsPage';
 import DepartmentsPage from './pages/DepartmentsPage';
+import BugReportsPage from './pages/BugReportsPage';
 import ProfilePage from './pages/ProfilePage';
 import MyDepartureSurveyPage from './pages/MyDepartureSurveyPage';
 import SettingsPage from './pages/SettingsPage';
@@ -115,6 +116,7 @@ const router = createBrowserRouter(createRoutesFromElements(
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/departure-survey" element={<MyDepartureSurveyPage />} />
+        <Route path="/bug-reports" element={<BugReportsPage />} />
       </Route>
       <Route element={<ProtectedRoute requiredAnyPermission={['CAN_VIEW_USERS', 'CAN_VIEW_SECURITY']} />}>
         <Route path="/settings" element={<SettingsPage />} />

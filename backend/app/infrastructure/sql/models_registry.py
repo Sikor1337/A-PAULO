@@ -1,5 +1,6 @@
 from app.modules.attachments.models.attachment import Attachment
 from app.modules.audit.models import AuditEvent
+from app.modules.bug_reports.models import BugReport
 from app.modules.calendar.models import CalendarAudit, CalendarEvent, CalendarFeedToken
 from app.modules.core_data.models.user import User
 from app.modules.departments.models import Department, DepartmentMember
@@ -21,6 +22,7 @@ __all__ = [
     "AuditEvent",
     "Beneficiary",
     "BeneficiaryAssignment",
+    "BugReport",
     "CalendarAudit",
     "CalendarEvent",
     "CalendarFeedToken",
