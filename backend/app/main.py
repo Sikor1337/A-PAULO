@@ -18,6 +18,7 @@ from app.modules.pi.api.groups import router as groups_router
 from app.modules.pi.api.volunteers import router as volunteers_router
 from app.modules.recruitment.api import router as recruitment_router
 from app.modules.security.api import router as security_router
+from app.modules.tasks.api import router as tasks_router
 
 
 @asynccontextmanager
@@ -61,4 +62,5 @@ app.include_router(bug_reports_router, prefix="/api/v1")
 app.include_router(departments_router, prefix="/api/v1")
 app.include_router(recruitment_router, prefix="/api/v1")
 app.include_router(calendar_router, prefix="/api/v1")
+app.include_router(tasks_router, prefix="/api/v1")
 

@@ -22,6 +22,8 @@ CAN_VIEW_DEPARTMENTS = "CAN_VIEW_DEPARTMENTS"
 CAN_MANAGE_DEPARTMENTS = "CAN_MANAGE_DEPARTMENTS"
 CAN_VIEW_BUG_REPORTS = "CAN_VIEW_BUG_REPORTS"
 CAN_MANAGE_BUG_REPORTS = "CAN_MANAGE_BUG_REPORTS"
+CAN_VIEW_TASKS = "CAN_VIEW_TASKS"
+CAN_MANAGE_TASKS = "CAN_MANAGE_TASKS"
 
 PERMISSION_CATALOG = (
     (CAN_VIEW_USERS, "Podgląd użytkowników", "Użytkownicy"),
@@ -46,6 +48,8 @@ PERMISSION_CATALOG = (
     (CAN_MANAGE_DEPARTMENTS, "Zarządzanie działami", "Działy"),
     (CAN_VIEW_BUG_REPORTS, "Podgląd zgłoszeń błędów", "Zgłoszenia błędów"),
     (CAN_MANAGE_BUG_REPORTS, "Rozwiązywanie zgłoszeń błędów", "Zgłoszenia błędów"),
+    (CAN_VIEW_TASKS, "Podgląd zadań", "Zadania"),
+    (CAN_MANAGE_TASKS, "Zarządzanie zadaniami", "Zadania"),
 )
 
 ALL_PERMISSION_CODES = frozenset(code for code, _, _ in PERMISSION_CATALOG)
