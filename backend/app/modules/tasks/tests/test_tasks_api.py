@@ -197,3 +197,79 @@ def test_task_delete_and_checklist_management(api_client) -> None:
     deleted = api_client.delete(f"/api/v1/tasks/{task['id']}")
     assert deleted.status_code == 200
     assert api_client.get(f"/api/v1/tasks/{task['id']}").status_code == 404
+
+
+def test_manual_status_wins_over_checklist_automation(api_client) -> None:
+    """Review fix: a manual status decision is never overridden by the automation."""
+    department = _create_department(api_client, name="Pomoc indywidualna")
+    task = api_client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Zadanie reczne",
+            "department_id": department["id"],
+            "checklist": ["Punkt 1", "Punkt 2"],
+        },
+    ).json()
+
+    manual = api_client.patch(
+        f"/api/v1/tasks/{task['id']}", json={"status": "ZROBIONE"}
+    ).json()
+    assert manual["status"] == "ZROBIONE"
+    assert manual["completed_at"] is not None
+
+    first = task["checklist"][0]
+    after_tick = api_client.patch(
+        f"/api/v1/tasks/{task['id']}/checklist/{first['id']}",
+        json={"is_done": True},
+    ).json()
+    assert after_tick["status"] == "ZROBIONE"
+    assert after_tick["completed_at"] is not None
+
+    after_untick = api_client.patch(
+        f"/api/v1/tasks/{task['id']}/checklist/{first['id']}",
+        json={"is_done": False},
+    ).json()
+    assert after_untick["status"] == "ZROBIONE"
+
+
+def test_adding_item_reopens_auto_completed_task(api_client) -> None:
+    """Review fix: reconcile runs after the new item is flushed."""
+    department = _create_department(api_client, name="Zbieranie funduszy")
+    task = api_client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Kwesta",
+            "department_id": department["id"],
+            "checklist": ["Puszki"],
+        },
+    ).json()
+
+    item = task["checklist"][0]
+    done = api_client.patch(
+        f"/api/v1/tasks/{task['id']}/checklist/{item['id']}",
+        json={"is_done": True},
+    ).json()
+    assert done["status"] == "ZROBIONE"
+
+    reopened = api_client.post(
+        f"/api/v1/tasks/{task['id']}/checklist", json={"label": "Identyfikatory"}
+    ).json()
+    assert reopened["status"] == "W_TRAKCIE"
+    assert reopened["completed_at"] is None
+
+
+def test_blank_title_and_label_rejected(api_client) -> None:
+    """Review fix: whitespace-only text is rejected after strip."""
+    department = _create_department(api_client, name="Klub seniora")
+    blank_title = api_client.post(
+        "/api/v1/tasks", json={"title": "   ", "department_id": department["id"]}
+    )
+    assert blank_title.status_code == 422
+
+    task = api_client.post(
+        "/api/v1/tasks", json={"title": "OK", "department_id": department["id"]}
+    ).json()
+    blank_label = api_client.post(
+        f"/api/v1/tasks/{task['id']}/checklist", json={"label": "   "}
+    )
+    assert blank_label.status_code == 422

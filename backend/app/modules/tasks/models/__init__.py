@@ -29,6 +29,9 @@ class Task(Base):
     status: Mapped[str] = mapped_column(
         String(20), default="DO_ZROBIENIA", index=True
     )
+    # True after a manual status change; the checklist automation then
+    # never overrides the human decision.
+    status_is_manual: Mapped[bool] = mapped_column(Boolean, default=False)
     department_id: Mapped[int] = mapped_column(
         ForeignKey("departments.id", ondelete="CASCADE"), index=True
     )

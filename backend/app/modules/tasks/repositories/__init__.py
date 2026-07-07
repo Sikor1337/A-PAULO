@@ -112,21 +112,25 @@ class TaskRepository(SQLRepository):
         )
         return {row[0] for row in rows}
 
-    def department_name(self, department_id: int) -> str | None:
-        row = (
-            self.session.query(Department.name)
-            .filter(Department.id == department_id)
-            .first()
+    def department_names(self, department_ids: set[int]) -> dict[int, str]:
+        if not department_ids:
+            return {}
+        rows = (
+            self.session.query(Department.id, Department.name)
+            .filter(Department.id.in_(department_ids))
+            .all()
         )
-        return row[0] if row else None
+        return dict(rows)
 
-    def event_title(self, event_id: int) -> str | None:
-        row = (
-            self.session.query(CalendarEvent.title)
-            .filter(CalendarEvent.id == event_id)
-            .first()
+    def event_titles(self, event_ids: set[int]) -> dict[int, str]:
+        if not event_ids:
+            return {}
+        rows = (
+            self.session.query(CalendarEvent.id, CalendarEvent.title)
+            .filter(CalendarEvent.id.in_(event_ids))
+            .all()
         )
-        return row[0] if row else None
+        return dict(rows)
 
     def volunteer_names(self, volunteer_ids: list[int]) -> dict[int, str]:
         if not volunteer_ids:

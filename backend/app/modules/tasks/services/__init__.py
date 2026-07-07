@@ -1,9 +1,11 @@
 """Task business logic.
 
 Status rules:
-- manually setting ZROBIONE stamps completed_at; leaving it clears the stamp,
-- checking the last checklist item auto-completes the task,
-- un-checking an item on a completed task reopens it (W_TRAKCIE).
+- a manual status change (PATCH status) marks the task as manually managed;
+  the checklist automation never overrides a manual decision,
+- on automatically managed tasks, checking the last checklist item completes
+  the task and un-checking an item reopens it (W_TRAKCIE),
+- ZROBIONE always stamps completed_at; leaving it clears the stamp.
 """
 
 from datetime import UTC, datetime
@@ -26,7 +28,7 @@ class TaskService:
         return task
 
     def get_task_detail(self, task_id: int) -> dict:
-        return self._serialize(self.get_task(task_id))
+        return self._serialize_many([self.get_task(task_id)])[0]
 
     def list_tasks(
         self,
@@ -45,7 +47,7 @@ class TaskService:
             status=status,
             volunteer_id=volunteer_id,
         )
-        return [self._serialize(task) for task in tasks]
+        return self._serialize_many(tasks)
 
     def create_task(
         self,
@@ -59,25 +61,28 @@ class TaskService:
         checklist: list[str] | None = None,
     ) -> dict:
         try:
+            title = self._require_text(title, "Tytuł zadania")
             self._validate_refs(department_id, event_id, assignee_ids or [])
             task = self.repo.create(
-                title=title.strip(),
+                title=title,
                 description=description.strip(),
                 department_id=department_id,
                 event_id=event_id,
                 due_date=due_date,
             )
             self.repo.flush()
-            for position, label in enumerate(checklist or []):
+            position = 0
+            for label in checklist or []:
                 label = label.strip()
                 if label:
                     self.repo.add_checklist_item(task.id, label, position)
+                    position += 1
             if assignee_ids:
                 self.repo.replace_assignees(task, assignee_ids)
             self.repo.flush()
             self.repo.refresh(task)
             self.repo.commit(skip_audit=True)
-            return self._serialize(task)
+            return self._serialize_many([task])[0]
         except Exception:
             self.repo.rollback()
             raise
@@ -93,6 +98,8 @@ class TaskService:
                 raise ValidationException(
                     f"Status musi być jednym z: {', '.join(TASK_STATUSES)}"
                 )
+            if kwargs.get("title") is not None:
+                kwargs["title"] = self._require_text(kwargs["title"], "Tytuł zadania")
             self._validate_refs(
                 kwargs.get("department_id"),
                 kwargs.get("event_id"),
@@ -105,6 +112,8 @@ class TaskService:
 
             task = self.repo.update(task, **kwargs)
             if new_status:
+                # A human decision: the checklist automation backs off from now on.
+                task.status_is_manual = True
                 task.completed_at = (
                     datetime.now(UTC) if new_status == "ZROBIONE" else None
                 )
@@ -113,7 +122,7 @@ class TaskService:
             self.repo.flush()
             self.repo.refresh(task)
             self.repo.commit(skip_audit=True)
-            return self._serialize(task)
+            return self._serialize_many([task])[0]
         except Exception:
             self.repo.rollback()
             raise
@@ -130,15 +139,17 @@ class TaskService:
     def add_checklist_item(self, task_id: int, label: str) -> dict:
         try:
             task = self.get_task(task_id)
+            label = self._require_text(label, "Treść punktu")
             position = (
                 max((item.position for item in task.checklist), default=-1) + 1
             )
-            self.repo.add_checklist_item(task.id, label.strip(), position)
-            self._reconcile_status(task)
+            self.repo.add_checklist_item(task.id, label, position)
             self.repo.flush()
             self.repo.refresh(task)
+            self._reconcile_status(task)
+            self.repo.flush()
             self.repo.commit(skip_audit=True)
-            return self._serialize(task)
+            return self._serialize_many([task])[0]
         except Exception:
             self.repo.rollback()
             raise
@@ -149,18 +160,17 @@ class TaskService:
             item = self.repo.get_checklist_item(task_id, item_id)
             if not item:
                 raise NotFoundError("Punkt checklisty nie istnieje")
-            if "label" in kwargs and kwargs["label"] is not None:
-                item.label = kwargs["label"].strip()
-            if "is_done" in kwargs and kwargs["is_done"] is not None:
+            if kwargs.get("label") is not None:
+                item.label = self._require_text(kwargs["label"], "Treść punktu")
+            if kwargs.get("is_done") is not None:
                 item.is_done = kwargs["is_done"]
                 item.done_at = datetime.now(UTC) if item.is_done else None
             self.repo.flush()
             self.repo.refresh(task)
             self._reconcile_status(task)
             self.repo.flush()
-            self.repo.refresh(task)
             self.repo.commit(skip_audit=True)
-            return self._serialize(task)
+            return self._serialize_many([task])[0]
         except Exception:
             self.repo.rollback()
             raise
@@ -177,14 +187,14 @@ class TaskService:
             self._reconcile_status(task)
             self.repo.flush()
             self.repo.commit(skip_audit=True)
-            return self._serialize(task)
+            return self._serialize_many([task])[0]
         except Exception:
             self.repo.rollback()
             raise
 
     def _reconcile_status(self, task: Task) -> None:
-        """Auto-complete when the whole checklist is ticked; reopen otherwise."""
-        if not task.checklist:
+        """Auto-complete/reopen from the checklist, unless a human decided."""
+        if task.status_is_manual or not task.checklist:
             return
         all_done = all(item.is_done for item in task.checklist)
         if all_done and task.status != "ZROBIONE":
@@ -193,6 +203,13 @@ class TaskService:
         elif not all_done and task.status == "ZROBIONE":
             task.status = "W_TRAKCIE"
             task.completed_at = None
+
+    @staticmethod
+    def _require_text(value: str, field_label: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValidationException(f"{field_label} nie może być pusty")
+        return value
 
     def _validate_refs(
         self,
@@ -212,9 +229,34 @@ class TaskService:
             if missing:
                 raise NotFoundError(f"Nie istnieją wolontariusze: {missing}")
 
-    def _serialize(self, task: Task) -> dict:
-        volunteer_ids = [assignee.volunteer_id for assignee in task.assignees]
-        names = self.repo.volunteer_names(volunteer_ids)
+    def _serialize_many(self, tasks: list[Task]) -> list[dict]:
+        department_names = self.repo.department_names(
+            {task.department_id for task in tasks}
+        )
+        event_titles = self.repo.event_titles(
+            {task.event_id for task in tasks if task.event_id is not None}
+        )
+        volunteer_names = self.repo.volunteer_names(
+            list(
+                {
+                    assignee.volunteer_id
+                    for task in tasks
+                    for assignee in task.assignees
+                }
+            )
+        )
+        return [
+            self._serialize(task, department_names, event_titles, volunteer_names)
+            for task in tasks
+        ]
+
+    def _serialize(
+        self,
+        task: Task,
+        department_names: dict[int, str],
+        event_titles: dict[int, str],
+        volunteer_names: dict[int, str],
+    ) -> dict:
         checklist = [
             {
                 "id": item.id,
@@ -231,10 +273,10 @@ class TaskService:
             "description": task.description,
             "status": task.status,
             "department_id": task.department_id,
-            "department_name": self.repo.department_name(task.department_id),
+            "department_name": department_names.get(task.department_id),
             "event_id": task.event_id,
             "event_title": (
-                self.repo.event_title(task.event_id) if task.event_id else None
+                event_titles.get(task.event_id) if task.event_id else None
             ),
             "due_date": task.due_date,
             "completed_at": task.completed_at,
@@ -242,8 +284,11 @@ class TaskService:
             "updated_at": task.updated_at,
             "checklist": checklist,
             "assignees": [
-                {"volunteer_id": vid, "full_name": names.get(vid, "")}
-                for vid in volunteer_ids
+                {
+                    "volunteer_id": assignee.volunteer_id,
+                    "full_name": volunteer_names.get(assignee.volunteer_id, ""),
+                }
+                for assignee in task.assignees
             ],
             "checklist_done": sum(1 for item in task.checklist if item.is_done),
             "checklist_total": len(task.checklist),

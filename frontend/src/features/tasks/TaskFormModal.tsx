@@ -2,8 +2,7 @@ import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
 import { useDepartmentList } from '@/hooks/useDepartments';
 import { useVolunteerList } from '@/hooks/useVolunteers';
-import { useQuery } from '@tanstack/react-query';
-import { calendarService } from '@/services/calendarService';
+import { useCalendarEvents } from '@/hooks/useCalendar';
 import type { Task, TaskCreateInput } from '@/types';
 
 interface TaskFormModalProps {
@@ -29,10 +28,7 @@ const TaskFormModal = ({ task, initialEventId = null, onClose, onSave, isPending
 
   const { data: departments } = useDepartmentList();
   const { data: volunteers } = useVolunteerList();
-  const { data: events } = useQuery({
-    queryKey: ['calendar-events-for-tasks'],
-    queryFn: () => calendarService.getEvents({ sort: 'desc' }),
-  });
+  const { data: events } = useCalendarEvents({ sort: 'desc' });
 
   const toggleAssignee = (volunteerId: number) => {
     setAssigneeIds((current) =>

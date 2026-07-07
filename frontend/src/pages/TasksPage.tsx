@@ -20,12 +20,12 @@ const statusLabel = (status: TaskStatus) => status.replace(/_/g, ' ');
 
 const TasksPage: React.FC = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_TASKS');
-  const [searchParams] = useSearchParams();
-  const eventParam = Number(searchParams.get('event')) || '';
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Derived live from the URL, so sidebar navigation to plain /tasks clears it.
+  const filterEvent: number | '' = Number(searchParams.get('event')) || '';
 
   const [filterDepartment, setFilterDepartment] = useState<number | ''>('');
   const [filterStatus, setFilterStatus] = useState<'' | TaskStatus>('');
-  const [filterEvent] = useState<number | ''>(eventParam);
   const [editing, setEditing] = useState<Task | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [newItemDrafts, setNewItemDrafts] = useState<Record<number, string>>({});
@@ -94,8 +94,16 @@ const TasksPage: React.FC = () => {
           ))}
         </select>
         {filterEvent !== '' && (
-          <span className="flex h-10 items-center rounded-lg bg-indigo-50 px-3 text-sm font-bold text-indigo-700">
+          <span className="flex h-10 items-center gap-2 rounded-lg bg-indigo-50 px-3 text-sm font-bold text-indigo-700">
             Filtr: wydarzenie #{filterEvent}
+            <button
+              type="button"
+              onClick={() => setSearchParams({})}
+              className="text-lg leading-none text-indigo-400 hover:text-indigo-700"
+              aria-label="Usuń filtr wydarzenia"
+            >
+              &times;
+            </button>
           </span>
         )}
       </div>

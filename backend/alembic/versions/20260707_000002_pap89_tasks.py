@@ -29,6 +29,12 @@ def upgrade() -> None:
         sa.Column("title", sa.String(length=200), nullable=False),
         sa.Column("description", sa.String(), nullable=False),
         sa.Column("status", sa.String(length=20), nullable=False),
+        sa.Column(
+            "status_is_manual",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text("false"),
+        ),
         sa.Column("department_id", sa.Integer(), nullable=False),
         sa.Column("event_id", sa.Integer(), nullable=True),
         sa.Column("due_date", sa.Date(), nullable=True),
