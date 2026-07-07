@@ -169,8 +169,9 @@ class GroupService:
             new_state.update(_assignments_state(detail))
             changes = calculate_delta(old_state, new_state)
             if not changes:
-                self.repo.rollback()
-                return self.get_group_detail(group_id)
+                # Genuine no-op: persist (nothing changed) without an audit entry.
+                self.repo.commit(skip_audit=True)
+                return detail
             self._record("UPDATE", group.id, actor, old_state, new_state)
             self._record_beneficiary_changes(beneficiary_states, group.id, actor)
             self.repo.commit()
@@ -304,8 +305,8 @@ class BeneficiaryAssignmentService:
             new_state = assignment_audit_state(assignment)
             changes = calculate_delta(old_state, new_state)
             if not changes:
-                self.repo.rollback()
-                return self.get_assignment_by_id(assignment_id)
+                self.repo.commit(skip_audit=True)
+                return assignment
             self._record("ASSIGNMENT_UPDATE", assignment, actor, old_state, new_state)
             self.repo.commit()
             return assignment

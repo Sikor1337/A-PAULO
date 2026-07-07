@@ -122,3 +122,24 @@ def test_default_group_assignment_preserves_explicit_memberships(
     service.remove_system_group(user, "staff")
 
     assert service.group_ids_for_user(user.id) == [admin_group.id]
+
+
+def test_permission_only_group_change_is_persisted(db_session: Session) -> None:
+    """Regression (PAP-79 review): permission codes are part of the group snapshot."""
+    view = Permission(code="CAN_VIEW_USERS", name="View", category="Users")
+    manage = Permission(code="CAN_MANAGE_USERS", name="Manage", category="Users")
+    group = UserGroup(name="Zespol", permissions=[view])
+    actor = _user(db_session, "aktor", status="admin")
+    db_session.add_all([view, manage, group])
+    db_session.commit()
+
+    service = _service(db_session)
+    service.replace_group_permissions(
+        group.id, ["CAN_VIEW_USERS", "CAN_MANAGE_USERS"], actor=actor
+    )
+
+    stored = db_session.get(UserGroup, group.id)
+    assert {permission.code for permission in stored.permissions} == {
+        "CAN_VIEW_USERS",
+        "CAN_MANAGE_USERS",
+    }

@@ -195,3 +195,43 @@ def test_pi_api_requires_authentication(db_session: Session) -> None:
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Missing or invalid authorization header"
+
+
+def test_function_only_volunteer_update_persists(api_client) -> None:
+    """Regression (PAP-79 review): empty audit delta must not roll back writes."""
+    function = api_client.post("/api/v1/functions", json={"name": "Transport"}).json()
+    volunteer = api_client.post(
+        "/api/v1/volunteers",
+        json={
+            "full_name": "Ola Testowa",
+            "email": "ola.testowa@example.com",
+            "join_date": "2026-03-01T09:00:00",
+        },
+    ).json()
+
+    response = api_client.patch(
+        f"/api/v1/volunteers/{volunteer['id']}",
+        json={"function_ids": [function["id"]]},
+    )
+    assert response.status_code == 200
+    assert response.json()["function_ids"] == [function["id"]]
+
+    fetched = api_client.get(f"/api/v1/volunteers/{volunteer['id']}").json()
+    assert fetched["function_ids"] == [function["id"]]
+
+
+def test_history_only_beneficiary_update_persists(api_client) -> None:
+    """Regression (PAP-79 review): history is part of the audit snapshot."""
+    beneficiary = api_client.post(
+        "/api/v1/beneficiaries",
+        json={"full_name": "Jan Historyczny", "address": "ul. Prosta 1"},
+    ).json()
+
+    response = api_client.patch(
+        f"/api/v1/beneficiaries/{beneficiary['id']}",
+        json={"history": "Nowy wpis"},
+    )
+    assert response.status_code == 200
+
+    fetched = api_client.get(f"/api/v1/beneficiaries/{beneficiary['id']}").json()
+    assert fetched["history"] == "Nowy wpis"

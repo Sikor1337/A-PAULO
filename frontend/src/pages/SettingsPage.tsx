@@ -64,7 +64,6 @@ const SettingsPage = () => {
           <HistoryButton
             path={`v1/users/${user.id}/audit`}
             entityName={`${user.first_name} ${user.last_name}`.trim() || user.email}
-            compact
             className="rounded bg-indigo-100 px-3 py-1.5 text-xs font-bold text-indigo-700"
           />
           {canManageSecurity && (

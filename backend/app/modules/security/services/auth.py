@@ -219,7 +219,8 @@ class AuthService:
                     "new": "[zmieniono]",
                 }
             if not changes:
-                self.repo.rollback()
+                # Genuine no-op: persist (nothing changed) without an audit entry.
+                self.repo.commit(skip_audit=True)
                 return user
             self._record_user(
                 "PROFILE_UPDATE",

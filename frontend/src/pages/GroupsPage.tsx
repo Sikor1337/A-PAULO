@@ -472,7 +472,6 @@ const GroupsPage: React.FC = () => {
             <HistoryButton
               path={`v1/groups/${selectedGroupId}/audit`}
               entityName={`Grupa: ${groupDetail?.name ?? ''}`}
-              compact
               className="min-h-9 rounded-lg bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-600 hover:bg-indigo-100"
             />
           )}

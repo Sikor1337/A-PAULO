@@ -152,8 +152,9 @@ class PermissionService:
             self.repo.refresh(group)
             new_state = self._group_state(group)
             if not calculate_delta(old_state, new_state):
-                self.repo.rollback()
-                return self._serialize_group(self.get_group(group_id))
+                # Genuine no-op: persist (nothing changed) without an audit entry.
+                self.repo.commit(skip_audit=True)
+                return self._serialize_group(group)
             self._record_group("UPDATE", group, actor, old_state, new_state)
             self.repo.commit()
             return self._serialize_group(group)
@@ -173,8 +174,9 @@ class PermissionService:
             self.repo.refresh(group)
             new_state = self._group_state(group)
             if not calculate_delta(old_state, new_state):
-                self.repo.rollback()
-                return self._serialize_group(self.get_group(group_id))
+                # Genuine no-op: persist (nothing changed) without an audit entry.
+                self.repo.commit(skip_audit=True)
+                return self._serialize_group(group)
             self._record_group("PERMISSIONS_UPDATE", group, actor, old_state, new_state)
             self.repo.commit()
             return self._serialize_group(group)
@@ -231,8 +233,9 @@ class PermissionService:
             self.repo.refresh(group)
             new_state = self._group_state(group)
             if not calculate_delta(old_state, new_state):
-                self.repo.rollback()
-                return self._serialize_group(self.get_group(group_id))
+                # Genuine no-op: persist (nothing changed) without an audit entry.
+                self.repo.commit(skip_audit=True)
+                return self._serialize_group(group)
             self._record_group("UPDATE", group, actor, old_state, new_state)
             self._record_membership_changes(user_groups_before, actor)
             self.repo.commit()
@@ -256,8 +259,9 @@ class PermissionService:
             self.repo.flush()
             new_state = self._group_state(group)
             if not calculate_delta(old_state, new_state):
-                self.repo.rollback()
-                return self._serialize_group(self.get_group(group_id))
+                # Genuine no-op: persist (nothing changed) without an audit entry.
+                self.repo.commit(skip_audit=True)
+                return self._serialize_group(group)
             self._record_group("MEMBERS_UPDATE", group, actor, old_state, new_state)
             self._record_membership_changes(user_groups_before, actor)
             self.repo.commit()
@@ -298,7 +302,8 @@ class PermissionService:
             self.repo.flush()
             new_ids = sorted(ids)
             if old_ids == new_ids:
-                self.repo.rollback()
+                # Genuine no-op: persist (nothing changed) without an audit entry.
+                self.repo.commit(skip_audit=True)
                 return old_ids
             self._record_user_groups(user, actor, old_ids, new_ids)
             for group_id, old_state in group_states_before.items():

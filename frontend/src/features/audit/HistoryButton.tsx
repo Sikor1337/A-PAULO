@@ -6,7 +6,6 @@ import type { AuditEvent } from '@/types';
 interface HistoryButtonProps {
   path: string;
   entityName: string;
-  compact?: boolean;
   className?: string;
 }
 

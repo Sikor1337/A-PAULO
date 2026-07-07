@@ -269,8 +269,9 @@ class UserService:
                     "new": "[zmieniono]",
                 }
             if not changes:
-                self.user_repo.rollback()
-                return self.get_user_by_id(user_id)
+                # Genuine no-op: persist (nothing changed) without an audit entry.
+                self.user_repo.commit(skip_audit=True)
+                return user
             self._record(
                 "UPDATE",
                 user,

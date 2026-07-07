@@ -105,8 +105,9 @@ class BeneficiaryService:
             new_state = beneficiary_audit_state(beneficiary)
             changes = calculate_delta(old_state, new_state)
             if not changes:
-                self.repo.rollback()
-                return self.get_beneficiary_by_id(beneficiary_id)
+                # Genuine no-op: persist (nothing changed) without an audit entry.
+                self.repo.commit(skip_audit=True)
+                return self._enrich_beneficiary(beneficiary)
             self._record("UPDATE", beneficiary.id, actor, old_state, new_state)
             self.repo.commit()
             return self._enrich_beneficiary(beneficiary)

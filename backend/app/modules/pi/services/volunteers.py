@@ -120,8 +120,9 @@ class VolunteerService:
             new_state = volunteer_audit_state(volunteer)
             changes = calculate_delta(old_state, new_state)
             if not changes:
-                self.repo.rollback()
-                return self.get_volunteer_by_id(volunteer_id)
+                # Genuine no-op: persist (nothing changed) without an audit entry.
+                self.repo.commit(skip_audit=True)
+                return volunteer
             self._record("UPDATE", volunteer.id, actor, old_state, new_state)
             self.repo.commit()
             return volunteer

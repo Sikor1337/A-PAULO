@@ -12,4 +12,7 @@ def security_group_audit_state(group: UserGroup, user_ids: list[int]) -> dict:
 		"is_system": audit_value(group.is_system),
 		"system_key": audit_value(group.system_key),
 		"user_ids": audit_value(sorted(user_ids)),
+		"permission_codes": audit_value(
+			sorted(permission.code for permission in group.permissions)
+		),
 	}
