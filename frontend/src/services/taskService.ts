@@ -7,6 +7,7 @@ export const taskService = {
     if (filters.departmentId) params.department_id = filters.departmentId;
     if (filters.eventId) params.event_id = filters.eventId;
     if (filters.status) params.status = filters.status;
+    if (filters.volunteerId) params.volunteer_id = filters.volunteerId;
     const response = await apiClient.get<Task[]>('v1/tasks', { params });
     return response.data;
   },

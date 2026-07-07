@@ -58,4 +58,5 @@ export interface TaskFilters {
   departmentId: number | '';
   eventId: number | '';
   status: '' | TaskStatus;
+  volunteerId: number | '';
 }

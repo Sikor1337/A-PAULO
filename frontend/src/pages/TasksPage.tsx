@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import PageShell from '@/components/layout/PageShell';
 import TaskFormModal from '@/features/tasks/TaskFormModal';
 import { useDepartmentList } from '@/hooks/useDepartments';
+import { useVolunteerList } from '@/hooks/useVolunteers';
 import { useTaskActions, useTaskList } from '@/hooks/useTasks';
 import { useHasPermission } from '@/hooks/usePermissions';
 import { formatDate } from '@/lib/date';
@@ -26,6 +27,7 @@ const TasksPage: React.FC = () => {
 
   const [filterDepartment, setFilterDepartment] = useState<number | ''>('');
   const [filterStatus, setFilterStatus] = useState<'' | TaskStatus>('');
+  const [filterVolunteer, setFilterVolunteer] = useState<number | ''>('');
   const [editing, setEditing] = useState<Task | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [newItemDrafts, setNewItemDrafts] = useState<Record<number, string>>({});
@@ -35,10 +37,12 @@ const TasksPage: React.FC = () => {
     setIsAdding(false);
   };
   const { data: departments } = useDepartmentList();
+  const { data: volunteers } = useVolunteerList();
   const { data: tasks, isLoading } = useTaskList({
     departmentId: filterDepartment,
     eventId: filterEvent,
     status: filterStatus,
+    volunteerId: filterVolunteer,
   });
   const { save, remove, addItem, updateItem, removeItem } = useTaskActions({ onSaved: closeForm });
 
@@ -90,6 +94,18 @@ const TasksPage: React.FC = () => {
           {STATUS_OPTIONS.map((status) => (
             <option key={status} value={status}>
               {statusLabel(status)}
+            </option>
+          ))}
+        </select>
+        <select
+          value={filterVolunteer}
+          onChange={(e) => setFilterVolunteer(e.target.value === '' ? '' : Number(e.target.value))}
+          className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-600 outline-none focus:border-indigo-500 lg:w-auto lg:min-w-[200px]"
+        >
+          <option value="">Wszyscy wolontariusze</option>
+          {volunteers?.map((volunteer) => (
+            <option key={volunteer.id} value={volunteer.id}>
+              {volunteer.full_name}
             </option>
           ))}
         </select>
