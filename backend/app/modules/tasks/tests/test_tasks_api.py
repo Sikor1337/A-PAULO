@@ -273,3 +273,44 @@ def test_blank_title_and_label_rejected(api_client) -> None:
         f"/api/v1/tasks/{task['id']}/checklist", json={"label": "   "}
     )
     assert blank_label.status_code == 422
+
+
+def test_checklist_item_volunteer_assignment(api_client) -> None:
+    """A checklist point can have its own responsible volunteer."""
+    department = _create_department(api_client, name="Fizjoterapia")
+    volunteer = _create_volunteer(api_client, "punktowy@example.com")
+    task = api_client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Cwiczenia",
+            "department_id": department["id"],
+            "checklist": ["Przygotowac sale"],
+        },
+    ).json()
+    item = task["checklist"][0]
+    assert item["volunteer_id"] is None
+
+    assigned = api_client.patch(
+        f"/api/v1/tasks/{task['id']}/checklist/{item['id']}",
+        json={"volunteer_id": volunteer["id"]},
+    ).json()
+    assert assigned["checklist"][0]["volunteer_id"] == volunteer["id"]
+    assert assigned["checklist"][0]["volunteer_name"] == "Wolontariusz Zadaniowy"
+
+    cleared = api_client.patch(
+        f"/api/v1/tasks/{task['id']}/checklist/{item['id']}",
+        json={"clear_volunteer": True},
+    ).json()
+    assert cleared["checklist"][0]["volunteer_id"] is None
+
+    with_owner = api_client.post(
+        f"/api/v1/tasks/{task['id']}/checklist",
+        json={"label": "Rozgrzewka", "volunteer_id": volunteer["id"]},
+    ).json()
+    assert with_owner["checklist"][1]["volunteer_name"] == "Wolontariusz Zadaniowy"
+
+    missing = api_client.patch(
+        f"/api/v1/tasks/{task['id']}/checklist/{item['id']}",
+        json={"volunteer_id": 99999},
+    )
+    assert missing.status_code == 404

@@ -176,7 +176,6 @@ const TaskFormModal = ({ task, initialEventId = null, onClose, onSave, isPending
             <textarea
               id="task-checklist"
               value={checklistText}
-              placeholder={'Zamówić podest\nRozstawić nagłośnienie'}
               onChange={(e) => setChecklistText(e.target.value)}
               className="min-h-20 w-full resize-y rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium outline-none focus:border-indigo-500 focus:bg-white"
             />

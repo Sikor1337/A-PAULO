@@ -136,14 +136,17 @@ class TaskService:
             self.repo.rollback()
             raise
 
-    def add_checklist_item(self, task_id: int, label: str) -> dict:
+    def add_checklist_item(
+        self, task_id: int, label: str, volunteer_id: int | None = None
+    ) -> dict:
         try:
             task = self.get_task(task_id)
             label = self._require_text(label, "Treść punktu")
+            self._validate_item_volunteer(volunteer_id)
             position = (
                 max((item.position for item in task.checklist), default=-1) + 1
             )
-            self.repo.add_checklist_item(task.id, label, position)
+            self.repo.add_checklist_item(task.id, label, position, volunteer_id)
             self.repo.flush()
             self.repo.refresh(task)
             self._reconcile_status(task)
@@ -162,6 +165,11 @@ class TaskService:
                 raise NotFoundError("Punkt checklisty nie istnieje")
             if kwargs.get("label") is not None:
                 item.label = self._require_text(kwargs["label"], "Treść punktu")
+            if kwargs.get("volunteer_id") is not None:
+                self._validate_item_volunteer(kwargs["volunteer_id"])
+                item.volunteer_id = kwargs["volunteer_id"]
+            if kwargs.get("clear_volunteer"):
+                item.volunteer_id = None
             if kwargs.get("is_done") is not None:
                 item.is_done = kwargs["is_done"]
                 item.done_at = datetime.now(UTC) if item.is_done else None
@@ -204,6 +212,12 @@ class TaskService:
             task.status = "W_TRAKCIE"
             task.completed_at = None
 
+    def _validate_item_volunteer(self, volunteer_id: int | None) -> None:
+        if volunteer_id is not None and not self.repo.existing_volunteer_ids(
+            [volunteer_id]
+        ):
+            raise NotFoundError("Wolontariusz nie istnieje")
+
     @staticmethod
     def _require_text(value: str, field_label: str) -> str:
         value = value.strip()
@@ -236,14 +250,17 @@ class TaskService:
         event_titles = self.repo.event_titles(
             {task.event_id for task in tasks if task.event_id is not None}
         )
+        assignee_ids = {
+            assignee.volunteer_id for task in tasks for assignee in task.assignees
+        }
+        item_owner_ids = {
+            item.volunteer_id
+            for task in tasks
+            for item in task.checklist
+            if item.volunteer_id is not None
+        }
         volunteer_names = self.repo.volunteer_names(
-            list(
-                {
-                    assignee.volunteer_id
-                    for task in tasks
-                    for assignee in task.assignees
-                }
-            )
+            list(assignee_ids | item_owner_ids)
         )
         return [
             self._serialize(task, department_names, event_titles, volunteer_names)
@@ -261,6 +278,12 @@ class TaskService:
             {
                 "id": item.id,
                 "label": item.label,
+                "volunteer_id": item.volunteer_id,
+                "volunteer_name": (
+                    volunteer_names.get(item.volunteer_id)
+                    if item.volunteer_id is not None
+                    else None
+                ),
                 "is_done": item.is_done,
                 "done_at": item.done_at,
                 "position": item.position,

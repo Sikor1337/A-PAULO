@@ -58,9 +58,18 @@ class TaskRepository(SQLRepository):
         self.session.delete(task)
 
     def add_checklist_item(
-        self, task_id: int, label: str, position: int
+        self,
+        task_id: int,
+        label: str,
+        position: int,
+        volunteer_id: int | None = None,
     ) -> TaskChecklistItem:
-        item = TaskChecklistItem(task_id=task_id, label=label, position=position)
+        item = TaskChecklistItem(
+            task_id=task_id,
+            label=label,
+            position=position,
+            volunteer_id=volunteer_id,
+        )
         self.session.add(item)
         return item
 

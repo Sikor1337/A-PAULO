@@ -32,16 +32,21 @@ class TaskUpdateRequest(BaseModel):
 
 class ChecklistItemCreateRequest(BaseModel):
     label: str = Field(..., min_length=1, max_length=300)
+    volunteer_id: int | None = None
 
 
 class ChecklistItemUpdateRequest(BaseModel):
     label: str | None = Field(None, min_length=1, max_length=300)
     is_done: bool | None = None
+    volunteer_id: int | None = None
+    clear_volunteer: bool = False
 
 
 class ChecklistItemResponse(BaseModel):
     id: int
     label: str
+    volunteer_id: int | None
+    volunteer_name: str | None
     is_done: bool
     done_at: datetime | None
     position: int

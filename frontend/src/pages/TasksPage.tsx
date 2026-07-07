@@ -231,6 +231,37 @@ const TasksPage: React.FC = () => {
                         <span className={`flex-1 font-medium ${item.is_done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
                           {item.label}
                         </span>
+                        {canManage ? (
+                          <select
+                            value={item.volunteer_id ?? ''}
+                            disabled={updateItem.isPending}
+                            onChange={(e) =>
+                              updateItem.mutate({
+                                taskId: task.id,
+                                itemId: item.id,
+                                data:
+                                  e.target.value === ''
+                                    ? { clear_volunteer: true }
+                                    : { volunteer_id: Number(e.target.value) },
+                              })
+                            }
+                            className="h-7 max-w-[160px] rounded border border-gray-200 bg-gray-50 px-1 text-[11px] font-bold text-gray-500 outline-none focus:border-indigo-500"
+                            aria-label="Osoba odpowiedzialna za punkt"
+                          >
+                            <option value="">— nikt —</option>
+                            {volunteers?.map((volunteer) => (
+                              <option key={volunteer.id} value={volunteer.id}>
+                                {volunteer.full_name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          item.volunteer_name && (
+                            <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700">
+                              🙋 {item.volunteer_name}
+                            </span>
+                          )
+                        )}
                         {item.done_at && <span className="text-[10px] font-medium text-gray-400">{formatDate(item.done_at)}</span>}
                         {canManage && (
                           <button

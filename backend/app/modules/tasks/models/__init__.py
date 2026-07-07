@@ -80,6 +80,10 @@ class TaskChecklistItem(Base):
         ForeignKey("tasks.id", ondelete="CASCADE"), index=True
     )
     label: Mapped[str] = mapped_column(String(300))
+    # Optional per-item owner, independent of the task-level assignees.
+    volunteer_id: Mapped[int | None] = mapped_column(
+        ForeignKey("volunteers.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     is_done: Mapped[bool] = mapped_column(Boolean, default=False)
     done_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

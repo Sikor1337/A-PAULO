@@ -68,14 +68,23 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("task_id", sa.Integer(), nullable=False),
         sa.Column("label", sa.String(length=300), nullable=False),
+        sa.Column("volunteer_id", sa.Integer(), nullable=True),
         sa.Column("is_done", sa.Boolean(), nullable=False),
         sa.Column("done_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("position", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["task_id"], ["tasks.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["volunteer_id"], ["volunteers.id"], ondelete="SET NULL"
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
         op.f("ix_task_checklist_items_task_id"), "task_checklist_items", ["task_id"]
+    )
+    op.create_index(
+        op.f("ix_task_checklist_items_volunteer_id"),
+        "task_checklist_items",
+        ["volunteer_id"],
     )
 
     op.create_table(
@@ -136,6 +145,10 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_task_assignees_volunteer_id"), table_name="task_assignees")
     op.drop_index(op.f("ix_task_assignees_task_id"), table_name="task_assignees")
     op.drop_table("task_assignees")
+    op.drop_index(
+        op.f("ix_task_checklist_items_volunteer_id"),
+        table_name="task_checklist_items",
+    )
     op.drop_index(
         op.f("ix_task_checklist_items_task_id"), table_name="task_checklist_items"
     )

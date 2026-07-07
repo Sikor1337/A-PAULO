@@ -89,8 +89,8 @@ def add_checklist_item(
     service: TaskService = Depends(get_task_service),
     _user: User = Depends(require_permission(CAN_MANAGE_TASKS)),
 ):
-    """Add a checklist item."""
-    return service.add_checklist_item(task_id, request.label)
+    """Add a checklist item, optionally owned by a volunteer."""
+    return service.add_checklist_item(task_id, request.label, request.volunteer_id)
 
 
 @router.patch("/{task_id}/checklist/{item_id}", response_model=TaskResponse)

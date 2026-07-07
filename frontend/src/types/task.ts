@@ -3,6 +3,8 @@ export type TaskStatus = 'DO_ZROBIENIA' | 'W_TRAKCIE' | 'ZROBIONE';
 export interface TaskChecklistItem {
   id: number;
   label: string;
+  volunteer_id: number | null;
+  volunteer_name: string | null;
   is_done: boolean;
   done_at: string | null;
   position: number;

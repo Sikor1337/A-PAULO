@@ -34,7 +34,7 @@ export const taskService = {
   updateChecklistItem: async (
     taskId: number,
     itemId: number,
-    data: { label?: string; is_done?: boolean },
+    data: { label?: string; is_done?: boolean; volunteer_id?: number; clear_volunteer?: boolean },
   ): Promise<Task> => {
     const response = await apiClient.patch<Task>(`v1/tasks/${taskId}/checklist/${itemId}`, data);
     return response.data;

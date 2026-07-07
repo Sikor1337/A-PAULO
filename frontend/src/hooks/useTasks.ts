@@ -42,8 +42,15 @@ export function useTaskActions(options?: { onSaved?: () => void }) {
   });
 
   const updateItem = useMutation({
-    mutationFn: ({ taskId, itemId, data }: { taskId: number; itemId: number; data: { label?: string; is_done?: boolean } }) =>
-      taskService.updateChecklistItem(taskId, itemId, data),
+    mutationFn: ({
+      taskId,
+      itemId,
+      data,
+    }: {
+      taskId: number;
+      itemId: number;
+      data: { label?: string; is_done?: boolean; volunteer_id?: number; clear_volunteer?: boolean };
+    }) => taskService.updateChecklistItem(taskId, itemId, data),
     onSuccess: invalidate,
     onError,
   });
