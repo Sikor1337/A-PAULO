@@ -2,7 +2,9 @@
 
 from typing import Final, Literal, get_args
 
-ATTACHMENT_MAX_SIZE_BYTES: Final = 10 * 1024 * 1024
+MEGABYTE: Final = 1024 * 1024
+
+ATTACHMENT_MAX_SIZE_BYTES: Final = 10 * MEGABYTE
 BO_CARD_ARCHIVE_MEMORY_THRESHOLD_BYTES: Final = 16 * 1024 * 1024
 BO_CARD_ARCHIVE_MAX_UNCOMPRESSED_BYTES: Final = 1024 * 1024 * 1024
 BO_CARD_ARCHIVE_MAX_FILES: Final = 5000
@@ -23,6 +25,11 @@ ATTACHMENT_FALLBACK_CONTENT_TYPES: Final = frozenset({"", "application/octet-str
 ATTACHMENT_SUPPORTED_FILES_MESSAGE: Final = (
     "Supported files: PDF, JPG, PNG, WEBP, HEIC, HEIF"
 )
+BUG_REPORT_MAX_FILE_BYTES: Final = 10 * MEGABYTE
+BUG_REPORT_ALLOWED_EXTENSIONS: Final = ATTACHMENT_ALLOWED_EXTENSIONS | frozenset(
+    {".txt", ".log", ".zip"}
+)
+BUG_REPORT_CONTEXT: Final = "bug_reports"
 BO_CARD_CONTEXT: Final = "bo_card"
 BO_CARD_PERIOD_PATTERN: Final = r"^\d{4}-(0[1-9]|1[0-2])$"
 

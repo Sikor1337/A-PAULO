@@ -1,12 +1,18 @@
 """Bug report models."""
 from datetime import datetime
+from enum import StrEnum
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.sql.base import Base
 
-BUG_REPORT_STATUSES = ("NOWY", "W_TRAKCIE", "ROZWIĄZANY", "ODRZUCONY")
+
+class BugReportStatus(StrEnum):
+    NOWY = "NOWY"
+    W_TRAKCIE = "W_TRAKCIE"
+    ROZWIAZANY = "ROZWIĄZANY"
+    ODRZUCONY = "ODRZUCONY"
 
 
 class BugReport(Base):
@@ -21,7 +27,9 @@ class BugReport(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(default="")
-    status: Mapped[str] = mapped_column(String(20), default="NOWY", index=True)
+    status: Mapped[str] = mapped_column(
+        String(20), default=BugReportStatus.NOWY.value, index=True
+    )
     resolution_comment: Mapped[str] = mapped_column(default="")
 
     reporter_id: Mapped[int | None] = mapped_column(
