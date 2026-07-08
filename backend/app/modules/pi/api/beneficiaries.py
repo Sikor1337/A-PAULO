@@ -2,6 +2,9 @@
 
 from fastapi import APIRouter, Depends, Query
 
+from app.core.audit import AuditReaderPort, EntityType
+from app.modules.audit.dependencies import get_audit_reader
+from app.modules.audit.schemas import AuditEventResponse
 from app.modules.core_data.models import User
 from app.modules.pi.dependencies import get_beneficiary_service
 from app.modules.pi.schemas.beneficiaries import (
@@ -44,10 +47,10 @@ def list_beneficiaries(
 def create_beneficiary(
     request: BeneficiaryCreateRequest,
     service: BeneficiaryService = Depends(get_beneficiary_service),
-    _user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
+    user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
 ):
     """Create new beneficiary."""
-    return service.create_beneficiary(**request.model_dump())
+    return service.create_beneficiary(actor=user, **request.model_dump())
 
 
 @router.get("/{beneficiary_id}", response_model=BeneficiaryResponse)
@@ -65,20 +68,38 @@ def update_beneficiary(
     beneficiary_id: int,
     request: BeneficiaryUpdateRequest,
     service: BeneficiaryService = Depends(get_beneficiary_service),
-    _user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
+    user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
 ):
     """Update beneficiary."""
     # Only update provided fields
     update_data = request.model_dump(exclude_unset=True)
-    return service.update_beneficiary(beneficiary_id, **update_data)
+    return service.update_beneficiary(beneficiary_id, actor=user, **update_data)
 
 
 @router.delete("/{beneficiary_id}")
 def delete_beneficiary(
     beneficiary_id: int,
     service: BeneficiaryService = Depends(get_beneficiary_service),
-    _user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
+    user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
 ):
     """Delete beneficiary."""
-    service.delete_beneficiary(beneficiary_id)
+    service.delete_beneficiary(beneficiary_id, actor=user)
     return {"message": "Beneficiary deleted successfully"}
+
+
+@router.get("/{beneficiary_id}/audit", response_model=list[AuditEventResponse])
+def beneficiary_audit_history(
+    beneficiary_id: int,
+    limit: int = Query(100, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    service: BeneficiaryService = Depends(get_beneficiary_service),
+    audit: AuditReaderPort = Depends(get_audit_reader),
+    _user: User = Depends(require_permission(CAN_VIEW_BENEFICIARIES)),
+):
+    service.get_beneficiary_by_id(beneficiary_id)
+    return audit.get_logs_for_entity(
+        EntityType.PI_BENEFICIARY.value,
+        str(beneficiary_id),
+        limit=limit,
+        offset=offset,
+    )

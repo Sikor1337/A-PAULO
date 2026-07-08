@@ -6,8 +6,10 @@ from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
+from app.core.audit import AuditEntry, AuditPort, EntityType, calculate_delta
 from app.core.config import get_settings
 from app.core.errors import AuthenticationError, ConflictError, NotFoundError
+from app.modules.core_data.audit_state import user_audit_state
 from app.modules.core_data.models.user import User
 from app.modules.core_data.repositories.users import UserRepository
 from app.modules.security.services.password import hash_password
@@ -24,10 +26,39 @@ class UserService:
         self,
         user_repo: UserRepository,
         permissions: PermissionService,
+        audit: AuditPort,
     ):
         self.user_repo = user_repo
         self.permissions = permissions
+        self.audit = audit
         self.settings = get_settings()
+
+    def _state(self, user: User) -> dict:
+        return user_audit_state(user)
+
+    def _record(
+        self,
+        action: str,
+        user: User,
+        actor: User,
+        old_state: dict,
+        new_state: dict,
+        *,
+        password_changed: bool = False,
+    ) -> None:
+        changes = calculate_delta(old_state, new_state)
+        if password_changed:
+            changes["password"] = {"old": "[ukryte]", "new": "[zmieniono]"}
+        self.audit.record(
+            AuditEntry(
+                entity_type=EntityType.CORE_DATA_USER.value,
+                entity_id=str(user.id),
+                action=action,
+                actor_id=str(actor.id),
+                actor_display_name=actor.email,
+                changes=changes,
+            )
+        )
 
     def hash_password(self, password: str) -> str:
         """Hash a password."""
@@ -68,8 +99,9 @@ class UserService:
             )
             self.user_repo.flush()
             self.user_repo.refresh(user)
-            self.permissions.assign_default_group(user)
-            self.user_repo.commit(skip_audit=True)
+            self.permissions.assign_default_group(user, actor=user)
+            self._record("REGISTER", user, user, {}, self._state(user))
+            self.user_repo.commit()
             return user
         except Exception:
             self.user_repo.rollback()
@@ -163,6 +195,8 @@ class UserService:
         username: str,
         email: str,
         password: str,
+        *,
+        actor: User,
         first_name: str = "",
         last_name: str = "",
         status: str = "regular",
@@ -189,17 +223,19 @@ class UserService:
             )
             self.user_repo.flush()
             self.user_repo.refresh(user)
-            self.permissions.assign_default_group(user)
-            self.user_repo.commit(skip_audit=True)
+            self.permissions.assign_default_group(user, actor=actor)
+            self._record("CREATE", user, actor, {}, self._state(user))
+            self.user_repo.commit()
             return user
         except Exception:
             self.user_repo.rollback()
             raise
 
-    def update_user(self, user_id: int, **kwargs) -> User:
+    def update_user(self, user_id: int, actor: User, **kwargs) -> User:
         """Update a user from the admin panel."""
         try:
             user = self.get_user_by_id(user_id)
+            old_state = self._state(user)
             update_data = {
                 key: value for key, value in kwargs.items() if value is not None
             }
@@ -225,15 +261,34 @@ class UserService:
             user = self.user_repo.update(user, **update_data)
             self.user_repo.flush()
             self.user_repo.refresh(user)
-            self.user_repo.commit(skip_audit=True)
+            new_state = self._state(user)
+            changes = calculate_delta(old_state, new_state)
+            if password:
+                changes["password"] = {
+                    "old": "[ukryte]",
+                    "new": "[zmieniono]",
+                }
+            if not changes:
+                # Genuine no-op: persist (nothing changed) without an audit entry.
+                self.user_repo.commit(skip_audit=True)
+                return user
+            self._record(
+                "UPDATE",
+                user,
+                actor,
+                old_state,
+                new_state,
+                password_changed=bool(password),
+            )
+            self.user_repo.commit()
             return user
         except Exception:
             self.user_repo.rollback()
             raise
 
-    def delete_user(self, user_id: int, current_user_id: int | None = None) -> None:
+    def delete_user(self, user_id: int, actor: User) -> None:
         """Delete a user from the admin panel."""
-        if current_user_id == user_id:
+        if actor.id == user_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="You cannot delete your own account",
@@ -241,8 +296,10 @@ class UserService:
 
         try:
             user = self.get_user_by_id(user_id)
+            old_state = self._state(user)
             self.user_repo.delete(user)
-            self.user_repo.commit(skip_audit=True)
+            self._record("DELETE", user, actor, old_state, {})
+            self.user_repo.commit()
         except Exception:
             self.user_repo.rollback()
             raise

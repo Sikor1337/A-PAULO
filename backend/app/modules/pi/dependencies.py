@@ -3,7 +3,9 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from app.core.audit import AuditPort
 from app.core.dependencies import get_db
+from app.modules.audit.dependencies import get_audit_service
 from app.modules.pi.repositories import (
     BeneficiaryAssignmentRepository,
     BeneficiaryRepository,
@@ -47,30 +49,34 @@ def get_function_repository(
 
 def get_volunteer_service(
     repo: VolunteerRepository = Depends(get_volunteer_repository),
+    audit: AuditPort = Depends(get_audit_service),
 ) -> VolunteerService:
     """Get volunteer service dependency."""
-    return VolunteerService(repo)
+    return VolunteerService(repo, audit)
 
 
 def get_beneficiary_service(
     repo: BeneficiaryRepository = Depends(get_beneficiary_repository),
+    audit: AuditPort = Depends(get_audit_service),
 ) -> BeneficiaryService:
     """Get beneficiary service dependency."""
-    return BeneficiaryService(repo)
+    return BeneficiaryService(repo, audit)
 
 
 def get_group_service(
     repo: GroupRepository = Depends(get_group_repository),
+    audit: AuditPort = Depends(get_audit_service),
 ) -> GroupService:
     """Get group service dependency."""
-    return GroupService(repo)
+    return GroupService(repo, audit)
 
 
 def get_assignment_service(
     repo: BeneficiaryAssignmentRepository = Depends(get_assignment_repository),
+    audit: AuditPort = Depends(get_audit_service),
 ) -> BeneficiaryAssignmentService:
     """Get assignment service dependency."""
-    return BeneficiaryAssignmentService(repo)
+    return BeneficiaryAssignmentService(repo, audit)
 
 
 def get_function_service(

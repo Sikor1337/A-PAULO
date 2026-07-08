@@ -165,9 +165,9 @@ def accept_submission(
     submission_id: int,
     request: DecisionRequest,
     service: RecruitmentService = Depends(get_recruitment_service),
-    _user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
+    user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
 ):
-    return service.accept(submission_id, request.comment)
+    return service.accept(submission_id, actor=user, comment=request.comment)
 
 
 @router.post(
@@ -189,6 +189,6 @@ def reject_submission(
 def restore_onboarding(
     submission_id: int,
     service: RecruitmentService = Depends(get_recruitment_service),
-    _user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
+    user: User = Depends(require_permission(CAN_MANAGE_RECRUITMENT)),
 ):
-    return service.restore_to_onboarding(submission_id)
+    return service.restore_to_onboarding(submission_id, actor=user)

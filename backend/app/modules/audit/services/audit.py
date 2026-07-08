@@ -51,3 +51,17 @@ class SqlAuditService:
             limit=limit,
             offset=offset,
         )
+
+    def get_logs_for_entity_or_context(
+        self,
+        entity_type: str,
+        entity_id: str,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[AuditEvent]:
+        return self.repository.get_by_entity_or_context(
+            entity_type=entity_type,
+            entity_id=entity_id,
+            limit=limit,
+            offset=offset,
+        )

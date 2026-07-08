@@ -2,6 +2,9 @@
 
 from fastapi import APIRouter, Depends, Query
 
+from app.core.audit import AuditReaderPort, EntityType
+from app.modules.audit.dependencies import get_audit_reader
+from app.modules.audit.schemas import AuditEventResponse
 from app.modules.core_data.models import User
 from app.modules.pi.dependencies import get_assignment_service, get_group_service
 from app.modules.pi.schemas.groups import (
@@ -45,10 +48,10 @@ def list_groups(
 def create_group(
     request: GroupCreateRequest,
     service: GroupService = Depends(get_group_service),
-    _user: User = Depends(require_permission(CAN_MANAGE_PI_GROUPS)),
+    user: User = Depends(require_permission(CAN_MANAGE_PI_GROUPS)),
 ):
     """Create new group."""
-    return service.create_group(**request.model_dump(by_alias=False))
+    return service.create_group(actor=user, **request.model_dump(by_alias=False))
 
 
 @router.get("/groups/{group_id}", response_model=GroupDetailResponse)
@@ -66,22 +69,40 @@ def update_group(
     group_id: int,
     request: GroupUpdateRequest,
     service: GroupService = Depends(get_group_service),
-    _user: User = Depends(require_permission(CAN_MANAGE_PI_GROUPS)),
+    user: User = Depends(require_permission(CAN_MANAGE_PI_GROUPS)),
 ):
     """Update group."""
     update_data = request.model_dump(exclude_unset=True, by_alias=False)
-    return service.update_group(group_id, **update_data)
+    return service.update_group(group_id, actor=user, **update_data)
 
 
 @router.delete("/groups/{group_id}")
 def delete_group(
     group_id: int,
     service: GroupService = Depends(get_group_service),
-    _user: User = Depends(require_permission(CAN_MANAGE_PI_GROUPS)),
+    user: User = Depends(require_permission(CAN_MANAGE_PI_GROUPS)),
 ):
     """Delete group."""
-    service.delete_group(group_id)
+    service.delete_group(group_id, actor=user)
     return {"message": "Group deleted successfully"}
+
+
+@router.get("/groups/{group_id}/audit", response_model=list[AuditEventResponse])
+def group_audit_history(
+    group_id: int,
+    limit: int = Query(100, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    service: GroupService = Depends(get_group_service),
+    audit: AuditReaderPort = Depends(get_audit_reader),
+    _user: User = Depends(require_permission(CAN_VIEW_PI_GROUPS)),
+):
+    service.get_group_by_id(group_id)
+    return audit.get_logs_for_entity_or_context(
+        EntityType.PI_GROUP.value,
+        str(group_id),
+        limit=limit,
+        offset=offset,
+    )
 
 
 # =========================================================
@@ -105,12 +126,13 @@ def list_assignments(
 def create_assignment(
     request: BeneficiaryAssignmentCreateRequest,
     service: BeneficiaryAssignmentService = Depends(get_assignment_service),
-    _user: User = Depends(require_permission(CAN_MANAGE_PI_GROUPS)),
+    user: User = Depends(require_permission(CAN_MANAGE_PI_GROUPS)),
 ):
     """Create new beneficiary assignment."""
     return service.create_assignment(
         beneficiary_id=request.beneficiary_id,
         volunteer_id=request.volunteer_id,
+        actor=user,
         is_main=request.is_main,
         additional_info=request.additional_info,
     )
@@ -135,19 +157,19 @@ def update_assignment(
     assignment_id: int,
     request: BeneficiaryAssignmentUpdateRequest,
     service: BeneficiaryAssignmentService = Depends(get_assignment_service),
-    _user: User = Depends(require_permission(CAN_MANAGE_PI_GROUPS)),
+    user: User = Depends(require_permission(CAN_MANAGE_PI_GROUPS)),
 ):
     """Update assignment."""
     update_data = request.model_dump(exclude_unset=True)
-    return service.update_assignment(assignment_id, **update_data)
+    return service.update_assignment(assignment_id, actor=user, **update_data)
 
 
 @router.delete("/assignments/{assignment_id}")
 def delete_assignment(
     assignment_id: int,
     service: BeneficiaryAssignmentService = Depends(get_assignment_service),
-    _user: User = Depends(require_permission(CAN_MANAGE_PI_GROUPS)),
+    user: User = Depends(require_permission(CAN_MANAGE_PI_GROUPS)),
 ):
     """Delete assignment."""
-    service.delete_assignment(assignment_id)
+    service.delete_assignment(assignment_id, actor=user)
     return {"message": "Assignment deleted successfully"}

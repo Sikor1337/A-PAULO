@@ -35,7 +35,9 @@ def service(
     repo.refresh = session.refresh
     repo.commit = session.commit
     repo.rollback = session.rollback
-    return AuthService(repo, token_service, MagicMock())
+    permissions = MagicMock()
+    permissions.group_ids_for_user.return_value = []
+    return AuthService(repo, token_service, permissions, MagicMock())
 
 
 def test_register_normalizes_fields_hashes_password_and_commits(
@@ -44,7 +46,15 @@ def test_register_normalizes_fields_hashes_password_and_commits(
     session: MagicMock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    user = SimpleNamespace(id=1)
+    user = SimpleNamespace(
+        id=1,
+        username="newuser",
+        email="user@example.com",
+        first_name="Jan",
+        last_name="Kowalski",
+        status="regular",
+        is_active=True,
+    )
     repo.get_by_username.return_value = None
     repo.get_by_email.return_value = None
     repo.create.return_value = user
@@ -83,7 +93,15 @@ def test_register_with_valid_recruitment_token_creates_candidate(
     repo: MagicMock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    user = SimpleNamespace(id=2)
+    user = SimpleNamespace(
+        id=2,
+        username="candidate",
+        email="candidate@example.com",
+        first_name="",
+        last_name="",
+        status="new_volunteer",
+        is_active=True,
+    )
     repo.get_by_username.return_value = None
     repo.get_by_email.return_value = None
     repo.create.return_value = user

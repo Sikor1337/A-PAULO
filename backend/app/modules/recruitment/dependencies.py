@@ -5,7 +5,9 @@ from typing import Annotated
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.audit import AuditPort
 from app.core.dependencies import get_db
+from app.modules.audit.dependencies import get_audit_service
 from app.modules.core_data.models import User
 from app.modules.recruitment.access import is_valid_recruitment_access_token
 from app.modules.recruitment.constants import (
@@ -27,8 +29,9 @@ def get_recruitment_repository(
 def get_recruitment_service(
     repo: RecruitmentRepository = Depends(get_recruitment_repository),
     permissions: PermissionService = Depends(get_permission_service),
+    audit: AuditPort = Depends(get_audit_service),
 ) -> RecruitmentService:
-    return RecruitmentService(repo, permissions)
+    return RecruitmentService(repo, permissions, audit)
 
 
 def require_recruitment_access(
