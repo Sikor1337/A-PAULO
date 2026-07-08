@@ -17,6 +17,7 @@ import BeneficiariesPage from './pages/BeneficiariesPage';
 import BOCardsPage from './pages/BOCardsPage';
 import VolunteersPage from './pages/VolunteersPage';
 import GroupsPage from './pages/GroupsPage';
+import DepartmentsPage from './pages/DepartmentsPage';
 import ProfilePage from './pages/ProfilePage';
 import MyDepartureSurveyPage from './pages/MyDepartureSurveyPage';
 import SettingsPage from './pages/SettingsPage';
@@ -103,6 +104,9 @@ const router = createBrowserRouter(createRoutesFromElements(
       </Route>
       <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_PI_GROUPS" />}>
         <Route path="/groups" element={<GroupsPage />} />
+      </Route>
+      <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_DEPARTMENTS" />}>
+        <Route path="/departments" element={<DepartmentsPage />} />
       </Route>
       <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_EVENTS" />}>
         <Route path="/pap-calendar" element={<PapCalendarPage />} />

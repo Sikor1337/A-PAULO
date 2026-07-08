@@ -18,6 +18,8 @@ CAN_VIEW_EVENTS = "CAN_VIEW_EVENTS"
 CAN_MANAGE_EVENTS = "CAN_MANAGE_EVENTS"
 CAN_VIEW_SECURITY = "CAN_VIEW_SECURITY"
 CAN_MANAGE_SECURITY = "CAN_MANAGE_SECURITY"
+CAN_VIEW_DEPARTMENTS = "CAN_VIEW_DEPARTMENTS"
+CAN_MANAGE_DEPARTMENTS = "CAN_MANAGE_DEPARTMENTS"
 
 PERMISSION_CATALOG = (
     (CAN_VIEW_USERS, "Podgląd użytkowników", "Użytkownicy"),
@@ -38,6 +40,8 @@ PERMISSION_CATALOG = (
     (CAN_MANAGE_EVENTS, "Zarządzanie wydarzeniami", "Wydarzenia"),
     (CAN_VIEW_SECURITY, "Podgląd grup użytkowników", "Bezpieczeństwo"),
     (CAN_MANAGE_SECURITY, "Zarządzanie grupami i uprawnieniami", "Bezpieczeństwo"),
+    (CAN_VIEW_DEPARTMENTS, "Podgląd działów", "Działy"),
+    (CAN_MANAGE_DEPARTMENTS, "Zarządzanie działami", "Działy"),
 )
 
 ALL_PERMISSION_CODES = frozenset(code for code, _, _ in PERMISSION_CATALOG)
