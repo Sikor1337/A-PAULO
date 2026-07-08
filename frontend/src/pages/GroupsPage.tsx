@@ -10,6 +10,7 @@ import { useBOCardAttachmentActions, useBOCardAttachments } from '@/hooks/useAtt
 import { attachmentService, BO_CARD_ACCEPT, BO_CARD_MAX_SIZE_BYTES, BO_CARD_SUPPORTED_LABEL } from '@/services/attachmentService';
 import { volunteerDetailFields } from '@/features/volunteers/volunteerDetail';
 import { beneficiaryDetailFields } from '@/features/beneficiaries/beneficiaryDetail';
+import HistoryButton from '@/features/audit/HistoryButton';
 import type {
   Volunteer,
   Beneficiary,
@@ -467,6 +468,13 @@ const GroupsPage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+          {!isNewGroup && selectedGroupId !== null && (
+            <HistoryButton
+              path={`v1/groups/${selectedGroupId}/audit`}
+              entityName={`Grupa: ${groupDetail?.name ?? ''}`}
+              className="min-h-9 rounded-lg bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-600 hover:bg-indigo-100"
+            />
+          )}
           {canManageGroups && !isNewGroup && !isEditing && (
             <button
               type="button"
@@ -1082,6 +1090,15 @@ const GroupsPage: React.FC = () => {
           fields={beneficiaryDetailFields(detailBeneficiary)}
           valueClassName="text-gray-700"
           onClose={() => setDetailBeneficiary(null)}
+          footer={(
+            <>
+              <HistoryButton
+                path={`v1/beneficiaries/${detailBeneficiary.id}/audit`}
+                entityName={detailBeneficiary.full_name}
+              />
+              <button type="button" onClick={() => setDetailBeneficiary(null)} className="px-4 py-2 font-bold text-gray-400">Zamknij</button>
+            </>
+          )}
         />
       )}
       {detailVolunteer && (
@@ -1090,6 +1107,15 @@ const GroupsPage: React.FC = () => {
           tag={{ text: 'Wolontariusz', className: 'text-emerald-500' }}
           fields={volunteerDetailFields(detailVolunteer)}
           onClose={() => setDetailVolunteer(null)}
+          footer={(
+            <>
+              <HistoryButton
+                path={`v1/volunteers/${detailVolunteer.id}/audit`}
+                entityName={detailVolunteer.full_name}
+              />
+              <button type="button" onClick={() => setDetailVolunteer(null)} className="px-4 py-2 font-bold text-gray-400">Zamknij</button>
+            </>
+          )}
         />
       )}
     </PageShell>

@@ -1,4 +1,5 @@
 export type { Paginated, WithId } from './api';
+export type { AuditChange, AuditEvent } from './audit';
 export type { AdminUser, AdminUserInput, UserStatus } from './user';
 export type {
   MyPermissions,
@@ -11,6 +12,12 @@ export type {
 export type { Volunteer, VolunteerStatus, VolunteerInput, VolunteerFunction, VolunteerFunctionInput } from './volunteer';
 export type { ImportEntity, ImportReport, ImportRowIssue } from './imports';
 export type { Beneficiary, BeneficiaryStatus, BeneficiaryInput } from './beneficiary';
+export type {
+  DepartmentDetail,
+  DepartmentInput,
+  DepartmentListItem,
+  DepartmentMember,
+} from './department';
 export type {
   AttachmentUpdateInput,
   BOCardAttachment,

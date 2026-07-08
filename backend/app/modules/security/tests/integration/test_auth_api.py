@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi import FastAPI
@@ -16,7 +17,9 @@ from app.modules.security.services.permissions import PermissionService
 
 
 def permission_service(session: Session) -> PermissionService:
-    return PermissionService(PermissionRepository(session), UserRepository(session))
+    return PermissionService(
+        PermissionRepository(session), UserRepository(session), MagicMock()
+    )
 
 
 @pytest.fixture

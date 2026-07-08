@@ -10,6 +10,7 @@ import { buildVolunteerColumns } from '@/features/volunteers/volunteerColumns';
 import { volunteerDetailFields } from '@/features/volunteers/volunteerDetail';
 import VolunteerFormModal from '@/features/volunteers/VolunteerFormModal';
 import CsvImportModal from '@/features/imports/CsvImportModal';
+import HistoryButton from '@/features/audit/HistoryButton';
 import { exportRowsToCsv } from '@/lib/csv';
 import type { Volunteer, VolunteerStatus } from '@/types';
 
@@ -145,6 +146,10 @@ const VolunteersPage: React.FC = () => {
           onClose={() => setDetails(null)}
           footer={
             <>
+              <HistoryButton
+                path={`v1/volunteers/${details.id}/audit`}
+                entityName={details.full_name}
+              />
               {canManage && (
                 <button
                   onClick={() => {

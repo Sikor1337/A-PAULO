@@ -24,6 +24,7 @@ from app.modules.attachments.api import router as attachments_router  # noqa: E4
 from app.modules.calendar.api import router as calendar_router  # noqa: E402
 from app.modules.core_data.api.users import router as users_router  # noqa: E402
 from app.modules.core_data.models import User  # noqa: E402
+from app.modules.departments.api import router as departments_router  # noqa: E402
 from app.modules.pi.api.beneficiaries import router as beneficiaries_router  # noqa: E402
 from app.modules.pi.api.functions import router as functions_router  # noqa: E402
 from app.modules.pi.api.groups import router as groups_router  # noqa: E402
@@ -125,6 +126,7 @@ def api_client(
     app.include_router(groups_router, prefix="/api/v1")
     app.include_router(imports_router, prefix="/api/v1")
     app.include_router(attachments_router, prefix="/api/v1")
+    app.include_router(departments_router, prefix="/api/v1")
     app.include_router(recruitment_router, prefix="/api/v1")
     app.include_router(calendar_router, prefix="/api/v1")
 

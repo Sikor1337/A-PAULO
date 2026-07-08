@@ -1,6 +1,9 @@
 """Beneficiary service for PI domain."""
 
+from app.core.audit import AuditEntry, AuditPort, EntityType, calculate_delta
 from app.core.errors import NotFoundError
+from app.modules.core_data.models import User
+from app.modules.pi.audit_state import beneficiary_audit_state
 from app.modules.pi.models.beneficiary import Beneficiary
 from app.modules.pi.repositories.beneficiaries import BeneficiaryRepository
 
@@ -8,8 +11,28 @@ from app.modules.pi.repositories.beneficiaries import BeneficiaryRepository
 class BeneficiaryService:
     """Service for beneficiary operations."""
 
-    def __init__(self, repo: BeneficiaryRepository):
+    def __init__(self, repo: BeneficiaryRepository, audit: AuditPort):
         self.repo = repo
+        self.audit = audit
+
+    def _record(
+        self,
+        action: str,
+        beneficiary_id: int,
+        actor: User,
+        old_state: dict,
+        new_state: dict,
+    ) -> None:
+        self.audit.record(
+            AuditEntry(
+                entity_type=EntityType.PI_BENEFICIARY.value,
+                entity_id=str(beneficiary_id),
+                action=action,
+                actor_id=str(actor.id),
+                actor_display_name=actor.email,
+                changes=calculate_delta(old_state, new_state),
+            )
+        )
 
     def _enrich_beneficiary(self, beneficiary: Beneficiary) -> Beneficiary:
         """Enrich beneficiary with group_name computed field."""
@@ -50,37 +73,56 @@ class BeneficiaryService:
         beneficiaries = [self._enrich_beneficiary(b) for b in beneficiaries]
         return beneficiaries, count
 
-    def create_beneficiary(self, **kwargs) -> Beneficiary:
+    def create_beneficiary(self, actor: User, **kwargs) -> Beneficiary:
         """Create new beneficiary."""
         try:
             beneficiary = self.repo.create(**kwargs)
             self.repo.flush()
             self.repo.refresh(beneficiary)
-            self.repo.commit(skip_audit=True)
+            self._record(
+                "CREATE",
+                beneficiary.id,
+                actor,
+                {},
+                beneficiary_audit_state(beneficiary),
+            )
+            self.repo.commit()
             return self._enrich_beneficiary(beneficiary)
         except Exception:
             self.repo.rollback()
             raise
 
-    def update_beneficiary(self, beneficiary_id: int, **kwargs) -> Beneficiary:
+    def update_beneficiary(
+        self, beneficiary_id: int, actor: User, **kwargs
+    ) -> Beneficiary:
         """Update beneficiary."""
         try:
             beneficiary = self.get_beneficiary_by_id(beneficiary_id)
+            old_state = beneficiary_audit_state(beneficiary)
             beneficiary = self.repo.update(beneficiary, **kwargs)
             self.repo.flush()
             self.repo.refresh(beneficiary)
-            self.repo.commit(skip_audit=True)
+            new_state = beneficiary_audit_state(beneficiary)
+            changes = calculate_delta(old_state, new_state)
+            if not changes:
+                # Genuine no-op: persist (nothing changed) without an audit entry.
+                self.repo.commit(skip_audit=True)
+                return self._enrich_beneficiary(beneficiary)
+            self._record("UPDATE", beneficiary.id, actor, old_state, new_state)
+            self.repo.commit()
             return self._enrich_beneficiary(beneficiary)
         except Exception:
             self.repo.rollback()
             raise
 
-    def delete_beneficiary(self, beneficiary_id: int) -> None:
+    def delete_beneficiary(self, beneficiary_id: int, actor: User) -> None:
         """Delete beneficiary."""
         try:
             beneficiary = self.get_beneficiary_by_id(beneficiary_id)
+            old_state = beneficiary_audit_state(beneficiary)
             self.repo.delete(beneficiary)
-            self.repo.commit(skip_audit=True)
+            self._record("DELETE", beneficiary.id, actor, old_state, {})
+            self.repo.commit()
         except Exception:
             self.repo.rollback()
             raise
