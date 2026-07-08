@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse
 from app.core.errors import register_error_handlers
 from app.infrastructure.sql import models_registry  # noqa: F401 - Register all models
 from app.modules.attachments.api import router as attachments_router
-from app.modules.bug_reports.api import router as bug_reports_router
+from app.modules.bug_reports.api.bug_reports import router as bug_reports_router
 from app.modules.calendar.api import router as calendar_router
 from app.modules.calendar.services import install_calendar_access_log_filter
 from app.modules.core_data.api.users import router as users_router
