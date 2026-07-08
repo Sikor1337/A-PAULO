@@ -9,6 +9,7 @@ import { useHasPermission } from '@/hooks/usePermissions';
 import { buildBeneficiaryColumns } from '@/features/beneficiaries/beneficiaryColumns';
 import { beneficiaryDetailFields } from '@/features/beneficiaries/beneficiaryDetail';
 import BeneficiaryFormModal from '@/features/beneficiaries/BeneficiaryFormModal';
+import HistoryButton from '@/features/audit/HistoryButton';
 import { exportRowsToCsv } from '@/lib/csv';
 import type { Beneficiary } from '@/types';
 
@@ -138,6 +139,10 @@ const BeneficiariesPage: React.FC = () => {
           onClose={() => setDetails(null)}
           footer={
             <>
+              <HistoryButton
+                path={`v1/beneficiaries/${details.id}/audit`}
+                entityName={details.full_name}
+              />
               {canManage && <button
                 onClick={() => {
                   setEditing(details);

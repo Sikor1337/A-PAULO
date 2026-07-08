@@ -23,6 +23,8 @@ def service(session: MagicMock, repo: MagicMock) -> UserService:
     service = UserService.__new__(UserService)
     service.user_repo = repo
     service.permissions = MagicMock()
+    service.permissions.group_ids_for_user.return_value = []
+    service.audit = MagicMock()
     repo.flush = session.flush
     repo.refresh = session.refresh
     repo.commit = session.commit
@@ -35,13 +37,25 @@ def service(session: MagicMock, repo: MagicMock) -> UserService:
     return service
 
 
+def actor(user_id: int = 99) -> SimpleNamespace:
+    return SimpleNamespace(id=user_id, email="admin@example.com")
+
+
 def test_create_user_normalizes_credentials_hashes_password_and_commits(
     service: UserService,
     repo: MagicMock,
     session: MagicMock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    created_user = SimpleNamespace(id=1)
+    created_user = SimpleNamespace(
+        id=1,
+        username="adminuser",
+        email="admin@example.com",
+        first_name="Ala",
+        last_name="Admin",
+        status="admin",
+        is_active=False,
+    )
     repo.get_by_username.return_value = None
     repo.get_by_email.return_value = None
     repo.create.return_value = created_user
@@ -58,6 +72,7 @@ def test_create_user_normalizes_credentials_hashes_password_and_commits(
         last_name="Admin",
         status="admin",
         is_active=False,
+        actor=actor(),
     )
 
     assert result is created_user
@@ -90,6 +105,7 @@ def test_create_user_rolls_back_on_duplicate_email(
             username="new-user",
             email="taken@example.com",
             password="StrongPass123",
+            actor=actor(),
         )
 
     repo.create.assert_not_called()
@@ -102,7 +118,15 @@ def test_update_user_normalizes_unique_fields_and_hashes_password(
     session: MagicMock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    user = SimpleNamespace(id=1, username="old", email="old@example.com")
+    user = SimpleNamespace(
+        id=1,
+        username="old",
+        email="old@example.com",
+        first_name="",
+        last_name="",
+        status="regular",
+        is_active=True,
+    )
     repo.get_by_id.return_value = user
     repo.get_by_username.return_value = None
     repo.get_by_email.return_value = None
@@ -117,6 +141,7 @@ def test_update_user_normalizes_unique_fields_and_hashes_password(
         username=" NewName ",
         email=" New@Example.com ",
         password="NewStrongPass123",
+        actor=actor(),
     )
 
     assert result is user
@@ -134,12 +159,20 @@ def test_update_user_rejects_duplicate_username(
     repo: MagicMock,
     session: MagicMock,
 ) -> None:
-    user = SimpleNamespace(id=1, username="old")
+    user = SimpleNamespace(
+        id=1,
+        username="old",
+        email="old@example.com",
+        first_name="",
+        last_name="",
+        status="regular",
+        is_active=True,
+    )
     repo.get_by_id.return_value = user
     repo.get_by_username.return_value = SimpleNamespace(id=2)
 
     with pytest.raises(ConflictError):
-        service.update_user(1, username="taken")
+        service.update_user(1, actor=actor(), username="taken")
 
     repo.update.assert_not_called()
     session.rollback.assert_called_once()
@@ -151,7 +184,7 @@ def test_delete_user_rejects_self_delete(
     session: MagicMock,
 ) -> None:
     with pytest.raises(HTTPException) as exc_info:
-        service.delete_user(7, current_user_id=7)
+        service.delete_user(7, actor=actor(7))
 
     assert exc_info.value.status_code == 400
     repo.delete.assert_not_called()

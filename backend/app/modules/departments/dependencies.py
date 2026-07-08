@@ -4,8 +4,8 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db
-from app.modules.departments.repositories import DepartmentRepository
-from app.modules.departments.services import DepartmentService
+from app.modules.departments.repositories.departments import DepartmentRepository
+from app.modules.departments.services.departments import DepartmentService
 
 
 def get_department_repository(

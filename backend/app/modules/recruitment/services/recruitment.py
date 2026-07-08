@@ -6,8 +6,11 @@ from datetime import UTC, datetime
 
 from sqlalchemy.exc import IntegrityError
 
+from app.core.audit import AuditEntry, AuditPort, EntityType, calculate_delta
 from app.core.errors import ConflictError, NotFoundError, ValidationException
+from app.modules.core_data.audit_state import user_audit_state
 from app.modules.core_data.models import User
+from app.modules.pi.audit_state import volunteer_audit_state
 from app.modules.recruitment.constants import (
     DEFAULT_FIELDS,
     NEW_VOLUNTEER_STATUS,
@@ -40,9 +43,31 @@ class RecruitmentService:
         self,
         repo: RecruitmentRepository,
         permissions: PermissionService,
+        audit: AuditPort,
     ):
         self.repo = repo
         self.permissions = permissions
+        self.audit = audit
+
+    def _record_entity(
+        self,
+        entity_type: EntityType,
+        entity_id: int,
+        action: str,
+        actor: User,
+        old_state: dict,
+        new_state: dict,
+    ) -> None:
+        self.audit.record(
+            AuditEntry(
+                entity_type=entity_type.value,
+                entity_id=str(entity_id),
+                action=action,
+                actor_id=str(actor.id),
+                actor_display_name=actor.email,
+                changes=calculate_delta(old_state, new_state),
+            )
+        )
 
     def _ensure_default_fields(self) -> None:
         current = self.repo.list_fields()
@@ -312,7 +337,7 @@ class RecruitmentService:
         )
 
     def accept(
-        self, submission_id: int, comment: str | None = None
+        self, submission_id: int, actor: User, comment: str | None = None
     ) -> RecruitmentSubmission:
         try:
             submission = self.get_submission(submission_id)
@@ -334,6 +359,11 @@ class RecruitmentService:
                 self.repo.get_volunteer(submission.volunteer_id)
                 if submission.volunteer_id is not None
                 else None
+            )
+            old_volunteer_state = volunteer_audit_state(volunteer) if volunteer else {}
+            old_user_state = user_audit_state(
+                submission.user,
+                self.permissions.group_ids_for_user(submission.user.id),
             )
             email_owner = self.repo.get_volunteer_by_email(submission.email)
             if email_owner and (volunteer is None or email_owner.id != volunteer.id):
@@ -361,34 +391,87 @@ class RecruitmentService:
             submission.decision_comment = comment
             submission.status_changed_at = datetime.now(UTC)
             submission.user.status = "regular"
-            self.permissions.assign_default_group(submission.user)
-            self.repo.commit(skip_audit=True)
+            self.permissions.assign_default_group(submission.user, actor=actor)
+            self.repo.flush()
+            self._record_entity(
+                EntityType.PI_VOLUNTEER,
+                volunteer.id,
+                "CREATE" if not old_volunteer_state else "UPDATE",
+                actor,
+                old_volunteer_state,
+                volunteer_audit_state(volunteer),
+            )
+            self._record_entity(
+                EntityType.CORE_DATA_USER,
+                submission.user.id,
+                "RECRUITMENT_ACCEPTED",
+                actor,
+                old_user_state,
+                user_audit_state(
+                    submission.user,
+                    self.permissions.group_ids_for_user(submission.user.id),
+                ),
+            )
+            self.repo.commit()
             self.repo.refresh(submission)
             return submission
         except Exception:
             self.repo.rollback()
             raise
 
-    def restore_to_onboarding(self, submission_id: int) -> RecruitmentSubmission:
+    def restore_to_onboarding(
+        self, submission_id: int, actor: User
+    ) -> RecruitmentSubmission:
         try:
             submission = self.get_submission(submission_id)
             if submission.status not in {"ACCEPTED", "REJECTED"}:
                 raise ConflictError(
                     "Do wdrażania można cofnąć tylko wdrożoną lub odrzuconą osobę"
                 )
+            old_user_state = user_audit_state(
+                submission.user,
+                self.permissions.group_ids_for_user(submission.user.id),
+            )
+            deleted_volunteer = None
+            old_volunteer_state = None
             if submission.volunteer_id is not None:
                 volunteer = self.repo.get_volunteer(submission.volunteer_id)
                 if volunteer:
+                    deleted_volunteer = volunteer
+                    old_volunteer_state = volunteer_audit_state(volunteer)
                     submission.volunteer_id = None
                     self.repo.flush()
                     self.repo.delete_volunteer(volunteer)
             submission.user.status = NEW_VOLUNTEER_STATUS
-            self.permissions.remove_system_group(submission.user, STAFF_GROUP_KEY)
+            self.permissions.remove_system_group(
+                submission.user, STAFF_GROUP_KEY, actor=actor
+            )
             submission.status = "ONBOARDING"
             submission.decision_comment = None
             submission.status_changed_at = datetime.now(UTC)
             self._ensure_onboarding_meetings(submission)
-            self.repo.commit(skip_audit=True)
+            self.repo.flush()
+            if deleted_volunteer and old_volunteer_state:
+                self._record_entity(
+                    EntityType.PI_VOLUNTEER,
+                    deleted_volunteer.id,
+                    "DELETE",
+                    actor,
+                    old_volunteer_state,
+                    {},
+                )
+            self._record_entity(
+                EntityType.CORE_DATA_USER,
+                submission.user.id,
+                "RECRUITMENT_RESTORED",
+                actor,
+                old_user_state,
+                user_audit_state(
+                    submission.user,
+                    self.permissions.group_ids_for_user(submission.user.id),
+                ),
+            )
+            self.repo.commit()
             return self.get_submission(submission.id)
         except Exception:
             self.repo.rollback()

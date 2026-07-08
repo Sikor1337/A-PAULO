@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pytest
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -10,7 +12,9 @@ from app.modules.security.services.permissions import PermissionService
 
 
 def _service(session: Session) -> PermissionService:
-    return PermissionService(PermissionRepository(session), UserRepository(session))
+    return PermissionService(
+        PermissionRepository(session), UserRepository(session), MagicMock()
+    )
 
 
 def _user(session: Session, username: str, status: str = "new_volunteer") -> User:
@@ -37,7 +41,7 @@ def test_user_inherits_union_of_permissions_from_multiple_groups(
     db_session.flush()
 
     service = _service(db_session)
-    service.replace_user_groups(user.id, [first.id, second.id])
+    service.replace_user_groups(user.id, [first.id, second.id], actor=user)
 
     assert service.permissions_for_user(user) == {
         "CAN_VIEW_USERS",
@@ -56,7 +60,7 @@ def test_system_group_definition_cannot_be_modified(db_session: Session) -> None
     db_session.commit()
 
     with pytest.raises(HTTPException) as error:
-        _service(db_session).update_group(group.id, name="Changed")
+        _service(db_session).update_group(group.id, actor=group, name="Changed")
 
     assert error.value.status_code == 400
 
@@ -74,7 +78,7 @@ def test_system_group_permission_matrix_cannot_be_modified(
     db_session.commit()
 
     with pytest.raises(HTTPException) as error:
-        _service(db_session).replace_group_permissions(group.id, [])
+        _service(db_session).replace_group_permissions(group.id, [], actor=group)
 
     assert error.value.status_code == 400
 
@@ -107,7 +111,7 @@ def test_default_group_assignment_preserves_explicit_memberships(
     db_session.add_all([admin_group, staff_group])
     db_session.flush()
     service = _service(db_session)
-    service.replace_user_groups(user.id, [admin_group.id])
+    service.replace_user_groups(user.id, [admin_group.id], actor=user)
 
     service.assign_default_group(user)
 
@@ -118,3 +122,24 @@ def test_default_group_assignment_preserves_explicit_memberships(
     service.remove_system_group(user, "staff")
 
     assert service.group_ids_for_user(user.id) == [admin_group.id]
+
+
+def test_permission_only_group_change_is_persisted(db_session: Session) -> None:
+    """Regression (PAP-79 review): permission codes are part of the group snapshot."""
+    view = Permission(code="CAN_VIEW_USERS", name="View", category="Users")
+    manage = Permission(code="CAN_MANAGE_USERS", name="Manage", category="Users")
+    group = UserGroup(name="Zespol", permissions=[view])
+    actor = _user(db_session, "aktor", status="admin")
+    db_session.add_all([view, manage, group])
+    db_session.commit()
+
+    service = _service(db_session)
+    service.replace_group_permissions(
+        group.id, ["CAN_VIEW_USERS", "CAN_MANAGE_USERS"], actor=actor
+    )
+
+    stored = db_session.get(UserGroup, group.id)
+    assert {permission.code for permission in stored.permissions} == {
+        "CAN_VIEW_USERS",
+        "CAN_MANAGE_USERS",
+    }

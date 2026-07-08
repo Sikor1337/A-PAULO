@@ -1,5 +1,7 @@
 from fastapi import HTTPException, status
 
+from app.core.audit import AuditEntry, AuditPort, EntityType, calculate_delta
+from app.modules.core_data.audit_state import user_audit_state
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
 from app.modules.recruitment.access import is_valid_recruitment_access_token
@@ -21,10 +23,38 @@ class AuthService:
         repo: UserRepository,
         token_service: TokenService,
         permissions: PermissionService,
+        audit: AuditPort,
     ):
         self.repo = repo
         self.token_service = token_service
         self.permissions = permissions
+        self.audit = audit
+
+    def _state(self, user: User) -> dict:
+        return user_audit_state(user)
+
+    def _record_user(
+        self,
+        action: str,
+        user: User,
+        old_state: dict,
+        new_state: dict,
+        *,
+        password_changed: bool = False,
+    ) -> None:
+        changes = calculate_delta(old_state, new_state)
+        if password_changed:
+            changes["password"] = {"old": "[ukryte]", "new": "[zmieniono]"}
+        self.audit.record(
+            AuditEntry(
+                entity_type=EntityType.CORE_DATA_USER.value,
+                entity_id=str(user.id),
+                action=action,
+                actor_id=str(user.id),
+                actor_display_name=user.email,
+                changes=changes,
+            )
+        )
 
     def _issue_tokens(self, user: User) -> Token:
         sub = {"sub": str(user.id)}
@@ -78,6 +108,7 @@ class AuthService:
 
             if is_migrated_candidate:
                 assert existing_email_user is not None
+                old_state = self._state(existing_email_user)
                 user = self.repo.update(
                     existing_email_user,
                     username=normalized_username,
@@ -88,6 +119,7 @@ class AuthService:
                     is_active=True,
                 )
             else:
+                old_state = {}
                 user = self.repo.create(
                     username=normalized_username,
                     email=normalized_email,
@@ -102,8 +134,15 @@ class AuthService:
                 )
             self.repo.flush()
             self.repo.refresh(user)
-            self.permissions.assign_default_group(user)
-            self.repo.commit(skip_audit=True)
+            self.permissions.assign_default_group(user, actor=user)
+            self._record_user(
+                "REGISTER",
+                user,
+                old_state,
+                self._state(user),
+                password_changed=is_migrated_candidate,
+            )
+            self.repo.commit()
             return user
         except HTTPException:
             self.repo.rollback()
@@ -160,6 +199,7 @@ class AuthService:
                     )
                 data.email = normalized_email
 
+            old_state = self._state(user)
             update_fields = {
                 "email": data.email,
                 "first_name": data.first_name,
@@ -169,8 +209,27 @@ class AuthService:
                 update_fields["hashed_password"] = hash_password(data.new_password)
 
             user = self.repo.update(user, **update_fields)
-            self.repo.commit(skip_audit=True)
+            self.repo.flush()
             self.repo.refresh(user)
+            new_state = self._state(user)
+            changes = calculate_delta(old_state, new_state)
+            if data.new_password:
+                changes["password"] = {
+                    "old": "[ukryte]",
+                    "new": "[zmieniono]",
+                }
+            if not changes:
+                # Genuine no-op: persist (nothing changed) without an audit entry.
+                self.repo.commit(skip_audit=True)
+                return user
+            self._record_user(
+                "PROFILE_UPDATE",
+                user,
+                old_state,
+                new_state,
+                password_changed=bool(data.new_password),
+            )
+            self.repo.commit()
             return user
         except HTTPException:
             self.repo.rollback()

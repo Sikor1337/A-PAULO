@@ -7,7 +7,12 @@ from app.modules.pi.models.volunteer import Volunteer
 
 
 def volunteer_audit_state(volunteer: Volunteer) -> dict:
-	"""Capture volunteer state for audit comparison."""
+	"""Capture volunteer state for audit comparison.
+
+	function_ids is a projection populated by VolunteerRepository.enrich();
+	include it (defaulting to []) so function-only updates produce a delta
+	instead of being rolled back as no-ops.
+	"""
 	return {
 		"full_name": audit_value(volunteer.full_name),
 		"email": audit_value(volunteer.email),
@@ -16,6 +21,10 @@ def volunteer_audit_state(volunteer: Volunteer) -> dict:
 		"status": audit_value(volunteer.status),
 		"join_date": audit_value(volunteer.join_date),
 		"notes": audit_value(volunteer.notes),
+		"history": audit_value(volunteer.history),
+		"function_ids": audit_value(
+			sorted(getattr(volunteer, "function_ids", None) or [])
+		),
 	}
 
 
@@ -32,6 +41,7 @@ def beneficiary_audit_state(beneficiary: Beneficiary) -> dict:
 		"bo_enrolled": audit_value(beneficiary.bo_enrolled),
 		"last_priest_visit": audit_value(beneficiary.last_priest_visit),
 		"last_volunteer_meeting": audit_value(beneficiary.last_volunteer_meeting),
+		"history": audit_value(beneficiary.history),
 	}
 
 
@@ -39,7 +49,7 @@ def group_audit_state(group: Group) -> dict:
 	"""Capture group state for audit comparison."""
 	return {
 		"name": audit_value(group.name),
-		"leader_id": audit_value(group.leader_id),
+		"leader_id": audit_value(getattr(group, "leader_id", None)),
 	}
 
 
