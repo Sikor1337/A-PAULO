@@ -4,54 +4,217 @@ Import contract (PAP-81):
 - the whole file is validated first; any format error blocks the import,
 - duplicates (existing or repeated within the file) are skipped and reported,
 - rows are numbered by CSV file line, where the header is line 1.
+
+Column definitions (`VOLUNTEER_COLUMNS` / `BENEFICIARY_COLUMNS`) are the single
+source of truth: they drive both the downloadable template and row parsing, and
+take field lengths from the SQLAlchemy models and statuses from the PI enums.
 """
 
 import csv
 import io
-import re
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date, datetime, time
+from enum import Enum
+from typing import Any
 
 from app.core.errors import ValidationException
+from app.core.uploads import MEGABYTE, ensure_upload_size
+from app.core.validation import is_valid_email
+from app.infrastructure.sql.base import Base
+from app.modules.pi.models import Beneficiary, Volunteer
+from app.modules.pi.models.enums import BeneficiaryStatus, VolunteerStatus
 from app.modules.pi.repositories.beneficiaries import BeneficiaryRepository
 from app.modules.pi.repositories.volunteers import VolunteerRepository
 from app.modules.pi.schemas.imports import ImportReport, ImportRowIssue
 
-MAX_FILE_BYTES = 2 * 1024 * 1024
+MAX_FILE_BYTES = 2 * MEGABYTE
 MAX_ROWS = 5000
 
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
-VOLUNTEER_STATUSES = ("Aktywny", "Były")
-BENEFICIARY_STATUSES = ("OBECNY", "ZMARŁY", "BYŁY", "DPS_ZOL")
 _TRUE_WORDS = frozenset({"tak", "true", "1"})
 _FALSE_WORDS = frozenset({"nie", "false", "0", ""})
 
-VOLUNTEER_COLUMNS = (
-    "Imię i nazwisko",
-    "Email",
-    "Telefon",
-    "Link społecznościowy",
-    "Status",
-    "Data przystąpienia",
-    "Notatki",
-)
-VOLUNTEER_REQUIRED = ("imię i nazwisko", "email")
 
-BENEFICIARY_COLUMNS = (
-    "Imię i nazwisko",
-    "Adres",
-    "Telefon",
-    "Telefon rodziny",
-    "Status",
-    "BO",
-    "Ostatnia wizyta księdza",
-    "Ostatnie spotkanie wolontariusza",
-    "Opis",
-)
-BENEFICIARY_REQUIRED = ("imię i nazwisko", "adres")
+def _is_true_word(value: str) -> bool:
+    return value.lower() in _TRUE_WORDS
 
-VOLUNTEER_TEMPLATE_CSV = ";".join(VOLUNTEER_COLUMNS) + "\r\n"
-BENEFICIARY_TEMPLATE_CSV = ";".join(BENEFICIARY_COLUMNS) + "\r\n"
+
+def _is_false_word(value: str) -> bool:
+    return value.lower() in _FALSE_WORDS
+
+
+def _column_length(model: type[Base], field: str) -> int:
+    """Max length of a string column, read from the model definition."""
+    return model.__table__.columns[field].type.length
+
+
+class RowValidationError(Exception):
+    """Single-field validation failure; the message is the user-facing warning."""
+
+
+class _RowReader:
+    """Field-level parsing for a single CSV row; failures raise RowValidationError."""
+
+    def __init__(self, fields: dict[str, str]):
+        self.fields = fields
+
+    def raw(self, header: str) -> str:
+        return self.fields.get(header, "")
+
+    def text(self, header: str, *, required: bool = False, max_length: int) -> str:
+        value = self.raw(header)
+        if required and not value:
+            raise RowValidationError(f"Pole „{header}” jest wymagane")
+        if len(value) > max_length:
+            raise RowValidationError(
+                f"Pole „{header}” może mieć najwyżej {max_length} znaków"
+            )
+        return value
+
+    def email(self, header: str, *, max_length: int) -> str:
+        value = self.text(header, required=True, max_length=max_length)
+        if value and not is_valid_email(value):
+            raise RowValidationError(f"Nieprawidłowy adres email: {value}")
+        return value
+
+    def choice(self, header: str, allowed: type[Enum], default: Enum) -> str:
+        value = self.raw(header)
+        if not value:
+            return default.value
+        for option in allowed:
+            if value.lower() == option.value.lower():
+                return option.value
+        raise RowValidationError(
+            f"Pole „{header}” musi być jednym z: "
+            f"{', '.join(option.value for option in allowed)}"
+        )
+
+    def flag(self, header: str) -> bool:
+        value = self.raw(header)
+        if _is_true_word(value):
+            return True
+        if _is_false_word(value):
+            return False
+        raise RowValidationError(f"Pole „{header}” musi być TAK lub NIE")
+
+    def date(self, header: str) -> date | None:
+        value = self.raw(header)
+        if not value:
+            return None
+        try:
+            return _parse_date(value)
+        except ValueError:
+            raise RowValidationError(
+                f"Pole „{header}” ma nieprawidłową datę (użyj RRRR-MM-DD): {value}"
+            ) from None
+
+
+@dataclass(frozen=True)
+class ColumnSpec:
+    """One CSV column: template header, target model field, and row parser."""
+
+    header: str
+    field: str
+    parse: Callable[[_RowReader, str], Any]
+    required: bool = False
+
+
+@dataclass(frozen=True)
+class CsvTemplate:
+    """Downloadable CSV template (filename + content)."""
+
+    filename: str
+    content: str
+
+
+VOLUNTEER_COLUMNS: tuple[ColumnSpec, ...] = (
+    ColumnSpec(
+        "Imię i nazwisko",
+        "full_name",
+        lambda r, h: r.text(
+            h, required=True, max_length=_column_length(Volunteer, "full_name")
+        ),
+        required=True,
+    ),
+    ColumnSpec(
+        "Email",
+        "email",
+        lambda r, h: r.email(h, max_length=_column_length(Volunteer, "email")),
+        required=True,
+    ),
+    ColumnSpec(
+        "Telefon",
+        "phone",
+        lambda r, h: r.text(h, max_length=_column_length(Volunteer, "phone")) or None,
+    ),
+    ColumnSpec(
+        "Link społecznościowy",
+        "social_link",
+        lambda r, h: r.text(h, max_length=_column_length(Volunteer, "social_link"))
+        or None,
+    ),
+    ColumnSpec(
+        "Status",
+        "status",
+        lambda r, h: r.choice(h, VolunteerStatus, VolunteerStatus.AKTYWNY),
+    ),
+    ColumnSpec(
+        "Data przystąpienia",
+        "join_date",
+        lambda r, h: datetime.combine(r.date(h) or date.today(), time.min),
+    ),
+    ColumnSpec("Notatki", "notes", lambda r, h: r.raw(h)),
+)
+
+BENEFICIARY_COLUMNS: tuple[ColumnSpec, ...] = (
+    ColumnSpec(
+        "Imię i nazwisko",
+        "full_name",
+        lambda r, h: r.text(
+            h, required=True, max_length=_column_length(Beneficiary, "full_name")
+        ),
+        required=True,
+    ),
+    ColumnSpec(
+        "Adres",
+        "address",
+        lambda r, h: r.text(
+            h, required=True, max_length=_column_length(Beneficiary, "address")
+        ),
+        required=True,
+    ),
+    ColumnSpec(
+        "Telefon",
+        "phone",
+        lambda r, h: r.text(h, max_length=_column_length(Beneficiary, "phone"))
+        or None,
+    ),
+    ColumnSpec(
+        "Telefon rodziny",
+        "family_phone",
+        lambda r, h: r.text(h, max_length=_column_length(Beneficiary, "family_phone"))
+        or None,
+    ),
+    ColumnSpec(
+        "Status",
+        "status",
+        lambda r, h: r.choice(h, BeneficiaryStatus, BeneficiaryStatus.OBECNY),
+    ),
+    ColumnSpec("BO", "bo_enrolled", lambda r, h: r.flag(h)),
+    ColumnSpec(
+        "Ostatnia wizyta księdza", "last_priest_visit", lambda r, h: r.date(h)
+    ),
+    ColumnSpec(
+        "Ostatnie spotkanie wolontariusza",
+        "last_volunteer_meeting",
+        lambda r, h: r.date(h),
+    ),
+    ColumnSpec("Opis", "description", lambda r, h: r.raw(h)),
+)
+
+
+def _template_csv(specs: tuple[ColumnSpec, ...]) -> str:
+    return ";".join(spec.header for spec in specs) + "\r\n"
 
 
 def _decode(data: bytes) -> str:
@@ -64,7 +227,7 @@ def _decode(data: bytes) -> str:
 
 
 def _parse_rows(
-    data: bytes, known_columns: tuple[str, ...], required: tuple[str, ...]
+    data: bytes, specs: tuple[ColumnSpec, ...]
 ) -> list[tuple[int, dict[str, str]]]:
     """Parse CSV bytes into (line_number, {lowercase header: value}) pairs.
 
@@ -80,13 +243,17 @@ def _parse_rows(
 
     raw_headers = [cell.strip() for cell in raw_rows[0]]
     headers = [cell.lower() for cell in raw_headers]
-    known = {column.lower() for column in known_columns}
+    known = {spec.header.lower() for spec in specs}
     unknown = [raw for raw in raw_headers if raw and raw.lower() not in known]
     if unknown:
         raise ValidationException(
             f"Nieznane kolumny: {', '.join(unknown)}. Pobierz aktualną formatkę."
         )
-    missing = [column for column in required if column not in headers]
+    missing = [
+        spec.header.lower()
+        for spec in specs
+        if spec.required and spec.header.lower() not in headers
+    ]
     if missing:
         raise ValidationException(
             f"Brak wymaganych kolumn: {', '.join(missing)}. Pobierz aktualną formatkę."
@@ -114,65 +281,50 @@ def _parse_date(value: str) -> date:
     raise ValueError(value)
 
 
-class _RowReader:
-    """Field-level validation for a single CSV row, collecting Polish messages."""
-
-    def __init__(
-        self, line_number: int, fields: dict[str, str], errors: list[ImportRowIssue]
-    ):
-        self.line_number = line_number
-        self.fields = fields
-        self.errors = errors
-        self.valid = True
-
-    def _fail(self, message: str) -> None:
-        self.errors.append(ImportRowIssue(row=self.line_number, message=message))
-        self.valid = False
-
-    def text(self, header: str, *, required: bool = False, max_length: int) -> str:
-        value = self.fields.get(header, "")
-        if required and not value:
-            self._fail(f"Pole „{header}” jest wymagane")
-        elif len(value) > max_length:
-            self._fail(f"Pole „{header}” może mieć najwyżej {max_length} znaków")
-        return value
-
-    def email(self, header: str) -> str:
-        value = self.text(header, required=True, max_length=255)
-        if value and not _EMAIL_RE.match(value):
-            self._fail(f"Nieprawidłowy adres email: {value}")
-        return value
-
-    def choice(self, header: str, allowed: tuple[str, ...], default: str) -> str:
-        value = self.fields.get(header, "")
-        if not value:
-            return default
-        for option in allowed:
-            if value.lower() == option.lower():
-                return option
-        self._fail(f"Pole „{header}” musi być jednym z: {', '.join(allowed)}")
-        return default
-
-    def flag(self, header: str) -> bool:
-        value = self.fields.get(header, "").lower()
-        if value in _TRUE_WORDS:
-            return True
-        if value in _FALSE_WORDS:
-            return False
-        self._fail(f"Pole „{header}” musi być TAK lub NIE")
-        return False
-
-    def date(self, header: str) -> date | None:
-        value = self.fields.get(header, "")
-        if not value:
-            return None
+def _parse_payload(
+    line_number: int,
+    fields: dict[str, str],
+    specs: tuple[ColumnSpec, ...],
+    errors: list[ImportRowIssue],
+) -> dict[str, Any] | None:
+    """Build a model payload from one row; collect issues, return None if invalid."""
+    reader = _RowReader(fields)
+    payload: dict[str, Any] = {}
+    valid = True
+    for spec in specs:
         try:
-            return _parse_date(value)
-        except ValueError:
-            self._fail(
-                f"Pole „{header}” ma nieprawidłową datę (użyj RRRR-MM-DD): {value}"
+            payload[spec.field] = spec.parse(reader, spec.header.lower())
+        except RowValidationError as error:
+            errors.append(ImportRowIssue(row=line_number, message=str(error)))
+            valid = False
+    return payload if valid else None
+
+
+def _split_duplicates(
+    parsed: list[tuple[int, dict[str, Any]]],
+    existing: set[str],
+    key_of: Callable[[dict[str, Any]], str],
+    already_exists: Callable[[dict[str, Any]], str],
+    repeated: Callable[[dict[str, Any]], str],
+) -> tuple[list[dict[str, Any]], list[ImportRowIssue]]:
+    """Split parsed rows into rows to create and skipped duplicates."""
+    to_create: list[dict[str, Any]] = []
+    skipped: list[ImportRowIssue] = []
+    seen: set[str] = set()
+    for line_number, payload in parsed:
+        key = key_of(payload)
+        if key in existing:
+            skipped.append(
+                ImportRowIssue(row=line_number, message=already_exists(payload))
             )
-            return None
+        elif key in seen:
+            skipped.append(
+                ImportRowIssue(row=line_number, message=repeated(payload))
+            )
+        else:
+            seen.add(key)
+            to_create.append(payload)
+    return to_create, skipped
 
 
 class CsvImportService:
@@ -186,119 +338,75 @@ class CsvImportService:
         self.volunteer_repo = volunteer_repo
         self.beneficiary_repo = beneficiary_repo
 
+    def volunteer_template(self) -> CsvTemplate:
+        return CsvTemplate(
+            "formatka-wolontariusze.csv", _template_csv(VOLUNTEER_COLUMNS)
+        )
+
+    def beneficiary_template(self) -> CsvTemplate:
+        return CsvTemplate(
+            "formatka-podopieczni.csv", _template_csv(BENEFICIARY_COLUMNS)
+        )
+
     def import_volunteers(self, data: bytes) -> ImportReport:
-        rows = _parse_rows(data, VOLUNTEER_COLUMNS, VOLUNTEER_REQUIRED)
-        errors: list[ImportRowIssue] = []
-        parsed: list[tuple[int, dict]] = []
-        for line_number, fields in rows:
-            reader = _RowReader(line_number, fields, errors)
-            payload = {
-                "full_name": reader.text(
-                    "imię i nazwisko", required=True, max_length=200
-                ),
-                "email": reader.email("email"),
-                "phone": reader.text("telefon", max_length=20) or None,
-                "social_link": reader.text("link społecznościowy", max_length=500)
-                or None,
-                "status": reader.choice("status", VOLUNTEER_STATUSES, "Aktywny"),
-                "join_date": datetime.combine(
-                    reader.date("data przystąpienia") or date.today(), time.min
-                ),
-                "notes": fields.get("notatki", ""),
-            }
-            if reader.valid:
-                parsed.append((line_number, payload))
-
-        skipped: list[ImportRowIssue] = []
-        to_create: list[dict] = []
-        existing = {email.lower() for email in self.volunteer_repo.list_emails()}
-        seen: set[str] = set()
-        for line_number, payload in parsed:
-            key = payload["email"].lower()
-            if key in existing:
-                skipped.append(
-                    ImportRowIssue(
-                        row=line_number,
-                        message=(
-                            f"Wolontariusz z adresem {payload['email']} "
-                            "już istnieje — pominięto"
-                        ),
-                    )
-                )
-            elif key in seen:
-                skipped.append(
-                    ImportRowIssue(
-                        row=line_number,
-                        message=(
-                            f"Adres {payload['email']} powtarza się "
-                            "w pliku — pominięto"
-                        ),
-                    )
-                )
-            else:
-                seen.add(key)
-                to_create.append(payload)
-
-        return self._finalize(self.volunteer_repo, rows, to_create, skipped, errors)
+        return self._run_import(
+            data,
+            specs=VOLUNTEER_COLUMNS,
+            repo=self.volunteer_repo,
+            existing_keys=lambda: {
+                email.lower() for email in self.volunteer_repo.list_emails()
+            },
+            key_of=lambda payload: payload["email"].lower(),
+            already_exists=lambda payload: (
+                f"Wolontariusz z adresem {payload['email']} już istnieje — pominięto"
+            ),
+            repeated=lambda payload: (
+                f"Adres {payload['email']} powtarza się w pliku — pominięto"
+            ),
+        )
 
     def import_beneficiaries(self, data: bytes) -> ImportReport:
-        rows = _parse_rows(data, BENEFICIARY_COLUMNS, BENEFICIARY_REQUIRED)
+        return self._run_import(
+            data,
+            specs=BENEFICIARY_COLUMNS,
+            repo=self.beneficiary_repo,
+            existing_keys=lambda: {
+                " ".join(name.split()).lower()
+                for name in self.beneficiary_repo.list_full_names()
+            },
+            key_of=lambda payload: " ".join(payload["full_name"].split()).lower(),
+            already_exists=lambda payload: (
+                f"Podopieczny {payload['full_name']} już istnieje — pominięto"
+            ),
+            repeated=lambda payload: (
+                f"{payload['full_name']} powtarza się w pliku — pominięto"
+            ),
+        )
+
+    def _run_import(
+        self,
+        data: bytes,
+        *,
+        specs: tuple[ColumnSpec, ...],
+        repo: VolunteerRepository | BeneficiaryRepository,
+        existing_keys: Callable[[], set[str]],
+        key_of: Callable[[dict[str, Any]], str],
+        already_exists: Callable[[dict[str, Any]], str],
+        repeated: Callable[[dict[str, Any]], str],
+    ) -> ImportReport:
+        """Shared pipeline: validate file, parse rows, skip duplicates, persist."""
+        ensure_upload_size(data, MAX_FILE_BYTES)
+        rows = _parse_rows(data, specs)
         errors: list[ImportRowIssue] = []
-        parsed: list[tuple[int, dict]] = []
+        parsed: list[tuple[int, dict[str, Any]]] = []
         for line_number, fields in rows:
-            reader = _RowReader(line_number, fields, errors)
-            payload = {
-                "full_name": reader.text(
-                    "imię i nazwisko", required=True, max_length=200
-                ),
-                "address": reader.text("adres", required=True, max_length=500),
-                "phone": reader.text("telefon", max_length=20) or None,
-                "family_phone": reader.text("telefon rodziny", max_length=20) or None,
-                "status": reader.choice("status", BENEFICIARY_STATUSES, "OBECNY"),
-                "bo_enrolled": reader.flag("bo"),
-                "last_priest_visit": reader.date("ostatnia wizyta księdza"),
-                "last_volunteer_meeting": reader.date(
-                    "ostatnie spotkanie wolontariusza"
-                ),
-                "description": fields.get("opis", ""),
-            }
-            if reader.valid:
+            payload = _parse_payload(line_number, fields, specs, errors)
+            if payload is not None:
                 parsed.append((line_number, payload))
-
-        skipped: list[ImportRowIssue] = []
-        to_create: list[dict] = []
-        existing = {
-            " ".join(name.split()).lower()
-            for name in self.beneficiary_repo.list_full_names()
-        }
-        seen: set[str] = set()
-        for line_number, payload in parsed:
-            key = " ".join(payload["full_name"].split()).lower()
-            if key in existing:
-                skipped.append(
-                    ImportRowIssue(
-                        row=line_number,
-                        message=(
-                            f"Podopieczny {payload['full_name']} "
-                            "już istnieje — pominięto"
-                        ),
-                    )
-                )
-            elif key in seen:
-                skipped.append(
-                    ImportRowIssue(
-                        row=line_number,
-                        message=(
-                            f"{payload['full_name']} powtarza się "
-                            "w pliku — pominięto"
-                        ),
-                    )
-                )
-            else:
-                seen.add(key)
-                to_create.append(payload)
-
-        return self._finalize(self.beneficiary_repo, rows, to_create, skipped, errors)
+        to_create, skipped = _split_duplicates(
+            parsed, existing_keys(), key_of, already_exists, repeated
+        )
+        return self._finalize(repo, rows, to_create, skipped, errors)
 
     def _finalize(
         self,

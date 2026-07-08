@@ -5,6 +5,7 @@ from sqlalchemy import DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.sql.base import Base
+from app.modules.pi.models.enums import VolunteerStatus
 
 
 class Volunteer(Base):
@@ -17,7 +18,9 @@ class Volunteer(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
     social_link: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    status: Mapped[str] = mapped_column(String(50), default="Aktywny")  # Aktywny, Były
+    status: Mapped[str] = mapped_column(
+        String(50), default=VolunteerStatus.AKTYWNY.value
+    )
     join_date: Mapped[datetime] = mapped_column(DateTime)
     notes: Mapped[str] = mapped_column(default="")
     history: Mapped[str] = mapped_column(default="")

@@ -3,6 +3,8 @@ from datetime import datetime, date
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 
+from app.modules.pi.models.enums import BeneficiaryStatus
+
 
 class BeneficiaryCreateRequest(BaseModel):
     """Beneficiary creation request."""
@@ -13,7 +15,7 @@ class BeneficiaryCreateRequest(BaseModel):
     family_phone: Optional[str] = Field(None, max_length=20)
     description: str = Field(default="")
     group_id: Optional[int] = Field(None, alias="group")
-    status: str = Field(default="OBECNY")
+    status: str = Field(default=BeneficiaryStatus.OBECNY.value)
     bo_enrolled: bool = Field(default=False)
     last_priest_visit: Optional[date] = None
     last_volunteer_meeting: Optional[date] = None

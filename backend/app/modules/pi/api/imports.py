@@ -1,17 +1,11 @@
-"""CSV import endpoints for PI domain."""
+"""CSV import endpoints for PI domain (thin HTTP layer over CsvImportService)."""
 
 from fastapi import APIRouter, Depends, File, Response, UploadFile
 
-from app.core.errors import ValidationException
 from app.modules.core_data.models import User
 from app.modules.pi.dependencies import get_import_service
 from app.modules.pi.schemas.imports import ImportReport
-from app.modules.pi.services.imports import (
-    BENEFICIARY_TEMPLATE_CSV,
-    MAX_FILE_BYTES,
-    VOLUNTEER_TEMPLATE_CSV,
-    CsvImportService,
-)
+from app.modules.pi.services.imports import CsvImportService, CsvTemplate
 from app.modules.security.dependencies import require_permission
 from app.modules.security.models.constants import (
     CAN_MANAGE_BENEFICIARIES,
@@ -21,27 +15,23 @@ from app.modules.security.models.constants import (
 router = APIRouter(prefix="/imports", tags=["imports"])
 
 
-def _template_response(csv_text: str, filename: str) -> Response:
+def _csv_attachment(template: CsvTemplate) -> Response:
     return Response(
-        content=csv_text.encode("utf-8-sig"),
+        content=template.content.encode("utf-8-sig"),
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{template.filename}"'
+        },
     )
-
-
-async def _read_upload(file: UploadFile) -> bytes:
-    data = await file.read()
-    if len(data) > MAX_FILE_BYTES:
-        raise ValidationException("Plik jest zbyt duży (maksymalnie 2 MB)")
-    return data
 
 
 @router.get("/volunteers/template")
 def volunteer_template(
+    service: CsvImportService = Depends(get_import_service),
     _user: User = Depends(require_permission(CAN_MANAGE_VOLUNTEERS)),
 ):
     """Download the CSV template for volunteer import."""
-    return _template_response(VOLUNTEER_TEMPLATE_CSV, "formatka-wolontariusze.csv")
+    return _csv_attachment(service.volunteer_template())
 
 
 @router.post("/volunteers", response_model=ImportReport)
@@ -51,15 +41,16 @@ async def import_volunteers(
     _user: User = Depends(require_permission(CAN_MANAGE_VOLUNTEERS)),
 ):
     """Validate and import volunteers from a CSV file."""
-    return service.import_volunteers(await _read_upload(file))
+    return service.import_volunteers(await file.read())
 
 
 @router.get("/beneficiaries/template")
 def beneficiary_template(
+    service: CsvImportService = Depends(get_import_service),
     _user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
 ):
     """Download the CSV template for beneficiary import."""
-    return _template_response(BENEFICIARY_TEMPLATE_CSV, "formatka-podopieczni.csv")
+    return _csv_attachment(service.beneficiary_template())
 
 
 @router.post("/beneficiaries", response_model=ImportReport)
@@ -69,4 +60,4 @@ async def import_beneficiaries(
     _user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
 ):
     """Validate and import beneficiaries from a CSV file."""
-    return service.import_beneficiaries(await _read_upload(file))
+    return service.import_beneficiaries(await file.read())
