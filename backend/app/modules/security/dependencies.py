@@ -3,8 +3,10 @@ from collections.abc import Callable
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.audit import AuditPort
 from app.core.config import get_settings
 from app.core.dependencies import get_db
+from app.modules.audit.dependencies import get_audit_service
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
 from app.modules.security.models.constants import (
@@ -40,16 +42,18 @@ def get_permission_repo(
 def get_permission_service(
     repo: PermissionRepository = Depends(get_permission_repo),
     users: UserRepository = Depends(get_user_repo),
+    audit: AuditPort = Depends(get_audit_service),
 ) -> PermissionService:
-    return PermissionService(repo, users)
+    return PermissionService(repo, users, audit)
 
 
 def get_auth_service(
     repo: UserRepository = Depends(get_user_repo),
     token_service: TokenService = Depends(get_token_service),
     permissions: PermissionService = Depends(get_permission_service),
+    audit: AuditPort = Depends(get_audit_service),
 ) -> AuthService:
-    return AuthService(repo, token_service, permissions)
+    return AuthService(repo, token_service, permissions, audit)
 
 
 def get_current_user(

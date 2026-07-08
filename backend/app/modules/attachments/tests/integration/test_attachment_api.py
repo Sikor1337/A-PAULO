@@ -14,6 +14,8 @@ from app.modules.attachments.api import router as attachments_router
 from app.modules.attachments.dependencies import get_attachment_service
 from app.modules.attachments.repositories import AttachmentRepository
 from app.modules.attachments.services import AttachmentService
+from app.modules.audit.repositories import AuditRepository
+from app.modules.audit.services import SqlAuditService
 from app.modules.core_data.models import User
 from app.modules.pi.repositories import (
     BeneficiaryAssignmentRepository,
@@ -34,20 +36,25 @@ def test_bo_card_attachment_api_flow(
     admin_user: User,
     tmp_path,
 ) -> None:
+    audit = SqlAuditService(AuditRepository(db_session))
     function = FunctionService(FunctionRepository(db_session)).create_function(
         name="Odwiedziny"
     )
-    volunteer = VolunteerService(VolunteerRepository(db_session)).create_volunteer(
+    volunteer = VolunteerService(
+        VolunteerRepository(db_session), audit
+    ).create_volunteer(
+        actor=admin_user,
         full_name="Anna Wolontariusz",
         email="anna.bo@example.com",
         join_date=datetime(2026, 1, 10, 9, 0),
         function_ids=[function.id],
     )
-    group_service = GroupService(GroupRepository(db_session))
-    group = group_service.create_group(name="Grupa BO")
+    group_service = GroupService(GroupRepository(db_session), audit)
+    group = group_service.create_group(name="Grupa BO", actor=admin_user)
     beneficiary = BeneficiaryService(
-        BeneficiaryRepository(db_session)
+        BeneficiaryRepository(db_session), audit
     ).create_beneficiary(
+        actor=admin_user,
         full_name="Jan BO",
         address="ul. Testowa 1",
         group_id=group["id"],
@@ -55,6 +62,7 @@ def test_bo_card_attachment_api_flow(
     )
     group_service.update_group(
         group["id"],
+        actor=admin_user,
         assignments=[
             {
                 "beneficiary": beneficiary.id,
@@ -177,7 +185,7 @@ def test_bo_card_attachment_api_flow(
             assert names[0].endswith("Karta czerwiec.pdf")
             assert archive.read(names[0]) == b"%PDF-1.4"
 
-        group_service.delete_group(group["id"])
+        group_service.delete_group(group["id"], actor=admin_user)
         db_session.expire_all()
         retained_response = client.get(f"/api/v1/attachments/{uploaded['id']}")
         assert retained_response.status_code == 200

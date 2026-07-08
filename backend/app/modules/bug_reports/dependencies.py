@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_attachment_storage, get_db
 from app.infrastructure.storage.attachments import AttachmentStorage
-from app.modules.bug_reports.repositories import BugReportRepository
-from app.modules.bug_reports.services import BugReportService
+from app.modules.bug_reports.repositories.bug_reports import BugReportRepository
+from app.modules.bug_reports.services.bug_reports import BugReportService
 
 
 def get_bug_report_repository(

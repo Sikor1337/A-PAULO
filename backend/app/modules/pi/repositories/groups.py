@@ -56,6 +56,9 @@ class GroupRepository(SQLRepository):
         """Delete group."""
         self.session.delete(group)
 
+    def get_beneficiary(self, beneficiary_id: int) -> Beneficiary | None:
+        return self.session.get(Beneficiary, beneficiary_id)
+
     def detail(self, group: Group) -> dict:
         leader = (
             self.session.query(Volunteer)
@@ -172,6 +175,13 @@ class BeneficiaryAssignmentRepository(SQLRepository):
                 BeneficiaryAssignment.volunteer_id == volunteer_id,
             )
             .first()
+        )
+
+    def group_id_for_beneficiary(self, beneficiary_id: int) -> int | None:
+        return (
+            self.session.query(Beneficiary.group_id)
+            .filter(Beneficiary.id == beneficiary_id)
+            .scalar()
         )
 
     def list_all(self, skip: int = 0, limit: int = 100) -> list[BeneficiaryAssignment]:

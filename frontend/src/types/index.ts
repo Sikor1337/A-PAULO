@@ -1,4 +1,5 @@
 export type { Paginated, WithId } from './api';
+export type { AuditChange, AuditEvent } from './audit';
 export type { AdminUser, AdminUserInput, UserStatus } from './user';
 export type {
   MyPermissions,

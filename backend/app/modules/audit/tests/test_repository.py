@@ -41,6 +41,8 @@ def test_repository_reads_entity_and_context_newest_first(db_session: Session) -
 
     by_entity = repository.get_by_entity("pi_beneficiary", "42")
     by_context = repository.get_by_context("pi_group", "3")
+    combined = repository.get_by_entity_or_context("pi_group", "3")
 
     assert [event.id for event in by_entity] == [2, 1]
     assert [event.id for event in by_context] == [2, 1]
+    assert [event.id for event in combined] == [2, 1]

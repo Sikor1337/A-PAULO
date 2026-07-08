@@ -9,6 +9,8 @@ from app.core.dependencies import get_attachment_storage
 from app.core.errors import NotFoundError
 from app.infrastructure.storage.attachments import StoredFile
 
+PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"fake-png-payload"
+
 
 class FakeStorage:
     """In-memory storage adapter for tests."""
@@ -53,14 +55,14 @@ def test_submit_and_resolve_bug_report_flow(api_client, storage) -> None:
             "title": "Nie działa zapis grupy",
             "description": "Po kliknięciu Zapisz nic się nie dzieje.",
         },
-        files={"file": ("zrzut.png", io.BytesIO(b"fake-png-bytes"), "image/png")},
+        files={"file": ("zrzut.png", io.BytesIO(PNG_BYTES), "image/png")},
     )
     assert submitted.status_code == 200
     report = submitted.json()
     assert report["status"] == "NOWY"
     assert report["reporter_email"] == "admin@example.com"
     assert report["original_filename"] == "zrzut.png"
-    assert report["size_bytes"] == len(b"fake-png-bytes")
+    assert report["size_bytes"] == len(PNG_BYTES)
 
     listing = api_client.get("/api/v1/bug-reports").json()
     assert [item["id"] for item in listing] == [report["id"]]
@@ -133,6 +135,14 @@ def test_rejects_bad_file_type_size_and_status(api_client, storage) -> None:
         },
     )
     assert too_big.status_code == 422
+
+    masquerading = api_client.post(
+        "/api/v1/bug-reports",
+        data={"title": "Skrypt udający obrazek"},
+        files={"file": ("obrazek.png", io.BytesIO(b"#!/bin/sh\nrm -rf"), "image/png")},
+    )
+    assert masquerading.status_code == 422
+    assert storage.files == {}
 
     blank_title = api_client.post(
         "/api/v1/bug-reports",
