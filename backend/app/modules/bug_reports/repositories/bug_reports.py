@@ -17,17 +17,28 @@ class BugReportRepository(SQLRepository):
             self.session.query(BugReport).filter(BugReport.id == report_id).first()
         )
 
-    def list_all(self, status: str | None = None) -> list[BugReport]:
+    def list_all(
+        self, status: str | None = None, skip: int = 0, limit: int = 100
+    ) -> list[BugReport]:
         query = self.session.query(BugReport)
         if status:
             query = query.filter(BugReport.status == status)
-        return query.order_by(BugReport.created_at.desc()).all()
+        return (
+            query.order_by(BugReport.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
-    def list_for_reporter(self, reporter_id: int) -> list[BugReport]:
+    def list_for_reporter(
+        self, reporter_id: int, skip: int = 0, limit: int = 100
+    ) -> list[BugReport]:
         return (
             self.session.query(BugReport)
             .filter(BugReport.reporter_id == reporter_id)
             .order_by(BugReport.created_at.desc())
+            .offset(skip)
+            .limit(limit)
             .all()
         )
 

@@ -39,21 +39,25 @@ async def submit_bug_report(
 
 @router.get("/my", response_model=list[BugReportResponse])
 def my_bug_reports(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
     service: BugReportService = Depends(get_bug_report_service),
     user: User = Depends(get_current_user),
 ):
     """List the current user's own reports."""
-    return service.list_my_reports(user)
+    return service.list_my_reports(user, skip=skip, limit=limit)
 
 
 @router.get("", response_model=list[BugReportResponse])
 def list_bug_reports(
     status: BugReportStatus | None = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
     service: BugReportService = Depends(get_bug_report_service),
     _user: User = Depends(require_permission(CAN_VIEW_BUG_REPORTS)),
 ):
     """List all reports, optionally filtered by status (developers)."""
-    return service.list_reports(status=status)
+    return service.list_reports(status=status, skip=skip, limit=limit)
 
 
 @router.get("/{report_id}", response_model=BugReportResponse)

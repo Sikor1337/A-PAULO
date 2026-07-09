@@ -110,6 +110,17 @@ def test_file_download_roundtrip(api_client, storage) -> None:
     assert 'filename="app.log"' in download.headers["content-disposition"]
 
 
+def test_utf16_log_upload_accepted(api_client, storage) -> None:
+    content = "Wyjątek: NullReferenceException".encode("utf-16")
+    response = api_client.post(
+        "/api/v1/bug-reports",
+        data={"title": "Log z PowerShella"},
+        files={"file": ("app.log", io.BytesIO(content), "text/plain")},
+    )
+    assert response.status_code == 200
+    assert response.json()["original_filename"] == "app.log"
+
+
 def test_download_missing_file_returns_404(api_client, storage) -> None:
     submitted = api_client.post(
         "/api/v1/bug-reports", data={"title": "Bez załącznika"}
