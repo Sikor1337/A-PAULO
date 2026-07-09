@@ -1,8 +1,7 @@
 """Shared validation helpers for uploaded files."""
 
+from app.core.constants import MEGABYTE
 from app.core.errors import ValidationException
-
-MEGABYTE = 1024 * 1024
 
 
 def ensure_upload_size(data: bytes, max_bytes: int) -> None:

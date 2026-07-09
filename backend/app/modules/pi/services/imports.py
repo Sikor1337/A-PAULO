@@ -18,8 +18,9 @@ from datetime import date, datetime, time
 from enum import Enum
 from typing import Any
 
+from app.core.constants import MEGABYTE
 from app.core.errors import ValidationException
-from app.core.uploads import MEGABYTE, ensure_upload_size
+from app.core.uploads import ensure_upload_size
 from app.core.validation import is_valid_email
 from app.infrastructure.sql.base import Base
 from app.modules.pi.models import Beneficiary, Volunteer
