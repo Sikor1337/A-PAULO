@@ -3,17 +3,20 @@ from datetime import datetime, date
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 
+from app.modules.pi.constants import PHONE_MAX_LENGTH
+from app.modules.pi.models.enums import BeneficiaryStatus
+
 
 class BeneficiaryCreateRequest(BaseModel):
     """Beneficiary creation request."""
 
     full_name: str = Field(..., min_length=1, max_length=200)
     address: str = Field(..., min_length=1, max_length=500)
-    phone: Optional[str] = Field(None, max_length=20)
-    family_phone: Optional[str] = Field(None, max_length=20)
+    phone: Optional[str] = Field(None, max_length=PHONE_MAX_LENGTH)
+    family_phone: Optional[str] = Field(None, max_length=PHONE_MAX_LENGTH)
     description: str = Field(default="")
     group_id: Optional[int] = Field(None, alias="group")
-    status: str = Field(default="OBECNY")
+    status: BeneficiaryStatus = BeneficiaryStatus.OBECNY
     bo_enrolled: bool = Field(default=False)
     last_priest_visit: Optional[date] = None
     last_volunteer_meeting: Optional[date] = None
@@ -27,11 +30,11 @@ class BeneficiaryUpdateRequest(BaseModel):
 
     full_name: Optional[str] = Field(None, min_length=1, max_length=200)
     address: Optional[str] = Field(None, min_length=1, max_length=500)
-    phone: Optional[str] = Field(None, max_length=20)
-    family_phone: Optional[str] = Field(None, max_length=20)
+    phone: Optional[str] = Field(None, max_length=PHONE_MAX_LENGTH)
+    family_phone: Optional[str] = Field(None, max_length=PHONE_MAX_LENGTH)
     description: Optional[str] = None
     group_id: Optional[int] = Field(None, alias="group")
-    status: Optional[str] = None
+    status: Optional[BeneficiaryStatus] = None
     bo_enrolled: Optional[bool] = None
     last_priest_visit: Optional[date] = None
     last_volunteer_meeting: Optional[date] = None

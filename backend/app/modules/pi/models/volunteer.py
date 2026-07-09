@@ -2,9 +2,10 @@
 from datetime import datetime
 
 from sqlalchemy import DateTime, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from app.infrastructure.sql.base import Base
+from app.modules.pi.models.enums import VolunteerStatus
 
 
 class Volunteer(Base):
@@ -15,9 +16,13 @@ class Volunteer(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     full_name: Mapped[str] = mapped_column(String(200), index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    # 30, not 20: recruitment onboarding copies longer candidate phone
+    # numbers here; user-facing forms and CSV import cap at PHONE_MAX_LENGTH.
     phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
     social_link: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    status: Mapped[str] = mapped_column(String(50), default="Aktywny")  # Aktywny, Były
+    status: Mapped[str] = mapped_column(
+        String(50), default=VolunteerStatus.AKTYWNY.value
+    )
     join_date: Mapped[datetime] = mapped_column(DateTime)
     notes: Mapped[str] = mapped_column(default="")
     history: Mapped[str] = mapped_column(default="")
@@ -33,6 +38,11 @@ class Volunteer(Base):
         onupdate=func.now(),
     )
 
+
+    @validates("status")
+    def _validate_status(self, key: str, value: str) -> str:
+        """Enforce the status enum at the ORM layer, not only in schemas."""
+        return VolunteerStatus(value).value
 
     def __repr__(self) -> str:
         return f"<Volunteer {self.full_name}>"

@@ -4,6 +4,9 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 import re
 
+from app.modules.pi.constants import PHONE_MAX_LENGTH
+from app.modules.pi.models.enums import VolunteerStatus
+
 
 def validate_polish_phone(phone: str) -> str:
     """Validate Polish phone number format."""
@@ -17,10 +20,10 @@ class VolunteerCreateRequest(BaseModel):
 
     full_name: str = Field(..., min_length=1, max_length=200)
     email: EmailStr
-    phone: Optional[str] = Field(None, max_length=20)
+    phone: Optional[str] = Field(None, max_length=PHONE_MAX_LENGTH)
     social_link: Optional[str] = Field(None, max_length=500)
     function_ids: list[int] = Field(default_factory=list)
-    status: str = Field(default="Aktywny")
+    status: VolunteerStatus = VolunteerStatus.AKTYWNY
     join_date: datetime
     notes: str = Field(default="")
     history: str = Field(default="")
@@ -31,10 +34,10 @@ class VolunteerUpdateRequest(BaseModel):
 
     full_name: Optional[str] = Field(None, min_length=1, max_length=200)
     email: Optional[EmailStr] = None
-    phone: Optional[str] = Field(None, max_length=20)
+    phone: Optional[str] = Field(None, max_length=PHONE_MAX_LENGTH)
     social_link: Optional[str] = Field(None, max_length=500)
     function_ids: Optional[list[int]] = None
-    status: Optional[str] = None
+    status: Optional[VolunteerStatus] = None
     join_date: Optional[datetime] = None
     notes: Optional[str] = None
     history: Optional[str] = None

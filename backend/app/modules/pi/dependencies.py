@@ -16,6 +16,7 @@ from app.modules.pi.repositories import (
 from app.modules.pi.services.beneficiaries import BeneficiaryService
 from app.modules.pi.services.functions import FunctionService
 from app.modules.pi.services.groups import BeneficiaryAssignmentService, GroupService
+from app.modules.pi.services.imports import CsvImportService
 from app.modules.pi.services.volunteers import VolunteerService
 
 
@@ -83,3 +84,11 @@ def get_function_service(
     repo: FunctionRepository = Depends(get_function_repository),
 ) -> FunctionService:
     return FunctionService(repo)
+
+
+def get_import_service(
+    volunteer_repo: VolunteerRepository = Depends(get_volunteer_repository),
+    beneficiary_repo: BeneficiaryRepository = Depends(get_beneficiary_repository),
+) -> CsvImportService:
+    """Get CSV import service dependency."""
+    return CsvImportService(volunteer_repo, beneficiary_repo)

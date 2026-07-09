@@ -1,10 +1,11 @@
 """Beneficiary model for PI domain."""
-from datetime import datetime, date
+from datetime import date, datetime
 
-from sqlalchemy import String, DateTime, Date, func, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Date, DateTime, ForeignKey, String, func
+from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from app.infrastructure.sql.base import Base
+from app.modules.pi.models.enums import BeneficiaryStatus
 
 
 class Beneficiary(Base):
@@ -21,7 +22,9 @@ class Beneficiary(Base):
     group_id: Mapped[int | None] = mapped_column(
         ForeignKey("groups.id", ondelete="SET NULL"), nullable=True
     )
-    status: Mapped[str] = mapped_column(String(50), default="OBECNY")  # OBECNY, ZMARŁY, BYŁY, DPS_ZOL
+    status: Mapped[str] = mapped_column(
+        String(50), default=BeneficiaryStatus.OBECNY.value
+    )
     bo_enrolled: Mapped[bool] = mapped_column(default=False)
     last_priest_visit: Mapped[date | None] = mapped_column(Date, nullable=True)
     last_volunteer_meeting: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -38,6 +41,11 @@ class Beneficiary(Base):
         onupdate=func.now(),
     )
 
+
+    @validates("status")
+    def _validate_status(self, key: str, value: str) -> str:
+        """Enforce the status enum at the ORM layer, not only in schemas."""
+        return BeneficiaryStatus(value).value
 
     def __repr__(self) -> str:
         return f"<Beneficiary {self.full_name}>"

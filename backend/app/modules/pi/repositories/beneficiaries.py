@@ -22,6 +22,10 @@ class BeneficiaryRepository(SQLRepository):
             .first()
         )
 
+    def list_full_names(self) -> list[str]:
+        """List all beneficiary names (for bulk-import duplicate checks)."""
+        return [row[0] for row in self.session.query(Beneficiary.full_name).all()]
+
     def group_name(self, group_id: int) -> str | None:
         row = self.session.query(Group.name).filter(Group.id == group_id).first()
         return row[0] if row else None

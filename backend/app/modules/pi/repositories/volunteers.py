@@ -85,6 +85,10 @@ class VolunteerRepository(SQLRepository):
         """Check if volunteer with email exists."""
         return self.get_by_email(email) is not None
 
+    def list_emails(self) -> list[str]:
+        """List all volunteer emails (for bulk-import duplicate checks)."""
+        return [row[0] for row in self.session.query(Volunteer.email).all()]
+
     def enrich(self, volunteer: Volunteer) -> Volunteer:
         """Populate volunteer projection fields used by API responses."""
         manual_functions = (
