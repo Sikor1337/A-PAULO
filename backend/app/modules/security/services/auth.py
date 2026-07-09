@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi import HTTPException, status
 
 from app.core.audit import AuditEntry, AuditPort, EntityType, calculate_delta
@@ -106,6 +108,12 @@ class AuthService:
             # Hash password
             hashed_password = hash_password(password)
 
+            # A recruitment link (or claiming a migrated invite) was e-mailed to
+            # this address, so mailbox control is already proven — skip the extra
+            # verification step. Plain self-registration must confirm the address.
+            arrived_via_email_invite = bool(recruitment_token) or is_migrated_candidate
+            verified_at = datetime.now(UTC) if arrived_via_email_invite else None
+
             if is_migrated_candidate:
                 assert existing_email_user is not None
                 old_state = self._state(existing_email_user)
@@ -117,6 +125,7 @@ class AuthService:
                     last_name=last_name,
                     status=existing_email_user.status,
                     is_active=True,
+                    email_verified_at=verified_at,
                 )
             else:
                 old_state = {}
@@ -131,6 +140,7 @@ class AuthService:
                         if recruitment_token
                         else REGULAR_USER_STATUS
                     ),
+                    email_verified_at=verified_at,
                 )
             self.repo.flush()
             self.repo.refresh(user)
@@ -171,6 +181,11 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials",
+            )
+        if user.email_verified_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Potwierdź swój adres e-mail, aby się zalogować",
             )
         return self._issue_tokens(user)
 
