@@ -6,6 +6,7 @@ import { useVolunteers } from '@/hooks/useVolunteers';
 import { useGroupList } from '@/hooks/useGroups';
 import { useTableControls } from '@/hooks/useTableControls';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import { buildVolunteerColumns } from '@/features/volunteers/volunteerColumns';
 import { volunteerDetailFields } from '@/features/volunteers/volunteerDetail';
 import VolunteerFormModal from '@/features/volunteers/VolunteerFormModal';
@@ -16,6 +17,7 @@ import type { Volunteer, VolunteerStatus } from '@/types';
 
 const VolunteersPage: React.FC = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_VOLUNTEERS');
+  const { confirm } = useDialogs();
   const [editing, setEditing] = useState<Volunteer | null>(null);
   const [details, setDetails] = useState<Volunteer | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -44,7 +46,11 @@ const VolunteersPage: React.FC = () => {
   const columns = buildVolunteerColumns({
     onSelect: setDetails,
     onEdit: setEditing,
-    onDelete: remove.mutate,
+    onDelete: async (id) => {
+      if (await confirm({ title: 'Usunąć wolontariusza?', message: 'Tej operacji nie można cofnąć.', confirmLabel: 'Usuń' })) {
+        remove.mutate(id);
+      }
+    },
     canManage,
   });
 

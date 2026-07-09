@@ -9,6 +9,7 @@ import {
 } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import BackendWakeupPopup from './components/BackendWakeupPopup';
+import { DialogProvider } from './components/ui/dialog/DialogProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -143,7 +144,9 @@ const router = createBrowserRouter(createRoutesFromElements(
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <DialogProvider>
+        <RouterProvider router={router} />
+      </DialogProvider>
     </QueryClientProvider>
   );
 }

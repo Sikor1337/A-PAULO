@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import PageShell from '@/components/layout/PageShell';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import { useDepartureFields, useMyDepartureSurvey } from '@/hooks/useDepartures';
 import { parseApiError } from '@/lib/errors';
 import { useAuthStore } from '@/stores/authStore';
@@ -92,6 +93,7 @@ const FieldControl = ({ field, value, onChange }: FieldControlProps) => {
 
 const MyDepartureSurveyPage = () => {
   const user = useAuthStore((state) => state.user);
+  const { confirm } = useDialogs();
   const isAdminPreview = user?.status === 'admin';
   const survey = useMyDepartureSurvey(!isAdminPreview);
   const fieldsPreview = useDepartureFields(isAdminPreview);
@@ -110,9 +112,9 @@ const MyDepartureSurveyPage = () => {
   const error = isAdminPreview ? fieldsPreview.error : survey.error;
   const hasData = isAdminPreview ? Boolean(fieldsPreview.data) : Boolean(survey.data);
 
-  const submit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!interview && !window.confirm('Wysłać ankietę odejścia?')) return;
+    if (!interview && !(await confirm({ title: 'Wysłać ankietę odejścia?', message: 'Odpowiedzi zostaną zapisane.', confirmLabel: 'Wyślij', tone: 'default' }))) return;
     survey.save.mutate(answers);
   };
 

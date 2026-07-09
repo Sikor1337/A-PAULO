@@ -6,6 +6,7 @@ import { useBeneficiaries } from '@/hooks/useBeneficiaries';
 import { useGroupList } from '@/hooks/useGroups';
 import { useTableControls } from '@/hooks/useTableControls';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import { buildBeneficiaryColumns } from '@/features/beneficiaries/beneficiaryColumns';
 import { beneficiaryDetailFields } from '@/features/beneficiaries/beneficiaryDetail';
 import BeneficiaryFormModal from '@/features/beneficiaries/BeneficiaryFormModal';
@@ -16,6 +17,7 @@ import type { Beneficiary } from '@/types';
 
 const BeneficiariesPage: React.FC = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_BENEFICIARIES');
+  const { confirm } = useDialogs();
   const [editing, setEditing] = useState<Beneficiary | null>(null);
   const [details, setDetails] = useState<Beneficiary | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -47,7 +49,11 @@ const BeneficiariesPage: React.FC = () => {
   const columns = buildBeneficiaryColumns({
     onSelect: setDetails,
     onEdit: setEditing,
-    onDelete: remove.mutate,
+    onDelete: async (id) => {
+      if (await confirm({ title: 'Usunąć podopiecznego?', message: 'Tej operacji nie można cofnąć.', confirmLabel: 'Usuń' })) {
+        remove.mutate(id);
+      }
+    },
     canManage,
   });
 

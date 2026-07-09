@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import SurveyFieldModal from './SurveyFieldModal';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import type { RecruitmentFieldDraft, RecruitmentFieldType } from '@/types';
 
 const typeLabels: Record<RecruitmentFieldType, string> = {
@@ -29,6 +30,7 @@ const SurveyFieldBuilder = ({
   title, description, fields: savedFields, isLoading, isSaving, canManage,
   onSave, error, excludedTypes, systemFieldHelp,
 }: Props) => {
+  const { confirm } = useDialogs();
   const [draft, setDraft] = useState<RecruitmentFieldDraft[] | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null | undefined>(undefined);
   const fields = draft ?? savedFields;
@@ -52,8 +54,8 @@ const SurveyFieldBuilder = ({
     [copy[index], copy[index + offset]] = [copy[index + offset]!, copy[index]!];
     return copy;
   });
-  const remove = (index: number) => {
-    if (!window.confirm('Usunąć to pole? Zapisane odpowiedzi pozostaną w archiwum.')) return;
+  const remove = async (index: number) => {
+    if (!(await confirm({ title: 'Usunąć pole?', message: 'Zapisane odpowiedzi pozostaną w archiwum.', confirmLabel: 'Usuń' }))) return;
     setDraft((current) => current?.filter((_, fieldIndex) => fieldIndex !== index) ?? current);
   };
 

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSecurityGroups } from '@/hooks/usePermissions';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import HistoryButton from '@/features/audit/HistoryButton';
 import type { AdminUser, PermissionCode } from '@/types';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
@@ -11,6 +12,7 @@ interface Props {
 
 const SecurityGroupsPanel = ({ users, canManage }: Props) => {
   const { permissions, groups, create, save: saveGroup, remove } = useSecurityGroups();
+  const { confirm, prompt } = useDialogs();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [drafts, setDrafts] = useState<Record<number, {
     name: string;
@@ -45,8 +47,8 @@ const SecurityGroupsPanel = ({ users, canManage }: Props) => {
     return [...result.entries()];
   }, [permissions]);
 
-  const addGroup = () => {
-    const groupName = prompt('Nazwa nowej grupy użytkowników:')?.trim();
+  const addGroup = async () => {
+    const groupName = await prompt({ title: 'Nowa grupa użytkowników', placeholder: 'Nazwa grupy', confirmLabel: 'Utwórz', required: true });
     if (!groupName) return;
     create.mutate(
       { name: groupName, description: '', permission_codes: [] },
@@ -166,7 +168,7 @@ const SecurityGroupsPanel = ({ users, canManage }: Props) => {
               {!selected.is_system && (
                 <button
                   type="button"
-                  onClick={() => confirm(`Usunąć grupę ${selected.name}?`) && remove.mutate(selected.id)}
+                  onClick={async () => { if (await confirm({ title: 'Usunąć grupę?', message: `Grupa „${selected.name}” zostanie usunięta.`, confirmLabel: 'Usuń' })) remove.mutate(selected.id); }}
                   className="rounded-lg bg-rose-100 px-4 py-2 text-sm font-bold text-rose-700"
                 >
                   Usuń grupę

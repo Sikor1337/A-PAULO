@@ -8,6 +8,7 @@ import HistoryButton from '@/features/audit/HistoryButton';
 import { useMyPermissions, useSecurityGroups } from '@/hooks/usePermissions';
 import { useTableControls } from '@/hooks/useTableControls';
 import { useUsers } from '@/hooks/useUsers';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import { exportRowsToCsv } from '@/lib/csv';
 import { useAuthStore } from '@/stores/authStore';
 import type { Column } from '@/components/ui/DataTable';
@@ -21,6 +22,7 @@ const roleLabel = (status: UserStatus) => {
 
 const SettingsPage = () => {
   const currentUser = useAuthStore((state) => state.user);
+  const { confirm } = useDialogs();
   const effective = useMyPermissions().data?.permissions ?? [];
   const canViewUsers = effective.includes('CAN_VIEW_USERS');
   const canManageUsers = effective.includes('CAN_MANAGE_USERS');
@@ -77,7 +79,7 @@ const SettingsPage = () => {
               <button
                 type="button"
                 disabled={user.id === currentUser?.id}
-                onClick={() => confirm(`Usunąć użytkownika ${user.email}?`) && remove.mutate(user.id)}
+                onClick={async () => { if (await confirm({ title: 'Usunąć użytkownika?', message: `Konto ${user.email} zostanie usunięte.`, confirmLabel: 'Usuń' })) remove.mutate(user.id); }}
                 className="rounded bg-rose-500 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-40"
               >
                 Usuń

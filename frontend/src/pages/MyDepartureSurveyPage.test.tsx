@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDepartureFields, useMyDepartureSurvey } from '@/hooks/useDepartures';
 import MyDepartureSurveyPage from './MyDepartureSurveyPage';
@@ -64,7 +64,7 @@ describe('MyDepartureSurveyPage', () => {
     } as unknown as ReturnType<typeof useDepartureFields>);
   });
 
-  it('lets the volunteer submit their own answers', () => {
+  it('lets the volunteer submit their own answers', async () => {
     const mutate = mockSurvey();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<MyDepartureSurveyPage />);
@@ -75,9 +75,10 @@ describe('MyDepartureSurveyPage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Wyślij ankietę' }));
 
-    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
+    // The confirmation dialog is promise-based, so the mutation runs a tick later.
+    await waitFor(() => expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
       departure_reason: 'Zmiana planów',
-    }));
+    })));
   });
 
   it('lets the volunteer edit the original submitted answers', () => {

@@ -5,6 +5,7 @@ import { useGroups, useGroupDetail } from '@/hooks/useGroups';
 import { useVolunteerList } from '@/hooks/useVolunteers';
 import { useBeneficiaryList } from '@/hooks/useBeneficiaries';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useBOCardAttachmentActions, useBOCardAttachments } from '@/hooks/useAttachments';
 import { attachmentService, BO_CARD_ACCEPT, BO_CARD_MAX_SIZE_BYTES, BO_CARD_SUPPORTED_LABEL } from '@/services/attachmentService';
@@ -59,6 +60,7 @@ const formatAttachmentSize = (sizeBytes: number) => {
 
 const GroupsPage: React.FC = () => {
   const { hasPermission: canManageGroups } = useHasPermission('CAN_MANAGE_PI_GROUPS');
+  const { confirm, alert, prompt } = useDialogs();
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [previousGroupId, setPreviousGroupId] = useState<number | null>(null);
   const [showKartyBO, setShowKartyBO] = useState(false);
@@ -174,10 +176,10 @@ const GroupsPage: React.FC = () => {
     setFormDirty(false);
   };
 
-  const handleDeleteGroup = () => {
+  const handleDeleteGroup = async () => {
     if (selectedGroupId === null) return;
     const name = groups?.find((g) => g.id === selectedGroupId)?.name ?? '';
-    if (confirm(`Usunąć grupę „${name}"? Podopieczni zostaną odłączeni, a ich przypisania wolontariuszy usunięte.`)) {
+    if (await confirm({ title: 'Usunąć grupę?', message: `Grupa „${name}” zostanie usunięta. Podopieczni zostaną odłączeni, a ich przypisania wolontariuszy usunięte.`, confirmLabel: 'Usuń' })) {
       deleteGroup.mutate(selectedGroupId, {
         onSuccess: () => {
           setPreviousGroupId(null);
@@ -273,7 +275,7 @@ const GroupsPage: React.FC = () => {
     const file = files?.item(0);
     if (!file || selectedGroupId === null) return;
     if (file.size > BO_CARD_MAX_SIZE_BYTES) {
-      alert('Plik jest za duży. Maksymalny rozmiar to 10 MB.');
+      void alert({ title: 'Plik za duży', message: 'Maksymalny rozmiar to 10 MB.' });
       return;
     }
     uploadBOCard.mutate({
@@ -289,18 +291,18 @@ const GroupsPage: React.FC = () => {
     try {
       await attachmentService.openContent(attachment);
     } catch {
-      alert('Nie udało się otworzyć pliku.');
+      await alert({ title: 'Błąd', message: 'Nie udało się otworzyć pliku.' });
     }
   };
 
-  const handleRenameAttachment = (attachment: BOCardAttachment) => {
-    const nextName = prompt('Nazwa pliku', attachment.display_name)?.trim();
+  const handleRenameAttachment = async (attachment: BOCardAttachment) => {
+    const nextName = await prompt({ title: 'Zmień nazwę pliku', defaultValue: attachment.display_name, confirmLabel: 'Zapisz', required: true });
     if (!nextName || nextName === attachment.display_name) return;
     updateAttachment.mutate({ id: attachment.id, data: { display_name: nextName } });
   };
 
-  const handleDeleteAttachment = (attachment: BOCardAttachment) => {
-    if (!confirm(`Usunąć plik „${attachment.display_name}”?`)) return;
+  const handleDeleteAttachment = async (attachment: BOCardAttachment) => {
+    if (!(await confirm({ title: 'Usunąć plik?', message: `Plik „${attachment.display_name}” zostanie usunięty.`, confirmLabel: 'Usuń' }))) return;
     deleteAttachment.mutate(attachment.id);
   };
 

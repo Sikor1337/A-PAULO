@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import PageShell from '@/components/layout/PageShell';
 import { useBugReportActions, useBugReportList, useMyBugReports } from '@/hooks/useBugReports';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import { formatDate } from '@/lib/date';
 import { bugReportService, BUG_REPORT_ACCEPT } from '@/services/bugReportService';
 import type { BugReport, BugReportStatus } from '@/types';
@@ -24,6 +25,7 @@ const StatusBadge = ({ status }: { status: BugReportStatus }) => (
 const BugReportsPage: React.FC = () => {
   const { hasPermission: canView } = useHasPermission('CAN_VIEW_BUG_REPORTS');
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_BUG_REPORTS');
+  const { confirm, alert } = useDialogs();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('');
@@ -66,12 +68,12 @@ const BugReportsPage: React.FC = () => {
     try {
       await bugReportService.downloadFile(report);
     } catch {
-      alert('Nie udało się pobrać pliku.');
+      await alert({ title: 'Błąd pobierania', message: 'Nie udało się pobrać pliku.' });
     }
   };
 
-  const deleteReport = (report: BugReport) => {
-    if (confirm(`Usunąć zgłoszenie „${report.title}”? Załącznik zostanie usunięty z serwera.`)) {
+  const deleteReport = async (report: BugReport) => {
+    if (await confirm({ title: 'Usunąć zgłoszenie?', message: `Zgłoszenie „${report.title}” oraz jego załącznik zostaną usunięte z serwera.`, confirmLabel: 'Usuń' })) {
       remove.mutate(report.id);
     }
   };

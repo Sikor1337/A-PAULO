@@ -3,6 +3,7 @@ import PageShell from '@/components/layout/PageShell';
 import { useBOCardOverview, useBOCardOverviewActions } from '@/hooks/useAttachments';
 import { useGroupList } from '@/hooks/useGroups';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { formatDate } from '@/lib/date';
 import { parseApiError } from '@/lib/errors';
@@ -84,6 +85,7 @@ const CommentEditor = ({ attachment, disabled, onSave, onDirtyChange }: CommentE
 
 const BOCardsPage: React.FC = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_ATTACHMENTS');
+  const { confirm, alert } = useDialogs();
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [groupId, setGroupId] = useState<number | ''>('');
@@ -160,12 +162,12 @@ const BOCardsPage: React.FC = () => {
     try {
       await attachmentService.openContent(attachment);
     } catch {
-      alert('Nie udało się otworzyć pliku.');
+      await alert({ title: 'Błąd', message: 'Nie udało się otworzyć pliku.' });
     }
   };
 
-  const removeAttachment = (attachment: BOCardOverviewAttachment) => {
-    if (!confirm(`Usunąć plik „${attachment.display_name}”?`)) return;
+  const removeAttachment = async (attachment: BOCardOverviewAttachment) => {
+    if (!(await confirm({ title: 'Usunąć plik?', message: `Plik „${attachment.display_name}” zostanie usunięty.`, confirmLabel: 'Usuń' }))) return;
     deleteAttachment.mutate(attachment.id, {
       onSuccess: () => {
         if (items.length === 1 && page > 1) setPage((current) => current - 1);

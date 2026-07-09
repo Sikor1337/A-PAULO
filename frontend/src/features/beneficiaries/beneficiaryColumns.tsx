@@ -86,9 +86,7 @@ export function buildBeneficiaryColumns({ onSelect, onEdit, onDelete, canManage 
             ✏️
           </button>
           <button
-            onClick={() => {
-              if (confirm('Usunąć?')) onDelete(b.id);
-            }}
+            onClick={() => onDelete(b.id)}
             className="bg-[#ef4444] text-white p-1.5 rounded hover:opacity-80"
           >
             🗑️

@@ -6,6 +6,7 @@ import EventFormModal from '@/features/calendar/EventFormModal';
 import { expandOccurrences, occurrenceDays } from '@/features/calendar/recurrence';
 import { useCalendarEvents } from '@/hooks/useCalendar';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import type { CalendarEvent, CalendarEventStatus, CalendarEventVisibility } from '@/types';
 
 const weekdays = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nie'];
@@ -52,6 +53,7 @@ const EventsPage = () => {
   const [initialDate, setInitialDate] = useState<Date | undefined>();
   const [subscriptionOpen, setSubscriptionOpen] = useState(false);
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_EVENTS');
+  const { confirm } = useDialogs();
 
   const days = useMemo(() => calendarDays(month), [month]);
   const [rangeStart, rangeEnd] = useMemo(() => {
@@ -187,8 +189,16 @@ const EventsPage = () => {
           canManage={canManage}
           onClose={() => setSelected(null)}
           onEdit={() => { setEditing(selected); setSelected(null); }}
-          onCancel={() => confirm('Anulować wydarzenie?') && eventsQuery.cancel.mutate(selected.id, { onSuccess: () => setSelected(null) })}
-          onDelete={() => confirm('Trwale usunąć wydarzenie?') && eventsQuery.remove.mutate(selected.id, { onSuccess: () => setSelected(null) })}
+          onCancel={async () => {
+            if (await confirm({ title: 'Anulować wydarzenie?', message: 'Wydarzenie zostanie oznaczone jako anulowane.', confirmLabel: 'Anuluj wydarzenie' })) {
+              eventsQuery.cancel.mutate(selected.id, { onSuccess: () => setSelected(null) });
+            }
+          }}
+          onDelete={async () => {
+            if (await confirm({ title: 'Trwale usunąć wydarzenie?', message: 'Tej operacji nie można cofnąć.', confirmLabel: 'Usuń' })) {
+              eventsQuery.remove.mutate(selected.id, { onSuccess: () => setSelected(null) });
+            }
+          }}
         />
       )}
       {subscriptionOpen && <CalendarSubscriptionModal onClose={() => setSubscriptionOpen(false)} />}

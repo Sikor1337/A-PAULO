@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import SurveyFieldModal from '@/features/surveys/SurveyFieldModal';
 import { useRecruitmentAccessLink, useRecruitmentFields } from '@/hooks/useRecruitment';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import type { RecruitmentFieldDraft, RecruitmentFieldType } from '@/types';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
@@ -19,6 +20,7 @@ const typeLabels: Record<RecruitmentFieldType, string> = {
 
 const RecruitmentFormBuilderPage = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_RECRUITMENT');
+  const { confirm } = useDialogs();
   const { data = [], isLoading, save } = useRecruitmentFields();
   const accessLink = useRecruitmentAccessLink();
   const [draft, setDraft] = useState<RecruitmentFieldDraft[] | null>(null);
@@ -73,8 +75,8 @@ const RecruitmentFormBuilderPage = () => {
     )) ?? current);
   };
 
-  const remove = (index: number) => {
-    if (!window.confirm('Usunąć to pole? Zapisane odpowiedzi pozostaną w archiwum.')) return;
+  const remove = async (index: number) => {
+    if (!(await confirm({ title: 'Usunąć pole?', message: 'Zapisane odpowiedzi pozostaną w archiwum.', confirmLabel: 'Usuń' }))) return;
     setDraft((current) => current?.filter((_, itemIndex) => itemIndex !== index) ?? current);
   };
 

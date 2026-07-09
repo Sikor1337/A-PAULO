@@ -6,6 +6,7 @@ import { useDepartmentList } from '@/hooks/useDepartments';
 import { useVolunteerList } from '@/hooks/useVolunteers';
 import { useTaskActions, useTaskList } from '@/hooks/useTasks';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import { formatDate } from '@/lib/date';
 import type { Task, TaskStatus } from '@/types';
 
@@ -21,6 +22,7 @@ const statusLabel = (status: TaskStatus) => status.replace(/_/g, ' ');
 
 const TasksPage: React.FC = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_TASKS');
+  const { confirm } = useDialogs();
   const [searchParams, setSearchParams] = useSearchParams();
   // Derived live from the URL, so sidebar navigation to plain /tasks clears it.
   const filterEvent: number | '' = Number(searchParams.get('event')) || '';
@@ -177,8 +179,8 @@ const TasksPage: React.FC = () => {
                         <button
                           type="button"
                           disabled={remove.isPending}
-                          onClick={() => {
-                            if (!confirm(`Usunąć zadanie „${task.title}”?`)) return;
+                          onClick={async () => {
+                            if (!(await confirm({ title: 'Usunąć zadanie?', message: `Zadanie „${task.title}” zostanie trwale usunięte.`, confirmLabel: 'Usuń' }))) return;
                             remove.mutate(task.id);
                           }}
                           className="min-h-9 rounded-md bg-rose-50 px-3 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"

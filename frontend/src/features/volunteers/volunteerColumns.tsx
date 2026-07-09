@@ -103,9 +103,7 @@ export function buildVolunteerColumns({ onSelect, onEdit, onDelete, canManage }:
           </button>
           {v.status === 'Aktywny' && (
             <button
-              onClick={() => {
-                if (confirm('Usunąć?')) onDelete(v.id);
-              }}
+              onClick={() => onDelete(v.id)}
               className="bg-[#ef4444] text-white p-1.5 rounded hover:opacity-80"
             >
               🗑️

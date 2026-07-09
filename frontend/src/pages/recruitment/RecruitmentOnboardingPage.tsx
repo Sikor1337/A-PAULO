@@ -4,6 +4,7 @@ import SubmissionDetailModal from '@/features/recruitment/SubmissionDetailModal'
 import SubmissionList from '@/features/recruitment/SubmissionList';
 import { useRecruitmentSubmissions } from '@/hooks/useRecruitment';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import type { RecruitmentStatus, RecruitmentSubmission } from '@/types';
 
 const tabs: { status: RecruitmentStatus; label: string; empty: string }[] = [
@@ -14,6 +15,7 @@ const tabs: { status: RecruitmentStatus; label: string; empty: string }[] = [
 
 const RecruitmentOnboardingPage = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_RECRUITMENT');
+  const { confirm, prompt } = useDialogs();
   const [status, setStatus] = useState<RecruitmentStatus>('ONBOARDING');
   const [selected, setSelected] = useState<RecruitmentSubmission | null>(null);
   const [search, setSearch] = useState('');
@@ -28,21 +30,21 @@ const RecruitmentOnboardingPage = () => {
     ))
     : data;
 
-  const returnSubmission = (submission: RecruitmentSubmission) => {
-    const note = window.prompt('Co kandydat ma poprawić?');
+  const returnSubmission = async (submission: RecruitmentSubmission) => {
+    const note = await prompt({ title: 'Zwróć do poprawy', message: 'Co kandydat ma poprawić?', multiline: true, confirmLabel: 'Zwróć' });
     if (note === null) return;
     action.mutate({ id: submission.id, action: 'return', note });
   };
 
-  const decide = (submission: RecruitmentSubmission, nextAction: 'accept' | 'reject') => {
+  const decide = async (submission: RecruitmentSubmission, nextAction: 'accept' | 'reject') => {
     const label = nextAction === 'accept' ? 'wdrożenia' : 'odrzucenia';
-    const note = window.prompt(`Komentarz do ${label} (opcjonalnie):`);
+    const note = await prompt({ title: `Komentarz do ${label}`, message: 'Opcjonalnie', multiline: true, confirmLabel: 'Zapisz' });
     if (note === null) return;
     action.mutate({ id: submission.id, action: nextAction, note });
   };
 
-  const restore = (submission: RecruitmentSubmission) => {
-    if (!window.confirm(`Cofnąć ${submission.full_name} do etapu wdrażania?`)) return;
+  const restore = async (submission: RecruitmentSubmission) => {
+    if (!(await confirm({ title: 'Cofnąć do wdrażania?', message: `${submission.full_name} wróci do etapu wdrażania.`, confirmLabel: 'Cofnij', tone: 'default' }))) return;
     action.mutate({ id: submission.id, action: 'restore-onboarding' });
   };
 

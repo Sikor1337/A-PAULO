@@ -4,11 +4,13 @@ import DepartmentFormModal from '@/features/departments/DepartmentFormModal';
 import { useDepartmentActions, useDepartmentDetail, useDepartmentList } from '@/hooks/useDepartments';
 import { useVolunteerList } from '@/hooks/useVolunteers';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import { formatDate } from '@/lib/date';
 import type { DepartmentListItem } from '@/types';
 
 const DepartmentsPage: React.FC = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_DEPARTMENTS');
+  const { confirm } = useDialogs();
   const [showArchived, setShowArchived] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editing, setEditing] = useState<DepartmentListItem | null>(null);
@@ -39,12 +41,12 @@ const DepartmentsPage: React.FC = () => {
     return volunteers.filter((v) => !memberIds.has(v.id));
   }, [volunteers, detail]);
 
-  const toggleArchive = () => {
+  const toggleArchive = async () => {
     if (!detail) return;
-    const question = detail.is_archived
-      ? `Przywrócić dział „${detail.name}”?`
-      : `Zarchiwizować dział „${detail.name}”? Dane i historia zostaną zachowane.`;
-    if (!confirm(question)) return;
+    const confirmed = detail.is_archived
+      ? await confirm({ title: `Przywrócić dział „${detail.name}”?`, message: 'Dział wróci do listy aktywnych.', confirmLabel: 'Przywróć', tone: 'default' })
+      : await confirm({ title: `Zarchiwizować dział „${detail.name}”?`, message: 'Dane i historia zostaną zachowane.', confirmLabel: 'Archiwizuj', tone: 'default' });
+    if (!confirmed) return;
     save.mutate({ id: detail.id, data: { is_archived: !detail.is_archived } });
   };
 
@@ -226,8 +228,8 @@ const DepartmentsPage: React.FC = () => {
                               <button
                                 type="button"
                                 disabled={removeMember.isPending}
-                                onClick={() => {
-                                  if (!confirm(`Usunąć ${member.full_name} z działu?`)) return;
+                                onClick={async () => {
+                                  if (!(await confirm({ title: 'Usunąć członka działu?', message: `${member.full_name} zostanie usunięty z działu.`, confirmLabel: 'Usuń' }))) return;
                                   removeMember.mutate({ id: detail.id, volunteerId: member.volunteer_id });
                                 }}
                                 className="min-h-9 rounded-md bg-rose-50 px-3 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"

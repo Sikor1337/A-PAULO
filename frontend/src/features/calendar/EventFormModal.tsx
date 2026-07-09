@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import Modal from '@/components/ui/Modal';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 import type { CalendarEvent, CalendarEventInput, CalendarEventStatus, CalendarEventVisibility } from '@/types';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
@@ -54,6 +55,7 @@ const EventFormModal = ({ event, initialDate, isPending, onClose, onSave }: Prop
   const { control, register, handleSubmit, setValue, formState: { errors, isDirty } } = useForm<FormValues>({
     defaultValues: defaults(event, initialDate),
   });
+  const { alert } = useDialogs();
   const confirmDiscard = useUnsavedChanges(isDirty && !isPending);
   const close = () => {
     if (confirmDiscard()) onClose();
@@ -68,11 +70,11 @@ const EventFormModal = ({ event, initialDate, isPending, onClose, onSave }: Prop
     setValue('endsAt', day);
   }, [event, initialDate, isAllDay, setValue]);
 
-  const submit = handleSubmit((values) => {
+  const submit = handleSubmit(async (values) => {
     const start = new Date(isAllDay ? `${values.startsAt}T00:00:00` : values.startsAt);
     const end = new Date(isAllDay ? `${values.endsAt}T00:00:00` : values.endsAt);
     if (end < start) {
-      alert('Data zakończenia nie może być wcześniejsza od rozpoczęcia.');
+      await alert({ title: 'Niepoprawne daty', message: 'Data zakończenia nie może być wcześniejsza od rozpoczęcia.' });
       return;
     }
     const baseRule = values.recurrenceRule

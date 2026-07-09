@@ -3,9 +3,11 @@ import { SurveyResponses } from '@/features/surveys';
 import { formatRecruitmentDate, recruitmentStatusClass, recruitmentStatusLabel } from '@/features/recruitment/recruitmentStatus';
 import { useRecruitmentSubmissions } from '@/hooks/useRecruitment';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useDialogs } from '@/components/ui/dialog/DialogProvider';
 
 const RecruitmentResponsesPage = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_RECRUITMENT');
+  const { prompt } = useDialogs();
   const { data = [], isLoading, action } = useRecruitmentSubmissions();
   const records = data.map((submission) => ({
     id: submission.id,
@@ -30,8 +32,8 @@ const RecruitmentResponsesPage = () => {
       emptyText="Nikt jeszcze nie wypełnił formularza."
       actions={canManage ? (record) => record.source.status === 'SUBMITTED' ? <>
         <button type="button" onClick={() => action.mutate({ id: record.id, action: 'start-onboarding' })} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Do wdrażania</button>
-        <button type="button" onClick={() => {
-          const reason = window.prompt('Powód zwrotu formularza (opcjonalnie):');
+        <button type="button" onClick={async () => {
+          const reason = await prompt({ title: 'Zwróć formularz', message: 'Powód zwrotu (opcjonalnie):', confirmLabel: 'Zwróć' });
           if (reason !== null) action.mutate({ id: record.id, action: 'return', note: reason });
         }} className="rounded-lg bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700">Zwróć</button>
       </> : undefined : undefined}
