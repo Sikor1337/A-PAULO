@@ -19,6 +19,7 @@ import VolunteersPage from './pages/VolunteersPage';
 import GroupsPage from './pages/GroupsPage';
 import DepartmentsPage from './pages/DepartmentsPage';
 import BugReportsPage from './pages/BugReportsPage';
+import TasksPage from './pages/TasksPage';
 import ProfilePage from './pages/ProfilePage';
 import MyDepartureSurveyPage from './pages/MyDepartureSurveyPage';
 import SettingsPage from './pages/SettingsPage';
@@ -108,6 +109,9 @@ const router = createBrowserRouter(createRoutesFromElements(
       </Route>
       <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_DEPARTMENTS" />}>
         <Route path="/departments" element={<DepartmentsPage />} />
+      </Route>
+      <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_TASKS" />}>
+        <Route path="/tasks" element={<TasksPage />} />
       </Route>
       <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_EVENTS" />}>
         <Route path="/pap-calendar" element={<PapCalendarPage />} />

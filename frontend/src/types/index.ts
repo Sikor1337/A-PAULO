@@ -25,6 +25,15 @@ export type {
   BugReportUpdateInput,
 } from './bugReport';
 export type {
+  Task,
+  TaskAssignee,
+  TaskChecklistItem,
+  TaskCreateInput,
+  TaskFilters,
+  TaskStatus,
+  TaskUpdateInput,
+} from './task';
+export type {
   AttachmentUpdateInput,
   BOCardAttachment,
   BOCardOverviewAttachment,

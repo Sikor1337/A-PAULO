@@ -1,5 +1,7 @@
+import { useNavigate } from 'react-router-dom';
 import Modal from '@/components/ui/Modal';
 import { calendarService } from '@/services/calendarService';
+import { useHasPermission } from '@/hooks/usePermissions';
 import type { CalendarEvent } from '@/types';
 
 interface Props {
@@ -18,7 +20,11 @@ const dateLabel = (event: CalendarEvent) => {
   return `${new Intl.DateTimeFormat('pl-PL', options).format(new Date(event.starts_at))} – ${new Intl.DateTimeFormat('pl-PL', options).format(new Date(event.ends_at))}`;
 };
 
-const EventDetailModal = ({ event, canManage, onClose, onEdit, onCancel, onDelete }: Props) => (
+const EventDetailModal = ({ event, canManage, onClose, onEdit, onCancel, onDelete }: Props) => {
+  const navigate = useNavigate();
+  const { hasPermission: canViewTasks } = useHasPermission('CAN_VIEW_TASKS');
+
+  return (
   <Modal onClose={onClose} maxWidth="max-w-xl">
     <div className="flex items-start justify-between gap-4">
       <div>
@@ -40,6 +46,15 @@ const EventDetailModal = ({ event, canManage, onClose, onEdit, onCancel, onDelet
       {event.recurrence_rule && <div><dt className="font-bold text-gray-500">Cykliczność</dt><dd>{event.recurrence_rule}</dd></div>}
     </dl>
     <div className="mt-6 flex flex-wrap justify-end gap-2 border-t pt-4">
+      {canViewTasks && (
+        <button
+          type="button"
+          onClick={() => navigate(`/tasks?event=${event.id}`)}
+          className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700"
+        >
+          📋 Zadania wydarzenia
+        </button>
+      )}
       <button type="button" onClick={() => calendarService.downloadEvent(event)} className="rounded-lg border px-3 py-2 text-sm font-bold text-gray-600">Pobierz .ics</button>
       {canManage && <button type="button" onClick={onEdit} className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-700">Edytuj</button>}
       {canManage && event.status !== 'cancelled' && <button type="button" onClick={onCancel} className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-bold text-amber-700">Anuluj wydarzenie</button>}
@@ -47,6 +62,7 @@ const EventDetailModal = ({ event, canManage, onClose, onEdit, onCancel, onDelet
     </div>
     <p className="mt-3 text-right text-xs text-gray-500">Pojedynczy plik .ics tworzy kopię wydarzenia i nie synchronizuje późniejszych zmian.</p>
   </Modal>
-);
+  );
+};
 
 export default EventDetailModal;

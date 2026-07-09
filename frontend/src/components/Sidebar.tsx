@@ -43,7 +43,7 @@ const sections: SidebarSection[] = [
       { name: 'Kalendarz PAP', icon: 'K', path: '/pap-calendar', permission: 'CAN_VIEW_EVENTS' },
       { name: 'Wydarzenia', icon: '📅', path: '/events', permission: 'CAN_VIEW_EVENTS' },
       { name: 'Działy', icon: '🗂️', path: '/departments', permission: 'CAN_VIEW_DEPARTMENTS' },
-      { name: 'Zadania', icon: '📋', path: '/tasks' },
+      { name: 'Zadania', icon: '📋', path: '/tasks', permission: 'CAN_VIEW_TASKS' },
       { name: 'Zgłoś błąd', icon: '🐛', path: '/bug-reports', statuses: ['regular', 'admin'] },
       { name: 'Ankieta odejścia', icon: 'A', path: '/departure-survey', statuses: ['regular', 'admin'] },
     ],

@@ -16,6 +16,7 @@ from app.modules.recruitment.models import (
     RecruitmentSubmission,
 )
 from app.modules.security.models import Permission, UserGroup
+from app.modules.tasks.models import Task, TaskAssignee, TaskChecklistItem
 
 __all__ = [
     "Attachment",
@@ -36,6 +37,9 @@ __all__ = [
     "RecruitmentField",
     "RecruitmentOnboardingMeeting",
     "RecruitmentSubmission",
+    "Task",
+    "TaskAssignee",
+    "TaskChecklistItem",
     "User",
     "UserGroup",
     "Volunteer",

@@ -43,6 +43,7 @@ from app.modules.security.models import (  # noqa: E402
     security_user_groups,
 )
 from app.modules.security.models.constants import PERMISSION_CATALOG  # noqa: E402
+from app.modules.tasks.api import router as tasks_router  # noqa: E402
 
 
 @pytest.fixture
@@ -131,6 +132,7 @@ def api_client(
     app.include_router(departments_router, prefix="/api/v1")
     app.include_router(recruitment_router, prefix="/api/v1")
     app.include_router(calendar_router, prefix="/api/v1")
+    app.include_router(tasks_router, prefix="/api/v1")
 
     def override_get_db() -> Generator[Session, None, None]:
         yield db_session
