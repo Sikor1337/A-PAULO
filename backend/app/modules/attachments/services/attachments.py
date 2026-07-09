@@ -25,6 +25,7 @@ from app.core.constants import (
     SortDirection,
 )
 from app.core.errors import NotFoundError, ValidationException
+from app.core.filetypes import content_matches_extension
 from app.infrastructure.storage.attachments import AttachmentStorage
 from app.modules.attachments.models import Attachment
 from app.modules.attachments.repositories import (
@@ -341,6 +342,8 @@ class AttachmentService:
             content_type not in ATTACHMENT_ALLOWED_CONTENT_TYPES
             and content_type not in ATTACHMENT_FALLBACK_CONTENT_TYPES
         ):
+            raise ValidationException(ATTACHMENT_SUPPORTED_FILES_MESSAGE)
+        if not content_matches_extension(extension, content):
             raise ValidationException(ATTACHMENT_SUPPORTED_FILES_MESSAGE)
 
     @staticmethod

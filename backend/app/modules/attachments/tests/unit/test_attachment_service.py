@@ -89,14 +89,14 @@ def test_create_bo_card_saves_file_and_metadata(
         period="2026-6",
         filename="karta.pdf",
         content_type="application/pdf",
-        content=b"pdf",
+        content=b"%PDF-1.4",
         actor=SimpleNamespace(id=7, username="admin"),
         display_name="Czerwiec",
     )
 
     assert result is attachment
     validate_scope.assert_called_once_with(1, 2, 3)
-    assert storage.saved == [(b"pdf", "karta.pdf", "bo_card")]
+    assert storage.saved == [(b"%PDF-1.4", "karta.pdf", "bo_card")]
     repo.create.assert_called_once()
     payload = repo.create.call_args.kwargs
     assert payload["context"] == "bo_card"

@@ -5,10 +5,10 @@ from pathlib import Path
 from app.core.constants import (
     BUG_REPORT_CONTEXT,
     BUG_REPORT_MAX_FILE_BYTES,
-    MEGABYTE,
 )
 from app.core.errors import NotFoundError, ValidationException
 from app.core.filetypes import content_matches_extension
+from app.core.uploads import ensure_upload_size
 from app.infrastructure.storage.attachments import AttachmentStorage
 from app.modules.bug_reports.models.bug_reports import BugReport, BugReportStatus
 from app.modules.bug_reports.repositories.bug_reports import BugReportRepository
@@ -32,11 +32,20 @@ class BugReportService:
             raise NotFoundError("Zgłoszenie nie istnieje")
         return report
 
-    def list_reports(self, status: BugReportStatus | None = None) -> list[BugReport]:
-        return self.repo.list_all(status=status.value if status else None)
+    def list_reports(
+        self,
+        status: BugReportStatus | None = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[BugReport]:
+        return self.repo.list_all(
+            status=status.value if status else None, skip=skip, limit=limit
+        )
 
-    def list_my_reports(self, reporter: User) -> list[BugReport]:
-        return self.repo.list_for_reporter(reporter.id)
+    def list_my_reports(
+        self, reporter: User, skip: int = 0, limit: int = 100
+    ) -> list[BugReport]:
+        return self.repo.list_for_reporter(reporter.id, skip=skip, limit=limit)
 
     def create_report(
         self,
@@ -107,11 +116,7 @@ class BugReportService:
         The schema already validated declared size and extension, but only the
         actual content proves the file is what its extension claims.
         """
-        if len(content) > BUG_REPORT_MAX_FILE_BYTES:
-            raise ValidationException(
-                "Plik jest zbyt duży "
-                f"(maksymalnie {BUG_REPORT_MAX_FILE_BYTES // MEGABYTE} MB)"
-            )
+        ensure_upload_size(content, BUG_REPORT_MAX_FILE_BYTES)
         extension = Path(filename).suffix.lower()
         if not content_matches_extension(extension, content):
             raise ValidationException(

@@ -7,6 +7,7 @@ these helpers verify the leading magic bytes of the actual content.
 from collections.abc import Callable
 
 _ZIP_PREFIXES = (b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08")
+_UTF16_BOMS = (b"\xff\xfe", b"\xfe\xff")
 
 
 def _is_pdf(content: bytes) -> bool:
@@ -34,6 +35,10 @@ def _is_zip(content: bytes) -> bool:
 
 
 def _is_plain_text(content: bytes) -> bool:
+    # UTF-16 text (e.g. PowerShell logs) is full of NUL bytes but legitimate;
+    # accept it by its BOM instead of the NUL heuristic.
+    if content.startswith(_UTF16_BOMS):
+        return True
     return b"\x00" not in content
 
 
