@@ -2,7 +2,7 @@
 from datetime import date, datetime
 
 from sqlalchemy import Date, DateTime, ForeignKey, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from app.infrastructure.sql.base import Base
 from app.modules.pi.models.enums import BeneficiaryStatus
@@ -41,6 +41,11 @@ class Beneficiary(Base):
         onupdate=func.now(),
     )
 
+
+    @validates("status")
+    def _validate_status(self, key: str, value: str) -> str:
+        """Enforce the status enum at the ORM layer, not only in schemas."""
+        return BeneficiaryStatus(value).value
 
     def __repr__(self) -> str:
         return f"<Beneficiary {self.full_name}>"

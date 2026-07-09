@@ -23,6 +23,7 @@ from app.core.errors import ValidationException
 from app.core.uploads import ensure_upload_size
 from app.core.validation import is_valid_email
 from app.infrastructure.sql.base import Base
+from app.modules.pi.constants import PHONE_MAX_LENGTH
 from app.modules.pi.models import Beneficiary, Volunteer
 from app.modules.pi.models.enums import BeneficiaryStatus, VolunteerStatus
 from app.modules.pi.repositories.beneficiaries import BeneficiaryRepository
@@ -146,7 +147,7 @@ VOLUNTEER_COLUMNS: tuple[ColumnSpec, ...] = (
     ColumnSpec(
         "Telefon",
         "phone",
-        lambda r, h: r.text(h, max_length=_column_length(Volunteer, "phone")) or None,
+        lambda r, h: r.text(h, max_length=PHONE_MAX_LENGTH) or None,
     ),
     ColumnSpec(
         "Link społecznościowy",
@@ -187,14 +188,12 @@ BENEFICIARY_COLUMNS: tuple[ColumnSpec, ...] = (
     ColumnSpec(
         "Telefon",
         "phone",
-        lambda r, h: r.text(h, max_length=_column_length(Beneficiary, "phone"))
-        or None,
+        lambda r, h: r.text(h, max_length=PHONE_MAX_LENGTH) or None,
     ),
     ColumnSpec(
         "Telefon rodziny",
         "family_phone",
-        lambda r, h: r.text(h, max_length=_column_length(Beneficiary, "family_phone"))
-        or None,
+        lambda r, h: r.text(h, max_length=PHONE_MAX_LENGTH) or None,
     ),
     ColumnSpec(
         "Status",
