@@ -36,6 +36,10 @@ export const bugReportService = {
     return response.data;
   },
 
+  remove: async (id: number): Promise<void> => {
+    await apiClient.delete(`v1/bug-reports/${id}`);
+  },
+
   downloadFile: async (report: BugReport): Promise<void> => {
     const response = await apiClient.get<Blob>(`v1/bug-reports/${report.id}/file`, {
       responseType: 'blob',
