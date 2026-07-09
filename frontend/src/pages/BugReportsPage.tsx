@@ -35,7 +35,7 @@ const BugReportsPage: React.FC = () => {
 
   const { data: myReports } = useMyBugReports();
   const { data: allReports, isLoading } = useBugReportList(filterStatus, canView);
-  const { submit, update } = useBugReportActions({
+  const { submit, update, remove } = useBugReportActions({
     onSubmitted: () => {
       setTitle('');
       setDescription('');
@@ -67,6 +67,12 @@ const BugReportsPage: React.FC = () => {
       await bugReportService.downloadFile(report);
     } catch {
       alert('Nie udało się pobrać pliku.');
+    }
+  };
+
+  const deleteReport = (report: BugReport) => {
+    if (confirm(`Usunąć zgłoszenie „${report.title}”? Załącznik zostanie usunięty z serwera.`)) {
+      remove.mutate(report.id);
     }
   };
 
@@ -144,7 +150,17 @@ const BugReportsPage: React.FC = () => {
               <div key={report.id} className="rounded-lg border border-gray-200 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-bold text-gray-900">{report.title}</p>
-                  <StatusBadge status={report.status} />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={report.status} />
+                    <button
+                      type="button"
+                      disabled={remove.isPending}
+                      onClick={() => deleteReport(report)}
+                      className="min-h-8 rounded-md bg-rose-50 px-2 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"
+                    >
+                      Usuń
+                    </button>
+                  </div>
                 </div>
                 <p className="mt-1 text-xs font-medium text-gray-400">{formatDate(report.created_at)}</p>
                 {report.resolution_comment && (
@@ -217,6 +233,16 @@ const BugReportsPage: React.FC = () => {
                         </select>
                       ) : (
                         <StatusBadge status={report.status} />
+                      )}
+                      {canManage && (
+                        <button
+                          type="button"
+                          disabled={remove.isPending}
+                          onClick={() => deleteReport(report)}
+                          className="min-h-9 rounded-md bg-rose-50 px-3 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"
+                        >
+                          Usuń
+                        </button>
                       )}
                     </div>
                   </div>

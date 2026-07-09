@@ -45,5 +45,11 @@ export function useBugReportActions(options?: { onSubmitted?: () => void }) {
     onError: (error) => alert(parseApiError(error)),
   });
 
-  return { submit, update };
+  const remove = useMutation({
+    mutationFn: (id: number) => bugReportService.remove(id),
+    onSuccess: invalidate,
+    onError: (error) => alert(parseApiError(error)),
+  });
+
+  return { submit, update, remove };
 }
