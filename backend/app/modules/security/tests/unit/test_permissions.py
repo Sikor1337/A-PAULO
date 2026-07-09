@@ -83,6 +83,56 @@ def test_system_group_permission_matrix_cannot_be_modified(
     assert error.value.status_code == 400
 
 
+def test_staff_group_permissions_are_editable_but_metadata_stays_locked(
+    db_session: Session,
+) -> None:
+    """PAP-95: admins can tune STAFF permissions; name/description stay locked."""
+    view = Permission(code="CAN_VIEW_USERS", name="View", category="Users")
+    manage = Permission(code="CAN_MANAGE_USERS", name="Manage", category="Users")
+    group = UserGroup(
+        name="Staff",
+        description="Protected",
+        is_system=True,
+        system_key="staff",
+        permissions=[view, manage],
+    )
+    actor = _user(db_session, "staff-admin", status="admin")
+    db_session.add(group)
+    db_session.commit()
+
+    service = _service(db_session)
+    updated = service.replace_group_permissions(
+        group.id, ["CAN_VIEW_USERS"], actor=actor
+    )
+    assert [permission.code for permission in updated["permissions"]] == [
+        "CAN_VIEW_USERS"
+    ]
+
+    saved = service.save_group(
+        group.id,
+        name="Staff",
+        description="Protected",
+        permission_codes=["CAN_VIEW_USERS", "CAN_MANAGE_USERS"],
+        user_ids=[],
+        actor=actor,
+    )
+    assert {permission.code for permission in saved["permissions"]} == {
+        "CAN_VIEW_USERS",
+        "CAN_MANAGE_USERS",
+    }
+
+    with pytest.raises(HTTPException) as error:
+        service.save_group(
+            group.id,
+            name="Inna nazwa",
+            description="Protected",
+            permission_codes=["CAN_VIEW_USERS", "CAN_MANAGE_USERS"],
+            user_ids=[],
+            actor=actor,
+        )
+    assert error.value.status_code == 400
+
+
 def test_admin_status_without_group_does_not_grant_permissions(
     db_session: Session,
 ) -> None:
