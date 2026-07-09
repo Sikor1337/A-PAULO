@@ -19,6 +19,12 @@ export type {
   DepartmentMember,
 } from './department';
 export type {
+  BugReport,
+  BugReportStatus,
+  BugReportSubmitInput,
+  BugReportUpdateInput,
+} from './bugReport';
+export type {
   AttachmentUpdateInput,
   BOCardAttachment,
   BOCardOverviewAttachment,

@@ -25,6 +25,11 @@ ATTACHMENT_FALLBACK_CONTENT_TYPES: Final = frozenset({"", "application/octet-str
 ATTACHMENT_SUPPORTED_FILES_MESSAGE: Final = (
     "Supported files: PDF, JPG, PNG, WEBP, HEIC, HEIF"
 )
+BUG_REPORT_MAX_FILE_BYTES: Final = 10 * MEGABYTE
+BUG_REPORT_ALLOWED_EXTENSIONS: Final = ATTACHMENT_ALLOWED_EXTENSIONS | frozenset(
+    {".txt", ".log", ".zip"}
+)
+BUG_REPORT_CONTEXT: Final = "bug_reports"
 BO_CARD_CONTEXT: Final = "bo_card"
 BO_CARD_PERIOD_PATTERN: Final = r"^\d{4}-(0[1-9]|1[0-2])$"
 
