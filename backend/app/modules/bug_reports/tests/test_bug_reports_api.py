@@ -1,6 +1,7 @@
 """Integration tests for the bug reports module (PAP-83)."""
 
 import io
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -108,6 +109,39 @@ def test_file_download_roundtrip(api_client, storage) -> None:
     assert download.status_code == 200
     assert download.content == b"traceback..."
     assert 'filename="app.log"' in download.headers["content-disposition"]
+
+
+def test_mp4_masquerading_as_heic_rejected(api_client, storage) -> None:
+    mp4_header = b"\x00\x00\x00\x18ftypisom" + b"\x00" * 16
+    response = api_client.post(
+        "/api/v1/bug-reports",
+        data={"title": "Wideo udające zdjęcie"},
+        files={"file": ("zdjecie.heic", io.BytesIO(mp4_header), "image/heic")},
+    )
+    assert response.status_code == 422
+    assert storage.files == {}
+
+
+def test_zip_upload_valid_and_path_traversal(api_client, storage) -> None:
+    valid = io.BytesIO()
+    with zipfile.ZipFile(valid, "w") as archive:
+        archive.writestr("logs/app.log", "traceback...")
+    accepted = api_client.post(
+        "/api/v1/bug-reports",
+        data={"title": "Paczka logów"},
+        files={"file": ("logi.zip", io.BytesIO(valid.getvalue()), "application/zip")},
+    )
+    assert accepted.status_code == 200
+
+    hostile = io.BytesIO()
+    with zipfile.ZipFile(hostile, "w") as archive:
+        archive.writestr("../evil.txt", "x")
+    rejected = api_client.post(
+        "/api/v1/bug-reports",
+        data={"title": "Zip z traversal"},
+        files={"file": ("zly.zip", io.BytesIO(hostile.getvalue()), "application/zip")},
+    )
+    assert rejected.status_code == 422
 
 
 def test_utf16_log_upload_accepted(api_client, storage) -> None:

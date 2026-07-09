@@ -1,4 +1,5 @@
 import apiClient from '@/lib/api';
+import { fetchAllPages } from '@/lib/pagination';
 import type { BugReport, BugReportSubmitInput, BugReportUpdateInput } from '@/types';
 
 export const BUG_REPORT_ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.txt,.log,.zip';
@@ -14,17 +15,21 @@ export const bugReportService = {
     return response.data;
   },
 
-  list: async (status?: string): Promise<BugReport[]> => {
-    const response = await apiClient.get<BugReport[]>('v1/bug-reports', {
-      params: status ? { status } : undefined,
-    });
-    return response.data;
-  },
+  list: (status?: string): Promise<BugReport[]> =>
+    fetchAllPages(async (skip, limit) => {
+      const response = await apiClient.get<BugReport[]>('v1/bug-reports', {
+        params: { ...(status ? { status } : {}), skip, limit },
+      });
+      return response.data;
+    }),
 
-  listMine: async (): Promise<BugReport[]> => {
-    const response = await apiClient.get<BugReport[]>('v1/bug-reports/my');
-    return response.data;
-  },
+  listMine: (): Promise<BugReport[]> =>
+    fetchAllPages(async (skip, limit) => {
+      const response = await apiClient.get<BugReport[]>('v1/bug-reports/my', {
+        params: { skip, limit },
+      });
+      return response.data;
+    }),
 
   update: async (id: number, data: BugReportUpdateInput): Promise<BugReport> => {
     const response = await apiClient.patch<BugReport>(`v1/bug-reports/${id}`, data);

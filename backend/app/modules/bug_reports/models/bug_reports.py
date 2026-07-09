@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from app.infrastructure.sql.base import Base
 
@@ -56,6 +56,11 @@ class BugReport(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+    @validates("status")
+    def _validate_status(self, key: str, value: str) -> str:
+        """Enforce the status enum at the ORM layer, not only in schemas."""
+        return BugReportStatus(value).value
 
     def __repr__(self) -> str:
         return f"<BugReport {self.id} {self.title}>"
