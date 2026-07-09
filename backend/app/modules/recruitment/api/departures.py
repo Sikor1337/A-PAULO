@@ -12,9 +12,10 @@ from app.modules.recruitment.schemas.departures import (
     DepartureSelfServiceResponse,
 )
 from app.modules.recruitment.services.departures import DepartureService
-from app.modules.security.dependencies import get_current_user, require_permission
+from app.modules.security.dependencies import require_permission
 from app.modules.security.models.constants import (
     CAN_MANAGE_RECRUITMENT,
+    CAN_SUBMIT_DEPARTURE_SURVEY,
     CAN_VIEW_RECRUITMENT,
 )
 
@@ -51,7 +52,7 @@ def list_departure_interviews(
 @router.get("/me", response_model=DepartureSelfServiceResponse)
 def get_my_departure_survey(
     service: DepartureService = Depends(get_departure_service),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission(CAN_SUBMIT_DEPARTURE_SURVEY)),
 ):
     return service.get_self_service(user)
 
@@ -64,7 +65,7 @@ def get_my_departure_survey(
 def submit_my_departure_survey(
     request: DepartureInterviewCreate,
     service: DepartureService = Depends(get_departure_service),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission(CAN_SUBMIT_DEPARTURE_SURVEY)),
 ):
     return service.create_self_interview(user, request.answers)
 
@@ -73,7 +74,7 @@ def submit_my_departure_survey(
 def update_my_departure_survey(
     request: DepartureInterviewCreate,
     service: DepartureService = Depends(get_departure_service),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission(CAN_SUBMIT_DEPARTURE_SURVEY)),
 ):
     return service.update_self_interview(user, request.answers)
 
