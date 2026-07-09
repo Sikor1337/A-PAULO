@@ -46,12 +46,16 @@ class TaskService:
         event_id: int | None = None,
         status: TaskStatus | None = None,
         volunteer_id: int | None = None,
+        skip: int = 0,
+        limit: int = 100,
     ) -> list[TaskResponse]:
         tasks = self.repo.list_all(
             department_id=department_id,
             event_id=event_id,
             status=status.value if status else None,
             volunteer_id=volunteer_id,
+            skip=skip,
+            limit=limit,
         )
         return self._to_responses(tasks)
 

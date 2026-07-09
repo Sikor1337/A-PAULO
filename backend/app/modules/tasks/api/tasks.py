@@ -28,6 +28,8 @@ def list_tasks(
     event_id: int | None = Query(None),
     status: TaskStatus | None = Query(None),
     volunteer_id: int | None = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
     service: TaskService = Depends(get_task_service),
     _user: User = Depends(require_permission(CAN_VIEW_TASKS)),
 ):
@@ -37,6 +39,8 @@ def list_tasks(
         event_id=event_id,
         status=status,
         volunteer_id=volunteer_id,
+        skip=skip,
+        limit=limit,
     )
 
 

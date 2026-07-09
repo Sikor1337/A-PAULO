@@ -29,6 +29,8 @@ class TaskRepository(SQLRepository):
         event_id: int | None = None,
         status: str | None = None,
         volunteer_id: int | None = None,
+        skip: int = 0,
+        limit: int = 100,
     ) -> list[Task]:
         query = self._query()
         if department_id is not None:
@@ -41,7 +43,9 @@ class TaskRepository(SQLRepository):
             query = query.join(TaskAssignee).filter(
                 TaskAssignee.volunteer_id == volunteer_id
             )
-        return query.order_by(Task.created_at.desc()).all()
+        return (
+            query.order_by(Task.created_at.desc()).offset(skip).limit(limit).all()
+        )
 
     def create(self, **kwargs) -> Task:
         task = Task(**kwargs)
