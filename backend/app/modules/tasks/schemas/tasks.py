@@ -1,7 +1,8 @@
 """Task schemas."""
 from datetime import date, datetime
+from typing import Self
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.modules.tasks.models.tasks import TaskStatus
 
@@ -53,6 +54,15 @@ class TaskUpdateRequest(BaseModel):
     def strip_text(cls, value: str | None) -> str | None:
         return value.strip() if isinstance(value, str) else value
 
+    @model_validator(mode="after")
+    def forbid_value_with_clear_flag(self) -> Self:
+        """Reject contradictory input: a new value plus its clear_* flag."""
+        if self.clear_event and self.event_id is not None:
+            raise ValueError("Nie można jednocześnie ustawić i wyczyścić wydarzenia")
+        if self.clear_due_date and self.due_date is not None:
+            raise ValueError("Nie można jednocześnie ustawić i wyczyścić terminu")
+        return self
+
 
 class ChecklistItemCreateRequest(BaseModel):
     label: str = Field(..., min_length=1, max_length=300)
@@ -74,6 +84,15 @@ class ChecklistItemUpdateRequest(BaseModel):
     @classmethod
     def strip_label(cls, value: str | None) -> str | None:
         return value.strip() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def forbid_value_with_clear_flag(self) -> Self:
+        """Reject contradictory input: a new value plus its clear_* flag."""
+        if self.clear_volunteer and self.volunteer_id is not None:
+            raise ValueError(
+                "Nie można jednocześnie przypisać i wyczyścić wolontariusza"
+            )
+        return self
 
 
 class ChecklistItemResponse(BaseModel):

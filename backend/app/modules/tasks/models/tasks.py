@@ -12,7 +12,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.infrastructure.sql.base import Base
 
@@ -70,6 +70,11 @@ class Task(Base):
         back_populates="task",
         cascade="all, delete-orphan",
     )
+
+    @validates("status")
+    def _validate_status(self, key: str, value: str) -> str:
+        """Enforce the status enum at the ORM layer, not only in schemas."""
+        return TaskStatus(value).value
 
     def __repr__(self) -> str:
         return f"<Task {self.id} {self.title}>"

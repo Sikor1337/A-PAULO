@@ -1,15 +1,20 @@
 import apiClient from '@/lib/api';
+import { fetchAllPages } from '@/lib/pagination';
 import type { Task, TaskCreateInput, TaskFilters, TaskUpdateInput } from '@/types';
 
 export const taskService = {
-  list: async (filters: Partial<TaskFilters> = {}): Promise<Task[]> => {
+  list: (filters: Partial<TaskFilters> = {}): Promise<Task[]> => {
     const params: Record<string, string | number> = {};
     if (filters.departmentId) params.department_id = filters.departmentId;
     if (filters.eventId) params.event_id = filters.eventId;
     if (filters.status) params.status = filters.status;
     if (filters.volunteerId) params.volunteer_id = filters.volunteerId;
-    const response = await apiClient.get<Task[]>('v1/tasks', { params });
-    return response.data;
+    return fetchAllPages(async (skip, limit) => {
+      const response = await apiClient.get<Task[]>('v1/tasks', {
+        params: { ...params, skip, limit },
+      });
+      return response.data;
+    });
   },
 
   create: async (data: TaskCreateInput): Promise<Task> => {

@@ -171,6 +171,27 @@ def test_task_validations(api_client) -> None:
     assert bad_status.status_code == 422
 
 
+def test_conflicting_value_and_clear_flag_rejected(api_client) -> None:
+    """Setting a value and clearing the same field in one PATCH is a 422."""
+    department = _create_department(api_client, name="Konflikty")
+    task = api_client.post(
+        "/api/v1/tasks",
+        json={"title": "Sprzeczność", "department_id": department["id"]},
+    ).json()
+
+    conflicting = api_client.patch(
+        f"/api/v1/tasks/{task['id']}",
+        json={"event_id": 1, "clear_event": True},
+    )
+    assert conflicting.status_code == 422
+
+    conflicting_due = api_client.patch(
+        f"/api/v1/tasks/{task['id']}",
+        json={"due_date": "2026-08-01", "clear_due_date": True},
+    )
+    assert conflicting_due.status_code == 422
+
+
 def test_task_delete_and_checklist_management(api_client) -> None:
     department = _create_department(api_client, name="Muzyczni")
     task = api_client.post(
