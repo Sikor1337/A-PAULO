@@ -120,7 +120,11 @@ const router = createBrowserRouter(createRoutesFromElements(
       </Route>
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<ProfilePage />} />
+      </Route>
+      <Route element={<ProtectedRoute requiredPermission="CAN_SUBMIT_DEPARTURE_SURVEY" />}>
         <Route path="/departure-survey" element={<MyDepartureSurveyPage />} />
+      </Route>
+      <Route element={<ProtectedRoute requiredPermission="CAN_SUBMIT_BUG_REPORTS" />}>
         <Route path="/bug-reports" element={<BugReportsPage />} />
       </Route>
       <Route element={<ProtectedRoute requiredAnyPermission={['CAN_VIEW_USERS', 'CAN_VIEW_SECURITY']} />}>
