@@ -4,9 +4,11 @@ Adds users.email_verified_at (existing accounts are grandfathered as
 verified) and the email_tokens table for one-time verification/reset
 tokens (only SHA-256 hashes are stored).
 
+Chained after pap96 so the branch shares main's single migration head.
+
 Revision ID: pap87_email_verification
-Revises: pap89_tasks
-Create Date: 2026-07-09
+Revises: pap96_submit_permissions
+Create Date: 2026-07-11
 """
 
 from collections.abc import Sequence
@@ -15,7 +17,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "pap87_email_verification"
-down_revision: str | Sequence[str] | None = "pap89_tasks"
+down_revision: str | Sequence[str] | None = "pap96_submit_permissions"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
