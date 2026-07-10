@@ -45,7 +45,7 @@ export const guideSections: GuideSection[] = [
     permission: 'CAN_VIEW_BENEFICIARIES',
     topics: [
       { heading: 'Dodawanie i edycja', body: 'Przycisk „+ Dodaj” tworzy nowego podopiecznego. Kliknięcie wiersza otwiera szczegóły z historią zmian.' },
-      { heading: 'Status', body: 'OBECNY, ZMARŁY, BYŁY lub DPS/ZOL. Pole „BO” oznacza objęcie programem Bank Otwarty.' },
+      { heading: 'Status', body: 'OBECNY, ZMARŁY, BYŁY lub DPS/ZOL. Pole „BO” oznacza objęcie Budżetem Obywatelskim.' },
       { heading: 'Import/eksport CSV', body: 'Możesz wgrać listę z pliku CSV lub wyeksportować bieżący widok do arkusza.' },
     ],
   },
