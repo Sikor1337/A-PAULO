@@ -15,3 +15,14 @@ class ConsoleEmailBackend:
             message.subject,
             message.html,
         )
+        # Printed (not just logged) so the link is always visible in the dev
+        # console regardless of the app's logging level — this backend exists
+        # precisely to surface that link.
+        print(
+            "\n===== E-MAIL (console backend) =====\n"
+            f"To:      {message.to}\n"
+            f"Subject: {message.subject}\n"
+            f"{message.html}\n"
+            "====================================\n",
+            flush=True,
+        )
