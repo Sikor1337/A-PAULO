@@ -44,8 +44,8 @@ const sections: SidebarSection[] = [
       { name: 'Wydarzenia', icon: '📅', path: '/events', permission: 'CAN_VIEW_EVENTS' },
       { name: 'Działy', icon: '🗂️', path: '/departments', permission: 'CAN_VIEW_DEPARTMENTS' },
       { name: 'Zadania', icon: '📋', path: '/tasks', permission: 'CAN_VIEW_TASKS' },
-      { name: 'Zgłoś błąd', icon: '🐛', path: '/bug-reports', statuses: ['regular', 'admin'] },
-      { name: 'Ankieta odejścia', icon: 'A', path: '/departure-survey', statuses: ['regular', 'admin'] },
+      { name: 'Zgłoś błąd', icon: '🐛', path: '/bug-reports', permission: 'CAN_SUBMIT_BUG_REPORTS' },
+      { name: 'Ankieta odejścia', icon: 'A', path: '/departure-survey', permission: 'CAN_SUBMIT_DEPARTURE_SURVEY' },
     ],
   },
   {

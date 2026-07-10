@@ -11,6 +11,8 @@ from app.core.errors import NotFoundError
 from app.infrastructure.storage.attachments import StoredFile
 from app.modules.core_data.models import User
 from app.modules.security.dependencies import get_current_user
+from app.modules.security.models import Permission, UserGroup, security_user_groups
+from app.modules.security.models.constants import CAN_SUBMIT_BUG_REPORTS
 
 PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"fake-png-payload"
 
@@ -144,6 +146,23 @@ def test_reporter_deletes_only_own_report(
         is_active=True,
     )
     db_session.add(regular)
+    db_session.flush()
+    submit_perm = (
+        db_session.query(Permission)
+        .filter_by(code=CAN_SUBMIT_BUG_REPORTS)
+        .one()
+    )
+    reporter_group = UserGroup(
+        name="Zgłaszający",
+        description="Może zgłaszać błędy, bez zarządzania",
+        permissions=[submit_perm],
+    )
+    db_session.add(reporter_group)
+    db_session.flush()
+    db_session.execute(
+        security_user_groups.insert(),
+        {"user_id": regular.id, "group_id": reporter_group.id},
+    )
     db_session.commit()
     api_client.app.dependency_overrides[get_current_user] = lambda: regular
     try:
