@@ -47,6 +47,14 @@ const EventsPage = () => {
   const [status, setStatus] = useState<CalendarEventStatus | ''>('');
   const [visibility, setVisibility] = useState<CalendarEventVisibility | ''>('');
   const [sort, setSort] = useState<'asc' | 'desc'>('asc');
+  const [listFrom, setListFrom] = useState(() => {
+    const now = new Date();
+    return dateKey(new Date(now.getFullYear(), now.getMonth(), 1));
+  });
+  const [listTo, setListTo] = useState(() => {
+    const now = new Date();
+    return dateKey(new Date(now.getFullYear(), now.getMonth() + 3, 0));
+  });
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
   const [editing, setEditing] = useState<CalendarEvent | null | undefined>(undefined);
   const [initialDate, setInitialDate] = useState<Date | undefined>();
@@ -55,11 +63,17 @@ const EventsPage = () => {
 
   const days = useMemo(() => calendarDays(month), [month]);
   const [rangeStart, rangeEnd] = useMemo(() => {
+    if (view === 'list') {
+      const start = new Date(`${listFrom}T00:00:00`);
+      const end = new Date(`${listTo}T23:59:59`);
+      // Guard an inverted range so the query stays well-formed.
+      return end < start ? [start, new Date(`${listFrom}T23:59:59`)] : [start, end];
+    }
     const start = days[0];
     const end = new Date(days[days.length - 1]);
     end.setHours(23, 59, 59, 999);
     return [start, end];
-  }, [days]);
+  }, [days, view, listFrom, listTo]);
   const eventsQuery = useCalendarEvents({
     startsFrom: rangeStart.toISOString(),
     startsTo: rangeEnd.toISOString(),
@@ -103,12 +117,25 @@ const EventsPage = () => {
           </div>
         </div>
         <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => moveMonth(-1)} className="size-9 rounded-lg border text-lg text-gray-600" aria-label="Poprzedni miesiąc">‹</button>
-            <button type="button" onClick={() => setMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} className="rounded-lg border px-3 py-2 text-sm font-bold text-gray-600">Dzisiaj</button>
-            <button type="button" onClick={() => moveMonth(1)} className="size-9 rounded-lg border text-lg text-gray-600" aria-label="Następny miesiąc">›</button>
-            <h2 className="ml-2 min-w-48 text-lg font-bold capitalize text-gray-900">{monthLabel}</h2>
-          </div>
+          {view === 'month' ? (
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => moveMonth(-1)} className="size-9 rounded-lg border text-lg text-gray-600" aria-label="Poprzedni miesiąc">‹</button>
+              <button type="button" onClick={() => setMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} className="rounded-lg border px-3 py-2 text-sm font-bold text-gray-600">Dzisiaj</button>
+              <button type="button" onClick={() => moveMonth(1)} className="size-9 rounded-lg border text-lg text-gray-600" aria-label="Następny miesiąc">›</button>
+              <h2 className="ml-2 min-w-48 text-lg font-bold capitalize text-gray-900">{monthLabel}</h2>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-1 text-xs font-bold text-gray-500">
+                Od
+                <input type="date" value={listFrom} max={listTo} onChange={(event) => setListFrom(event.target.value)} className="h-9 rounded-lg border bg-white px-2 text-sm text-gray-700" />
+              </label>
+              <label className="flex items-center gap-1 text-xs font-bold text-gray-500">
+                Do
+                <input type="date" value={listTo} min={listFrom} onChange={(event) => setListTo(event.target.value)} className="h-9 rounded-lg border bg-white px-2 text-sm text-gray-700" />
+              </label>
+            </div>
+          )}
           <div className="flex flex-wrap gap-2">
             <select value={status} onChange={(event) => setStatus(event.target.value as CalendarEventStatus | '')} className="h-9 rounded-lg border bg-white px-3 text-sm text-gray-600">
               <option value="">Wszystkie statusy</option><option value="published">Opublikowane</option><option value="draft">Szkice</option><option value="cancelled">Anulowane</option>

@@ -24,6 +24,7 @@ from app.modules.security.dependencies import (
 )
 from app.modules.security.models.constants import (
     CAN_MANAGE_BUG_REPORTS,
+    CAN_SUBMIT_BUG_REPORTS,
     CAN_VIEW_BUG_REPORTS,
 )
 from app.modules.security.services import PermissionService
@@ -35,9 +36,9 @@ router = APIRouter(prefix="/bug-reports", tags=["bug-reports"])
 async def submit_bug_report(
     request: Annotated[BugReportCreateRequest, Form()],
     service: BugReportService = Depends(get_bug_report_service),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission(CAN_SUBMIT_BUG_REPORTS)),
 ):
-    """Submit a bug report with an optional file (any logged-in user)."""
+    """Submit a bug report with an optional file (needs submit permission)."""
     content = await request.file.read() if request.file is not None else None
     return service.create_report(user, request, content)
 
@@ -47,7 +48,7 @@ def my_bug_reports(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     service: BugReportService = Depends(get_bug_report_service),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission(CAN_SUBMIT_BUG_REPORTS)),
 ):
     """List the current user's own reports."""
     return service.list_my_reports(user, skip=skip, limit=limit)

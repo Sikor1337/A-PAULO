@@ -6,8 +6,11 @@ from app.modules.core_data.models import User
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.models import DepartureField
 from app.modules.security.dependencies import get_current_user
-from app.modules.security.models import UserGroup
-from app.modules.security.models.constants import CAN_MANAGE_RECRUITMENT
+from app.modules.security.models import Permission, UserGroup, security_user_groups
+from app.modules.security.models.constants import (
+    CAN_MANAGE_RECRUITMENT,
+    CAN_SUBMIT_DEPARTURE_SURVEY,
+)
 
 
 def _volunteer(db_session, suffix: str = "departure") -> Volunteer:
@@ -26,6 +29,27 @@ def _volunteer(db_session, suffix: str = "departure") -> Volunteer:
     return volunteer
 
 
+def _grant_departure_submit(db_session, user: User) -> None:
+    """Give a user the self-service departure-survey permission (PAP-96)."""
+    perm = (
+        db_session.query(Permission)
+        .filter_by(code=CAN_SUBMIT_DEPARTURE_SURVEY)
+        .one()
+    )
+    group = UserGroup(
+        name=f"Odejście-{user.username}",
+        description="Może wypełnić własną ankietę odejścia",
+        permissions=[perm],
+    )
+    db_session.add(group)
+    db_session.flush()
+    db_session.execute(
+        security_user_groups.insert(),
+        {"user_id": user.id, "group_id": group.id},
+    )
+    db_session.commit()
+
+
 def _user(db_session, volunteer: Volunteer, suffix: str = "departure-user") -> User:
     user = User(
         username=suffix,
@@ -39,6 +63,7 @@ def _user(db_session, volunteer: Volunteer, suffix: str = "departure-user") -> U
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
+    _grant_departure_submit(db_session, user)
     return user
 
 
@@ -161,6 +186,8 @@ def test_user_cannot_submit_departure_for_an_unrelated_volunteer(
     )
     db_session.add(user)
     db_session.commit()
+    db_session.refresh(user)
+    _grant_departure_submit(db_session, user)
     _as_user(api_client, user)
 
     response = api_client.post(

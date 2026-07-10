@@ -29,7 +29,8 @@ import RecruitmentLayout from './pages/recruitment/RecruitmentLayout';
 import RecruitmentFormBuilderPage from './pages/recruitment/RecruitmentFormBuilderPage';
 import RecruitmentResponsesPage from './pages/recruitment/RecruitmentResponsesPage';
 import RecruitmentOnboardingPage from './pages/recruitment/RecruitmentOnboardingPage';
-import DepartureSurveyPage from './pages/recruitment/DepartureSurveyPage';
+import DepartureEditorPage from './pages/recruitment/DepartureEditorPage';
+import DepartureResponsesPage from './pages/recruitment/DepartureResponsesPage';
 import RecruitmentEntryPage from './pages/recruitment/RecruitmentEntryPage';
 import RecruitmentAccessRequiredPage from './pages/recruitment/RecruitmentAccessRequiredPage';
 import { queryClient } from './lib/queryClient';
@@ -119,7 +120,11 @@ const router = createBrowserRouter(createRoutesFromElements(
       </Route>
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<ProfilePage />} />
+      </Route>
+      <Route element={<ProtectedRoute requiredPermission="CAN_SUBMIT_DEPARTURE_SURVEY" />}>
         <Route path="/departure-survey" element={<MyDepartureSurveyPage />} />
+      </Route>
+      <Route element={<ProtectedRoute requiredPermission="CAN_SUBMIT_BUG_REPORTS" />}>
         <Route path="/bug-reports" element={<BugReportsPage />} />
       </Route>
       <Route element={<ProtectedRoute requiredAnyPermission={['CAN_VIEW_USERS', 'CAN_VIEW_SECURITY']} />}>
@@ -127,11 +132,16 @@ const router = createBrowserRouter(createRoutesFromElements(
       </Route>
       <Route element={<ProtectedRoute requiredPermission="CAN_VIEW_RECRUITMENT" />}>
         <Route path="/recruitment" element={<RecruitmentLayout />}>
-          <Route index element={<Navigate to="form" replace />} />
-          <Route path="form" element={<RecruitmentFormBuilderPage />} />
-          <Route path="responses" element={<RecruitmentResponsesPage />} />
+          <Route index element={<Navigate to="surveys/recruitment/editor" replace />} />
+          <Route path="surveys/recruitment/editor" element={<RecruitmentFormBuilderPage />} />
+          <Route path="surveys/recruitment/responses" element={<RecruitmentResponsesPage />} />
+          <Route path="surveys/departure/editor" element={<DepartureEditorPage />} />
+          <Route path="surveys/departure/responses" element={<DepartureResponsesPage />} />
           <Route path="onboarding" element={<RecruitmentOnboardingPage />} />
-          <Route path="departures" element={<DepartureSurveyPage />} />
+          {/* Back-compat redirects for old bookmarks. */}
+          <Route path="form" element={<Navigate to="/recruitment/surveys/recruitment/editor" replace />} />
+          <Route path="responses" element={<Navigate to="/recruitment/surveys/recruitment/responses" replace />} />
+          <Route path="departures" element={<Navigate to="/recruitment/surveys/departure/editor" replace />} />
         </Route>
       </Route>
     </Route>
