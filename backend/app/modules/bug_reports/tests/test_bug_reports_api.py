@@ -9,6 +9,10 @@ import pytest
 from app.core.dependencies import get_attachment_storage
 from app.core.errors import NotFoundError
 from app.infrastructure.storage.attachments import StoredFile
+from app.modules.core_data.models import User
+from app.modules.security.dependencies import get_current_user
+from app.modules.security.models import Permission, UserGroup, security_user_groups
+from app.modules.security.models.constants import CAN_SUBMIT_BUG_REPORTS
 
 PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"fake-png-payload"
 
@@ -109,6 +113,74 @@ def test_file_download_roundtrip(api_client, storage) -> None:
     assert download.status_code == 200
     assert download.content == b"traceback..."
     assert 'filename="app.log"' in download.headers["content-disposition"]
+
+
+def test_manager_deletes_report_with_attachment(api_client, storage) -> None:
+    """PAP-94: a manager deletes any report; the stored file goes with it."""
+    submitted = api_client.post(
+        "/api/v1/bug-reports",
+        data={"title": "Do usunięcia"},
+        files={"file": ("zrzut.png", io.BytesIO(PNG_BYTES), "image/png")},
+    ).json()
+    assert storage.files != {}
+
+    deleted = api_client.delete(f"/api/v1/bug-reports/{submitted['id']}")
+    assert deleted.status_code == 204
+    assert storage.files == {}
+    assert api_client.get(f"/api/v1/bug-reports/{submitted['id']}").status_code == 404
+
+
+def test_reporter_deletes_only_own_report(
+    api_client, storage, db_session, admin_user
+) -> None:
+    """PAP-94: a reporter without manage permission deletes only own reports."""
+    foreign = api_client.post(
+        "/api/v1/bug-reports", data={"title": "Cudze zgłoszenie"}
+    ).json()
+
+    regular = User(
+        username="zgłaszający",
+        email="reporter@example.com",
+        hashed_password="not-used",
+        status="regular",
+        is_active=True,
+    )
+    db_session.add(regular)
+    db_session.flush()
+    submit_perm = (
+        db_session.query(Permission)
+        .filter_by(code=CAN_SUBMIT_BUG_REPORTS)
+        .one()
+    )
+    reporter_group = UserGroup(
+        name="Zgłaszający",
+        description="Może zgłaszać błędy, bez zarządzania",
+        permissions=[submit_perm],
+    )
+    db_session.add(reporter_group)
+    db_session.flush()
+    db_session.execute(
+        security_user_groups.insert(),
+        {"user_id": regular.id, "group_id": reporter_group.id},
+    )
+    db_session.commit()
+    api_client.app.dependency_overrides[get_current_user] = lambda: regular
+    try:
+        own = api_client.post(
+            "/api/v1/bug-reports", data={"title": "Moje zgłoszenie"}
+        ).json()
+
+        assert (
+            api_client.delete(f"/api/v1/bug-reports/{foreign['id']}").status_code
+            == 403
+        )
+        assert (
+            api_client.delete(f"/api/v1/bug-reports/{own['id']}").status_code == 204
+        )
+    finally:
+        api_client.app.dependency_overrides[get_current_user] = lambda: admin_user
+
+    assert api_client.get(f"/api/v1/bug-reports/{foreign['id']}").status_code == 200
 
 
 def test_mp4_masquerading_as_heic_rejected(api_client, storage) -> None:

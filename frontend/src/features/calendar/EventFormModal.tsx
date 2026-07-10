@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import Modal from '@/components/ui/Modal';
+import DateTimeField from '@/features/calendar/DateTimeField';
 import type { CalendarEvent, CalendarEventInput, CalendarEventStatus, CalendarEventVisibility } from '@/types';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
@@ -117,11 +118,29 @@ const EventFormModal = ({ event, initialDate, isPending, onClose, onSave }: Prop
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-bold text-gray-700">
               Początek
-              <input type={isAllDay ? 'date' : 'datetime-local'} {...register('startsAt', { required: true })} className={inputClass} />
+              {isAllDay ? (
+                <input type="date" {...register('startsAt', { required: true })} className={inputClass} />
+              ) : (
+                <Controller
+                  control={control}
+                  name="startsAt"
+                  rules={{ required: true }}
+                  render={({ field }) => <DateTimeField value={field.value} onChange={field.onChange} />}
+                />
+              )}
             </label>
             <label className="text-sm font-bold text-gray-700">
               Koniec
-              <input type={isAllDay ? 'date' : 'datetime-local'} {...register('endsAt', { required: true })} className={inputClass} />
+              {isAllDay ? (
+                <input type="date" {...register('endsAt', { required: true })} className={inputClass} />
+              ) : (
+                <Controller
+                  control={control}
+                  name="endsAt"
+                  rules={{ required: true }}
+                  render={({ field }) => <DateTimeField value={field.value} onChange={field.onChange} />}
+                />
+              )}
             </label>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">

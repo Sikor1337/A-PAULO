@@ -21,8 +21,10 @@ export type PermissionCode =
   | 'CAN_MANAGE_DEPARTMENTS'
   | 'CAN_VIEW_BUG_REPORTS'
   | 'CAN_MANAGE_BUG_REPORTS'
+  | 'CAN_SUBMIT_BUG_REPORTS'
   | 'CAN_VIEW_TASKS'
-  | 'CAN_MANAGE_TASKS';
+  | 'CAN_MANAGE_TASKS'
+  | 'CAN_SUBMIT_DEPARTURE_SURVEY';
 
 export interface SecurityPermission {
   id: number;
