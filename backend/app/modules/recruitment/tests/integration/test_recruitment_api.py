@@ -175,6 +175,57 @@ def test_onboarding_attendance_can_be_corrected(api_client, db_session, admin_us
     assert invalid.status_code == 422
 
 
+def test_invalid_status_transitions_and_lookups_are_rejected(
+    api_client, db_session, admin_user
+):
+    """Guard rails: wrong-order transitions, unknown ids and bad filters."""
+    candidate = _candidate(db_session, "transitions")
+    _as_user(api_client, candidate)
+    submission = api_client.post(
+        "/api/v1/recruitment/submissions",
+        json={"answers": _answers(candidate)},
+    ).json()
+    sid = submission["id"]
+
+    _as_user(api_client, admin_user)
+
+    # Attendance cannot be set before the candidate reaches onboarding.
+    early_attendance = api_client.put(
+        f"/api/v1/recruitment/submissions/{sid}"
+        f"/onboarding-meetings/{ONBOARDING_MEETING_TYPES[0]}",
+        json={"attended": True},
+    )
+    assert early_attendance.status_code == 409
+
+    # First transition works; repeating it is no longer an available change.
+    assert (
+        api_client.post(
+            f"/api/v1/recruitment/submissions/{sid}/start-onboarding"
+        ).status_code
+        == 200
+    )
+    assert (
+        api_client.post(
+            f"/api/v1/recruitment/submissions/{sid}/start-onboarding"
+        ).status_code
+        == 409
+    )
+
+    # Unknown submission and an unknown status filter are clean errors.
+    assert (
+        api_client.post(
+            "/api/v1/recruitment/submissions/999999/start-onboarding"
+        ).status_code
+        == 404
+    )
+    assert (
+        api_client.get(
+            "/api/v1/recruitment/submissions", params={"status": "NIEISTNIEJE"}
+        ).status_code
+        == 422
+    )
+
+
 def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
     api_client, db_session, admin_user
 ):

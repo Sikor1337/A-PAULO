@@ -164,6 +164,18 @@ def test_reporter_deletes_only_own_report(
     assert api_client.get(f"/api/v1/bug-reports/{foreign['id']}").status_code == 200
 
 
+def test_unknown_report_endpoints_return_404(api_client, storage) -> None:
+    """Reading, updating or deleting a missing report is a clean 404."""
+    assert api_client.get("/api/v1/bug-reports/999999").status_code == 404
+    assert (
+        api_client.patch(
+            "/api/v1/bug-reports/999999", json={"status": "W_TRAKCIE"}
+        ).status_code
+        == 404
+    )
+    assert api_client.delete("/api/v1/bug-reports/999999").status_code == 404
+
+
 def test_mp4_masquerading_as_heic_rejected(api_client, storage) -> None:
     mp4_header = b"\x00\x00\x00\x18ftypisom" + b"\x00" * 16
     response = api_client.post(
