@@ -55,5 +55,24 @@ export function useDepartmentActions(options?: { onSaved?: () => void }) {
     onError: (error) => alert(parseApiError(error)),
   });
 
-  return { save, addMember, removeMember };
+  const join = useMutation({
+    mutationFn: (id: number) => departmentService.join(id),
+    onSuccess: invalidate,
+    onError: (error) => alert(parseApiError(error)),
+  });
+
+  const approveMember = useMutation({
+    mutationFn: ({ id, volunteerId }: { id: number; volunteerId: number }) =>
+      departmentService.approveMember(id, volunteerId),
+    onSuccess: invalidate,
+    onError: (error) => alert(parseApiError(error)),
+  });
+
+  const leave = useMutation({
+    mutationFn: (id: number) => departmentService.leave(id),
+    onSuccess: invalidate,
+    onError: (error) => alert(parseApiError(error)),
+  });
+
+  return { save, addMember, removeMember, join, approveMember, leave };
 }

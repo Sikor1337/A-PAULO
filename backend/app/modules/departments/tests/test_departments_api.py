@@ -120,3 +120,87 @@ def test_membership_rejects_unknown_volunteer_and_archived_department(
         json={"volunteer_id": volunteer["id"]},
     )
     assert blocked.status_code == 422
+
+
+def test_self_service_join_approve_and_leave(api_client) -> None:
+    """PAP-91: a volunteer requests to join, is approved, then leaves."""
+    department = _create_department(api_client, name="Wolontariat")
+    # The current user (admin) needs a matching volunteer profile to join.
+    _create_volunteer(api_client, "admin@example.com", name="Admin Wolontariusz")
+
+    joined = api_client.post(f"/api/v1/departments/{department['id']}/join")
+    assert joined.status_code == 200
+    members = joined.json()["members"]
+    assert len(members) == 1
+    assert members[0]["membership_status"] == "PENDING"
+    volunteer_id = members[0]["volunteer_id"]
+
+    # Pending requests are not counted as full members.
+    assert api_client.get("/api/v1/departments").json()[0]["member_count"] == 0
+
+    # A second request while one is pending is a conflict.
+    assert (
+        api_client.post(f"/api/v1/departments/{department['id']}/join").status_code
+        == 409
+    )
+
+    approved = api_client.post(
+        f"/api/v1/departments/{department['id']}/members/{volunteer_id}/approve"
+    )
+    assert approved.status_code == 200
+    assert approved.json()["members"][0]["membership_status"] == "ACTIVE"
+    assert api_client.get("/api/v1/departments").json()[0]["member_count"] == 1
+
+    # Approving an already active member is a conflict.
+    assert (
+        api_client.post(
+            f"/api/v1/departments/{department['id']}/members/{volunteer_id}/approve"
+        ).status_code
+        == 409
+    )
+
+    left = api_client.delete(f"/api/v1/departments/{department['id']}/members/me")
+    assert left.status_code == 200
+    assert left.json()["members"] == []
+
+
+def test_join_needs_a_volunteer_profile_and_leave_needs_membership(
+    api_client,
+) -> None:
+    department = _create_department(api_client, name="Bez profilu")
+    # No volunteer carries the current user's e-mail yet.
+    assert (
+        api_client.post(f"/api/v1/departments/{department['id']}/join").status_code
+        == 404
+    )
+    _create_volunteer(api_client, "admin@example.com")
+    # Leaving a department you never joined is a clean 404.
+    assert (
+        api_client.delete(
+            f"/api/v1/departments/{department['id']}/members/me"
+        ).status_code
+        == 404
+    )
+
+
+def test_cannot_join_an_archived_department(api_client) -> None:
+    department = _create_department(api_client, name="Zamkniety")
+    _create_volunteer(api_client, "admin@example.com")
+    api_client.patch(
+        f"/api/v1/departments/{department['id']}", json={"is_archived": True}
+    )
+    assert (
+        api_client.post(f"/api/v1/departments/{department['id']}/join").status_code
+        == 422
+    )
+
+
+def test_manager_added_member_is_active_immediately(api_client) -> None:
+    department = _create_department(api_client, name="Zarzadzany")
+    volunteer = _create_volunteer(api_client, "aktywny@example.com")
+    added = api_client.post(
+        f"/api/v1/departments/{department['id']}/members",
+        json={"volunteer_id": volunteer["id"]},
+    )
+    assert added.status_code == 200
+    assert added.json()["members"][0]["membership_status"] == "ACTIVE"

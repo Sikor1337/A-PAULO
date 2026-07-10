@@ -7,12 +7,15 @@ export interface DepartmentListItem {
   member_count: number;
 }
 
+export type MembershipStatus = 'PENDING' | 'ACTIVE';
+
 export interface DepartmentMember {
   id: number;
   volunteer_id: number;
   full_name: string;
   email: string;
   status: string;
+  membership_status: MembershipStatus;
   created_at: string;
 }
 
