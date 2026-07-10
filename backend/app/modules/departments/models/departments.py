@@ -3,11 +3,23 @@
 Departments are archived, never hard-deleted, so member history survives.
 """
 from datetime import datetime
+from enum import StrEnum
 
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.sql.base import Base
+
+
+class MembershipStatus(StrEnum):
+    """Lifecycle of a department membership (PAP-91).
+
+    PENDING — the volunteer asked to join and awaits approval.
+    ACTIVE  — a full member (approved, or added directly by a manager).
+    """
+
+    PENDING = "PENDING"
+    ACTIVE = "ACTIVE"
 
 
 class Department(Base):
@@ -52,6 +64,12 @@ class DepartmentMember(Base):
     )
     volunteer_id: Mapped[int] = mapped_column(
         ForeignKey("volunteers.id", ondelete="CASCADE"), index=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=MembershipStatus.ACTIVE.value,
+        server_default=MembershipStatus.ACTIVE.value,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

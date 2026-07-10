@@ -35,13 +35,18 @@ class DepartmentListItem(BaseModel):
 
 
 class DepartmentMemberResponse(BaseModel):
-    """A volunteer belonging to a department."""
+    """A volunteer belonging to a department.
+
+    `status` is the volunteer's own status (Aktywny/Były); `membership_status`
+    is the department membership lifecycle (PENDING/ACTIVE, PAP-91).
+    """
 
     id: int
     volunteer_id: int
     full_name: str
     email: str
     status: str
+    membership_status: str
     created_at: datetime
 
 

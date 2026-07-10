@@ -35,4 +35,19 @@ export const departmentService = {
     const response = await apiClient.delete<DepartmentDetail>(`v1/departments/${id}/members/${volunteerId}`);
     return response.data;
   },
+
+  join: async (id: number): Promise<DepartmentDetail> => {
+    const response = await apiClient.post<DepartmentDetail>(`v1/departments/${id}/join`);
+    return response.data;
+  },
+
+  approveMember: async (id: number, volunteerId: number): Promise<DepartmentDetail> => {
+    const response = await apiClient.post<DepartmentDetail>(`v1/departments/${id}/members/${volunteerId}/approve`);
+    return response.data;
+  },
+
+  leave: async (id: number): Promise<DepartmentDetail> => {
+    const response = await apiClient.delete<DepartmentDetail>(`v1/departments/${id}/members/me`);
+    return response.data;
+  },
 };

@@ -12,7 +12,7 @@ from app.modules.departments.schemas.departments import (
     MemberAddRequest,
 )
 from app.modules.departments.services.departments import DepartmentService
-from app.modules.security.dependencies import require_permission
+from app.modules.security.dependencies import get_current_user, require_permission
 from app.modules.security.models.constants import (
     CAN_MANAGE_DEPARTMENTS,
     CAN_VIEW_DEPARTMENTS,
@@ -72,6 +72,40 @@ def add_member(
 ):
     """Add a volunteer to the department."""
     return service.add_member(department_id, request.volunteer_id)
+
+
+@router.post("/{department_id}/join", response_model=DepartmentDetailResponse)
+def request_membership(
+    department_id: int,
+    service: DepartmentService = Depends(get_department_service),
+    user: User = Depends(require_permission(CAN_VIEW_DEPARTMENTS)),
+):
+    """Ask to join a department; the request awaits approval (PAP-91)."""
+    return service.request_membership(department_id, user)
+
+
+@router.delete("/{department_id}/members/me", response_model=DepartmentDetailResponse)
+def leave_department(
+    department_id: int,
+    service: DepartmentService = Depends(get_department_service),
+    user: User = Depends(get_current_user),
+):
+    """Leave a department you belong to (PAP-91)."""
+    return service.leave_department(department_id, user)
+
+
+@router.post(
+    "/{department_id}/members/{volunteer_id}/approve",
+    response_model=DepartmentDetailResponse,
+)
+def approve_member(
+    department_id: int,
+    volunteer_id: int,
+    service: DepartmentService = Depends(get_department_service),
+    _user: User = Depends(require_permission(CAN_MANAGE_DEPARTMENTS)),
+):
+    """Approve a pending join request (PAP-91)."""
+    return service.approve_member(department_id, volunteer_id)
 
 
 @router.delete(

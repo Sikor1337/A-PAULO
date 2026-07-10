@@ -4,7 +4,11 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.infrastructure.sql.repository import SQLRepository
-from app.modules.departments.models.departments import Department, DepartmentMember
+from app.modules.departments.models.departments import (
+    Department,
+    DepartmentMember,
+    MembershipStatus,
+)
 from app.modules.pi.models.volunteer import Volunteer
 
 
@@ -46,11 +50,12 @@ class DepartmentRepository(SQLRepository):
         return department
 
     def member_counts(self) -> dict[int, int]:
-        """Member count per department id."""
+        """Active member count per department id (pending requests excluded)."""
         rows = (
             self.session.query(
                 DepartmentMember.department_id, func.count(DepartmentMember.id)
             )
+            .filter(DepartmentMember.status == MembershipStatus.ACTIVE.value)
             .group_by(DepartmentMember.department_id)
             .all()
         )
@@ -79,9 +84,16 @@ class DepartmentRepository(SQLRepository):
             .first()
         )
 
-    def add_member(self, department_id: int, volunteer_id: int) -> DepartmentMember:
+    def add_member(
+        self,
+        department_id: int,
+        volunteer_id: int,
+        status: str = MembershipStatus.ACTIVE.value,
+    ) -> DepartmentMember:
         member = DepartmentMember(
-            department_id=department_id, volunteer_id=volunteer_id
+            department_id=department_id,
+            volunteer_id=volunteer_id,
+            status=status,
         )
         self.session.add(member)
         return member
@@ -95,4 +107,11 @@ class DepartmentRepository(SQLRepository):
             .filter(Volunteer.id == volunteer_id)
             .first()
             is not None
+        )
+
+    def get_volunteer_by_email(self, email: str) -> Volunteer | None:
+        return (
+            self.session.query(Volunteer)
+            .filter(func.lower(Volunteer.email) == email.lower())
+            .first()
         )
