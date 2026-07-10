@@ -22,6 +22,8 @@ const SecurityGroupsPanel = ({ users, canManage }: Props) => {
 
   const effectiveSelectedId = selectedId ?? groups.data?.[0]?.id ?? null;
   const selected = groups.data?.find((group) => group.id === effectiveSelectedId) ?? null;
+  // PAP-95: STAFF permissions are admin-tunable; other system groups stay locked.
+  const permissionsLocked = !!selected?.is_system && selected.system_key !== 'staff';
   const draft = selected
     ? drafts[selected.id] ?? {
       name: selected.name,
@@ -110,7 +112,8 @@ const SecurityGroupsPanel = ({ users, canManage }: Props) => {
 
           <div>
             <h3 className="mb-2 font-bold text-gray-900">Matryca uprawnień</h3>
-            {selected.is_system && <p className="mb-3 text-xs text-amber-700">Zestaw uprawnień grupy systemowej jest chroniony przed zmianą.</p>}
+            {permissionsLocked && <p className="mb-3 text-xs text-amber-700">Zestaw uprawnień grupy systemowej jest chroniony przed zmianą.</p>}
+            {selected.is_system && !permissionsLocked && <p className="mb-3 text-xs text-emerald-700">Grupa systemowa: nazwa i opis są chronione, ale uprawnienia można edytować.</p>}
             <div className="overflow-hidden rounded-xl border">
               {categories.map(([category, entries]) => (
                 <div key={category} className="grid border-b last:border-b-0 md:grid-cols-[190px_1fr]">
@@ -120,7 +123,7 @@ const SecurityGroupsPanel = ({ users, canManage }: Props) => {
                       <label key={permission.id} className="flex items-center gap-2 text-sm text-gray-700">
                         <input
                           type="checkbox"
-                          disabled={selected.is_system || !canManage}
+                          disabled={permissionsLocked || !canManage}
                           checked={draft.permissionCodes.includes(permission.code)}
                           onChange={() => changeDraft({ permissionCodes: draft.permissionCodes.includes(permission.code)
                             ? draft.permissionCodes.filter((code) => code !== permission.code)

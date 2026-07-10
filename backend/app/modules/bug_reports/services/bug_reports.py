@@ -6,7 +6,7 @@ from app.core.constants import (
     BUG_REPORT_CONTEXT,
     BUG_REPORT_MAX_FILE_BYTES,
 )
-from app.core.errors import NotFoundError, ValidationException
+from app.core.errors import NotFoundError, PermissionError, ValidationException
 from app.core.filetypes import content_matches_extension
 from app.core.uploads import ensure_upload_size
 from app.infrastructure.storage.attachments import AttachmentStorage
@@ -102,6 +102,28 @@ class BugReportService:
         except Exception:
             self.repo.rollback()
             raise
+
+    def delete_report(self, report_id: int, actor: User, can_manage: bool) -> None:
+        """Delete a report together with its stored attachment (PAP-94).
+
+        Reporters may delete their own reports; CAN_MANAGE_BUG_REPORTS
+        holders may delete any report.
+        """
+        report = self.get_report(report_id)
+        if not can_manage and report.reporter_id != actor.id:
+            raise PermissionError("Możesz usunąć tylko własne zgłoszenie")
+        storage_key = report.storage_key
+        try:
+            self.repo.delete(report)
+            self.repo.flush()
+            self.repo.commit(skip_audit=True)
+        except Exception:
+            self.repo.rollback()
+            raise
+        # Remove the file only after the DB delete committed, so a failed
+        # transaction never leaves a report pointing at a missing file.
+        if storage_key:
+            self.storage.delete(storage_key)
 
     def read_file(self, report_id: int) -> tuple[BugReport, bytes]:
         report = self.get_report(report_id)

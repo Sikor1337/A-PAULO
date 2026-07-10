@@ -47,6 +47,9 @@ class BugReportRepository(SQLRepository):
         self.session.add(report)
         return report
 
+    def delete(self, report: BugReport) -> None:
+        self.session.delete(report)
+
     def update(self, report: BugReport, **kwargs) -> BugReport:
         for key, value in kwargs.items():
             if hasattr(report, key):

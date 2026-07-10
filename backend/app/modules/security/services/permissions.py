@@ -168,7 +168,7 @@ class PermissionService:
         try:
             group = self.get_group(group_id)
             old_state = self._group_state(group)
-            self._ensure_custom_group(group)
+            self._ensure_permissions_editable(group)
             group.permissions = self._resolve_permissions(codes)
             self.repo.flush()
             self.repo.refresh(group)
@@ -206,16 +206,15 @@ class PermissionService:
             self._protect_last_admin(group, member_ids)
 
             if group.is_system:
-                current_codes = {permission.code for permission in group.permissions}
-                if (
-                    name != group.name
-                    or description != group.description
-                    or set(permission_codes) != current_codes
-                ):
+                if name != group.name or description != group.description:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Grupy systemowej nie można dowolnie modyfikować",
+                        detail="Nazwy i opisu grupy systemowej nie można zmieniać",
                     )
+                current_codes = {permission.code for permission in group.permissions}
+                if set(permission_codes) != current_codes:
+                    self._ensure_permissions_editable(group)
+                    group.permissions = self._resolve_permissions(permission_codes)
             else:
                 duplicate = any(
                     candidate.id != group.id
@@ -425,6 +424,17 @@ class PermissionService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Grupy systemowej nie można modyfikować",
+            )
+
+    @staticmethod
+    def _ensure_permissions_editable(group: UserGroup) -> None:
+        """STAFF permissions are admin-tunable (PAP-95); other system groups
+        stay locked — Admin especially, so administrators cannot cut off
+        their own access."""
+        if group.is_system and group.system_key != STAFF_GROUP_KEY:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Uprawnień tej grupy systemowej nie można modyfikować",
             )
 
     def _serialize_group(self, group: UserGroup) -> dict:
