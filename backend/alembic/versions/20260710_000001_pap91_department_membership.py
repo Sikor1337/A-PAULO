@@ -16,7 +16,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "pap91_dept_membership"
-down_revision: str | Sequence[str] | None = "pap89_tasks"
+down_revision: str | Sequence[str] | None = "pap96_submit_permissions"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
