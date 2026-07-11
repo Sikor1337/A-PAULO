@@ -1,3 +1,4 @@
+from .email_tokens import EmailToken, EmailTokenPurpose
 from .permissions import (
     Permission,
     UserGroup,
@@ -6,6 +7,8 @@ from .permissions import (
 )
 
 __all__ = [
+    "EmailToken",
+    "EmailTokenPurpose",
     "Permission",
     "UserGroup",
     "security_group_permissions",

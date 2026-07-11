@@ -22,6 +22,10 @@ class User(Base):
         String(50), default="regular"
     )  # new_volunteer, regular, admin
     is_active: Mapped[bool] = mapped_column(default=True)
+    # When the user confirmed their e-mail address (PAP-87). NULL blocks login.
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
