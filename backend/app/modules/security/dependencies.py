@@ -6,6 +6,11 @@ from sqlalchemy.orm import Session
 from app.core.audit import AuditPort
 from app.core.config import get_settings
 from app.core.dependencies import get_db
+from app.infrastructure.email import (
+    ConsoleEmailBackend,
+    EmailPort,
+    ResendEmailBackend,
+)
 from app.modules.audit.dependencies import get_audit_service
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
@@ -14,6 +19,8 @@ from app.modules.security.models.constants import (
     CAN_MANAGE_SECURITY,
 )
 from app.modules.security.repositories import PermissionRepository
+from app.modules.security.repositories.email_tokens import EmailTokenRepository
+from app.modules.security.services.account_emails import AccountEmailService
 from app.modules.security.services.auth import AuthService
 from app.modules.security.services.permissions import PermissionService
 from app.modules.security.services.token import TokenService
@@ -54,6 +61,29 @@ def get_auth_service(
     audit: AuditPort = Depends(get_audit_service),
 ) -> AuthService:
     return AuthService(repo, token_service, permissions, audit)
+
+
+def get_email_backend() -> EmailPort:
+    settings = get_settings()
+    if settings.email_provider == "resend" and settings.resend_api_key:
+        return ResendEmailBackend(settings.resend_api_key, settings.email_from)
+    return ConsoleEmailBackend()
+
+
+def get_email_token_repo(
+    session: Session = Depends(get_db),
+) -> EmailTokenRepository:
+    return EmailTokenRepository(session)
+
+
+def get_account_email_service(
+    tokens: EmailTokenRepository = Depends(get_email_token_repo),
+    users: UserRepository = Depends(get_user_repo),
+    email: EmailPort = Depends(get_email_backend),
+) -> AccountEmailService:
+    return AccountEmailService(
+        tokens, users, email, get_settings().frontend_base_url
+    )
 
 
 def get_current_user(

@@ -1,5 +1,7 @@
 """User repository for data access."""
 
+from datetime import datetime
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
@@ -95,6 +97,7 @@ class UserRepository(SQLRepository):
         last_name: str = "",
         status: str = "regular",
         is_active: bool = True,
+        email_verified_at: datetime | None = None,
     ) -> User:
         """Create new user."""
         user = User(
@@ -105,6 +108,7 @@ class UserRepository(SQLRepository):
             last_name=last_name,
             status=status,
             is_active=is_active,
+            email_verified_at=email_verified_at,
         )
         self.session.add(user)
         return user
