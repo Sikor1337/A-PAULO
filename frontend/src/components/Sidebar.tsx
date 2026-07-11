@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useMyPermissions } from '@/hooks/usePermissions';
+import GuideModal from '@/features/guide/GuideModal';
 import type { PermissionCode, UserStatus } from '@/types';
 
 interface SidebarProps {
@@ -65,6 +66,7 @@ const Sidebar = ({ groupsSlot, isOpen = true, onClose }: SidebarProps) => {
   const { user, logout } = useAuthStore();
   const permissions = useMyPermissions().data?.permissions ?? [];
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/' || location.pathname === '/dashboard';
@@ -77,6 +79,7 @@ const Sidebar = ({ groupsSlot, isOpen = true, onClose }: SidebarProps) => {
   };
 
   return (
+    <>
     <aside
       className={`fixed left-0 top-0 z-40 flex h-dvh w-[260px] flex-col transition-transform duration-200 lg:translate-x-0 ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
@@ -189,6 +192,16 @@ const Sidebar = ({ groupsSlot, isOpen = true, onClose }: SidebarProps) => {
               type="button"
               onClick={() => {
                 setProfileMenuOpen(false);
+                setGuideOpen(true);
+              }}
+              className="w-full px-3 py-2 text-left text-sm font-medium text-gray-200 transition-colors hover:bg-[#3d4558] hover:text-white"
+            >
+              📖 Przewodnik
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setProfileMenuOpen(false);
                 logout();
                 goTo('/login');
               }}
@@ -200,6 +213,8 @@ const Sidebar = ({ groupsSlot, isOpen = true, onClose }: SidebarProps) => {
         )}
       </div>
     </aside>
+    {guideOpen && <GuideModal onClose={() => setGuideOpen(false)} />}
+    </>
   );
 };
 
