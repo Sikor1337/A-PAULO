@@ -335,3 +335,60 @@ def test_checklist_item_volunteer_assignment(api_client) -> None:
         json={"volunteer_id": 99999},
     )
     assert missing.status_code == 404
+
+
+def test_clear_event_and_due_date_flags_null_the_fields(
+    api_client, db_session, admin_user
+) -> None:
+    """The clear_* flags actually null the stored value (not just reject)."""
+    department = _create_department(api_client, name="Porzadkowanie")
+    event = _create_event(db_session, admin_user)
+    task = api_client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Sprzatanie",
+            "department_id": department["id"],
+            "event_id": event.id,
+            "due_date": "2026-08-01",
+        },
+    ).json()
+    assert task["event_id"] == event.id
+    assert task["due_date"] is not None
+
+    without_event = api_client.patch(
+        f"/api/v1/tasks/{task['id']}", json={"clear_event": True}
+    ).json()
+    assert without_event["event_id"] is None
+    assert without_event["due_date"] is not None
+
+    without_due = api_client.patch(
+        f"/api/v1/tasks/{task['id']}", json={"clear_due_date": True}
+    ).json()
+    assert without_due["due_date"] is None
+
+
+def test_deleting_the_last_open_item_auto_completes_the_task(api_client) -> None:
+    """Reconcile also runs on delete: removing the only open item finishes it."""
+    department = _create_department(api_client, name="Archiwum")
+    task = api_client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Segregacja",
+            "department_id": department["id"],
+            "checklist": ["Gotowe", "Wciaz otwarte"],
+        },
+    ).json()
+    done_item, open_item = task["checklist"]
+
+    in_progress = api_client.patch(
+        f"/api/v1/tasks/{task['id']}/checklist/{done_item['id']}",
+        json={"is_done": True},
+    ).json()
+    # One of two items done: not yet complete.
+    assert in_progress["status"] != "ZROBIONE"
+
+    completed = api_client.delete(
+        f"/api/v1/tasks/{task['id']}/checklist/{open_item['id']}"
+    ).json()
+    assert completed["status"] == "ZROBIONE"
+    assert completed["completed_at"] is not None

@@ -120,3 +120,45 @@ def test_membership_rejects_unknown_volunteer_and_archived_department(
         json={"volunteer_id": volunteer["id"]},
     )
     assert blocked.status_code == 422
+
+
+def test_rename_to_another_departments_name_conflicts(api_client) -> None:
+    """Renaming onto a name another department already owns is rejected."""
+    _create_department(api_client, name="Media")
+    remonty = _create_department(api_client, name="Remonty", icon="🔨")
+
+    conflict = api_client.patch(
+        f"/api/v1/departments/{remonty['id']}", json={"name": "media"}
+    )
+    assert conflict.status_code == 409
+
+
+def test_rename_that_only_changes_letter_case_is_allowed(api_client) -> None:
+    """A case-only rename is not a self-conflict."""
+    department = _create_department(api_client, name="Media")
+
+    updated = api_client.patch(
+        f"/api/v1/departments/{department['id']}", json={"name": "MEDIA"}
+    )
+    assert updated.status_code == 200
+    assert updated.json()["name"] == "MEDIA"
+
+
+def test_removing_a_non_member_returns_404(api_client) -> None:
+    department = _create_department(api_client)
+    volunteer = _create_volunteer(api_client, "obcy@example.com")
+
+    response = api_client.delete(
+        f"/api/v1/departments/{department['id']}/members/{volunteer['id']}"
+    )
+    assert response.status_code == 404
+
+
+def test_detail_and_update_of_unknown_department_return_404(api_client) -> None:
+    assert api_client.get("/api/v1/departments/999999").status_code == 404
+    assert (
+        api_client.patch(
+            "/api/v1/departments/999999", json={"description": "x"}
+        ).status_code
+        == 404
+    )
