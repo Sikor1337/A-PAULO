@@ -54,22 +54,3 @@ class ProfileUpdateRequest(BaseModel):
     last_name: str | None = Field(default=None, max_length=150)
     current_password: str | None = None
     new_password: str | None = Field(default=None, min_length=6)
-
-
-class EmailRequest(BaseModel):
-    """Request keyed only by an e-mail address (verification resend / reset)."""
-
-    email: EmailStr
-
-
-class TokenOnlyRequest(BaseModel):
-    """Confirm an action with a single one-time token from an e-mail link."""
-
-    token: str = Field(..., min_length=16, max_length=128)
-
-
-class PasswordResetConfirmRequest(BaseModel):
-    """Set a new password using a password-reset token."""
-
-    token: str = Field(..., min_length=16, max_length=128)
-    new_password: str = Field(..., min_length=6)

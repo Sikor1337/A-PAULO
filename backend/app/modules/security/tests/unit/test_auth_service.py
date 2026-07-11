@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -82,7 +81,6 @@ def test_register_normalizes_fields_hashes_password_and_commits(
         first_name="Jan",
         last_name="Kowalski",
         status="regular",
-        email_verified_at=None,
     )
     session.flush.assert_called_once()
     session.refresh.assert_called_once_with(user)
@@ -179,15 +177,15 @@ def test_register_claims_a_migrated_recruitment_account(
 
     assert result is migrated_user
     repo.create.assert_not_called()
-    update_kwargs = repo.update.call_args.kwargs
-    assert update_kwargs["username"] == "candidate"
-    assert update_kwargs["hashed_password"] == "hashed:StrongPass123"
-    assert update_kwargs["first_name"] == "Anna"
-    assert update_kwargs["last_name"] == "Nowak"
-    assert update_kwargs["status"] == "regular"
-    assert update_kwargs["is_active"] is True
-    # A claimed invite arrived by e-mail, so the address counts as verified.
-    assert update_kwargs["email_verified_at"] is not None
+    repo.update.assert_called_once_with(
+        migrated_user,
+        username="candidate",
+        hashed_password="hashed:StrongPass123",
+        first_name="Anna",
+        last_name="Nowak",
+        status="regular",
+        is_active=True,
+    )
     session.commit.assert_called_once()
 
 
@@ -197,12 +195,7 @@ def test_login_uses_username_then_email_and_issues_tokens(
     token_service: MagicMock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    user = SimpleNamespace(
-        id=42,
-        is_active=True,
-        hashed_password="stored-hash",
-        email_verified_at=datetime(2026, 1, 1, tzinfo=UTC),
-    )
+    user = SimpleNamespace(id=42, is_active=True, hashed_password="stored-hash")
     repo.get_by_username.return_value = None
     repo.get_by_email.return_value = user
     token_service.create_access_token.return_value = "access-token"

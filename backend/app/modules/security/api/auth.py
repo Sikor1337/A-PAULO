@@ -1,37 +1,25 @@
 """Authentication API endpoints."""
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends
 
 from app.modules.core_data.models import User
-from app.modules.security.dependencies import (
-    get_account_email_service,
-    get_auth_service,
-    get_current_user,
-)
+from app.modules.security.dependencies import get_auth_service, get_current_user
 from app.modules.security.schemas import (
-    EmailRequest,
     LoginRequest,
-    PasswordResetConfirmRequest,
     ProfileUpdateRequest,
     RegisterRequest,
     Token,
-    TokenOnlyRequest,
     TokenRefresh,
     UserResponse,
 )
-from app.modules.security.services.account_emails import AccountEmailService
 from app.modules.security.services.auth import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=UserResponse)
-def register(
-    data: RegisterRequest,
-    svc: AuthService = Depends(get_auth_service),
-    emails: AccountEmailService = Depends(get_account_email_service),
-):
-    """Register new user; unverified accounts get a confirmation e-mail."""
-    user = svc.register(
+def register(data: RegisterRequest, svc: AuthService = Depends(get_auth_service)):
+    """Register new user."""
+    return svc.register(
         username=data.username,
         email=data.email,
         password=data.password,
@@ -39,49 +27,6 @@ def register(
         last_name=data.last_name,
         recruitment_token=data.recruitment_token,
     )
-    if user.email_verified_at is None:
-        emails.send_verification(user)
-    return user
-
-
-@router.post("/verify-email", status_code=status.HTTP_204_NO_CONTENT)
-def verify_email(
-    data: TokenOnlyRequest,
-    emails: AccountEmailService = Depends(get_account_email_service),
-):
-    """Confirm an e-mail address using the token from the confirmation link."""
-    emails.verify_email(data.token)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.post("/verify-email/resend", status_code=status.HTTP_202_ACCEPTED)
-def resend_verification(
-    data: EmailRequest,
-    emails: AccountEmailService = Depends(get_account_email_service),
-):
-    """Re-send the confirmation e-mail; always 202 (no account disclosure)."""
-    emails.resend_verification(data.email)
-    return Response(status_code=status.HTTP_202_ACCEPTED)
-
-
-@router.post("/password-reset/request", status_code=status.HTTP_202_ACCEPTED)
-def request_password_reset(
-    data: EmailRequest,
-    emails: AccountEmailService = Depends(get_account_email_service),
-):
-    """Send a password-reset e-mail; always 202 (no account disclosure)."""
-    emails.request_password_reset(data.email)
-    return Response(status_code=status.HTTP_202_ACCEPTED)
-
-
-@router.post("/password-reset/confirm", status_code=status.HTTP_204_NO_CONTENT)
-def confirm_password_reset(
-    data: PasswordResetConfirmRequest,
-    emails: AccountEmailService = Depends(get_account_email_service),
-):
-    """Set a new password using a password-reset token."""
-    emails.confirm_password_reset(data.token, data.new_password)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/token", response_model=Token)
