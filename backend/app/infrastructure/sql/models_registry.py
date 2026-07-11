@@ -15,7 +15,7 @@ from app.modules.recruitment.models import (
     RecruitmentOnboardingMeeting,
     RecruitmentSubmission,
 )
-from app.modules.security.models import Permission, UserGroup
+from app.modules.security.models import EmailToken, Permission, UserGroup
 from app.modules.tasks.models import Task, TaskAssignee, TaskChecklistItem
 
 __all__ = [
@@ -31,6 +31,7 @@ __all__ = [
     "DepartmentMember",
     "DepartureField",
     "DepartureInterview",
+    "EmailToken",
     "Function",
     "Group",
     "Permission",

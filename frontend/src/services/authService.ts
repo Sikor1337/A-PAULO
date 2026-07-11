@@ -140,4 +140,27 @@ export const authService = {
     });
     return response.data;
   },
+
+  // Confirm an e-mail address with the token from the confirmation link
+  async verifyEmail(token: string): Promise<void> {
+    await authClient.post('/auth/verify-email', { token });
+  },
+
+  // Re-send the confirmation e-mail
+  async resendVerification(email: string): Promise<void> {
+    await authClient.post('/auth/verify-email/resend', { email });
+  },
+
+  // Request a password-reset e-mail
+  async requestPasswordReset(email: string): Promise<void> {
+    await authClient.post('/auth/password-reset/request', { email });
+  },
+
+  // Set a new password using a reset token
+  async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+    await authClient.post('/auth/password-reset/confirm', {
+      token,
+      new_password: newPassword,
+    });
+  },
 };

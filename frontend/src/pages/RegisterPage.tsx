@@ -24,6 +24,7 @@ const RegisterPage = () => {
   const { isAuthenticated, user } = useAuthStore();
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState<string>('');
 
   const {
     register,
@@ -45,6 +46,7 @@ const RegisterPage = () => {
     setIsLoading(true);
     setError('');
 
+    const isRecruitment = searchParams.get('recruitment') === '1';
     try {
       // Register user
       await authService.register({
@@ -53,15 +55,21 @@ const RegisterPage = () => {
         password: data.password,
         first_name: data.first_name,
         last_name: data.last_name,
-        recruitment_token: searchParams.get('recruitment') === '1'
+        recruitment_token: isRecruitment
           ? getStoredRecruitmentAccessToken()
           : undefined,
       });
 
-      // Redirect to login after successful registration
-      navigate('/login', { 
-        state: { message: 'Rejestracja zakończona pomyślnie! Zaloguj się na swoje konto.' } 
-      });
+      if (isRecruitment) {
+        // Recruitment accounts arrive via an e-mailed link and are already
+        // verified — send them straight to login.
+        navigate('/login', {
+          state: { message: 'Rejestracja zakończona pomyślnie! Zaloguj się na swoje konto.' },
+        });
+      } else {
+        // Normal sign-up must confirm the e-mail before logging in.
+        setRegisteredEmail(data.email);
+      }
     } catch (err) {
       console.error('Registration error:', err);
       setError(parseApiError(err, 'Wystąpił błąd podczas rejestracji. Spróbuj ponownie.'));
@@ -69,6 +77,33 @@ const RegisterPage = () => {
       setIsLoading(false);
     }
   };
+
+  if (registeredEmail) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-gray-100 px-4 py-6">
+        <div className="w-full max-w-md rounded-lg bg-white p-6 text-center shadow-md sm:p-8">
+          <h1 className="mb-6 text-2xl font-bold text-gray-900">A-PAULO</h1>
+          <h2 className="mb-3 text-xl font-bold text-emerald-600">Sprawdź swoją skrzynkę</h2>
+          <p className="mb-6 text-gray-600">
+            Wysłaliśmy link potwierdzający na adres <strong>{registeredEmail}</strong>.
+            Kliknij go, aby aktywować konto i móc się zalogować.
+          </p>
+          <button
+            type="button"
+            onClick={() => authService.resendVerification(registeredEmail)}
+            className="mb-4 text-sm text-blue-600 hover:text-blue-700"
+          >
+            Wyślij link ponownie
+          </button>
+          <p className="text-sm text-gray-600">
+            <Link to="/login" className="text-blue-600 hover:text-blue-700">
+              Przejdź do logowania
+            </Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-gray-100 px-4 py-6">
