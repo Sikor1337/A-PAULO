@@ -1,8 +1,10 @@
 """Department business logic."""
 
 from app.core.errors import ConflictError, NotFoundError, ValidationException
-from app.modules.departments.models.departments import Department
+from app.modules.core_data.models import User
+from app.modules.departments.models.departments import Department, MembershipStatus
 from app.modules.departments.repositories.departments import DepartmentRepository
+from app.modules.pi.models.volunteer import Volunteer
 
 
 class DepartmentService:
@@ -73,7 +75,63 @@ class DepartmentService:
                 raise NotFoundError("Wolontariusz nie istnieje")
             if self.repo.get_member(department_id, volunteer_id):
                 raise ConflictError("Wolontariusz już należy do tego działu")
-            self.repo.add_member(department_id, volunteer_id)
+            # A manager-added member is active immediately.
+            self.repo.add_member(
+                department_id, volunteer_id, status=MembershipStatus.ACTIVE.value
+            )
+            self.repo.commit(skip_audit=True)
+            return self._serialize_detail(department)
+        except Exception:
+            self.repo.rollback()
+            raise
+
+    def request_membership(self, department_id: int, user: User) -> dict:
+        """A volunteer asks to join; the request awaits approval (PAP-91)."""
+        try:
+            department = self.get_department(department_id)
+            if department.is_archived:
+                raise ValidationException(
+                    "Nie można dołączyć do zarchiwizowanego działu"
+                )
+            volunteer = self._volunteer_for_user(user)
+            if self.repo.get_member(department_id, volunteer.id):
+                raise ConflictError(
+                    "Masz już członkostwo lub oczekującą prośbę w tym dziale"
+                )
+            self.repo.add_member(
+                department_id, volunteer.id, status=MembershipStatus.PENDING.value
+            )
+            self.repo.commit(skip_audit=True)
+            return self._serialize_detail(department)
+        except Exception:
+            self.repo.rollback()
+            raise
+
+    def approve_member(self, department_id: int, volunteer_id: int) -> dict:
+        """Approve a pending join request, turning it into full membership."""
+        try:
+            department = self.get_department(department_id)
+            member = self.repo.get_member(department_id, volunteer_id)
+            if not member:
+                raise NotFoundError("Brak prośby o dołączenie do tego działu")
+            if member.status == MembershipStatus.ACTIVE.value:
+                raise ConflictError("Wolontariusz jest już aktywnym członkiem")
+            member.status = MembershipStatus.ACTIVE.value
+            self.repo.commit(skip_audit=True)
+            return self._serialize_detail(department)
+        except Exception:
+            self.repo.rollback()
+            raise
+
+    def leave_department(self, department_id: int, user: User) -> dict:
+        """Remove the current volunteer's own membership (PAP-91)."""
+        try:
+            department = self.get_department(department_id)
+            volunteer = self._volunteer_for_user(user)
+            member = self.repo.get_member(department_id, volunteer.id)
+            if not member:
+                raise NotFoundError("Nie należysz do tego działu")
+            self.repo.remove_member(member)
             self.repo.commit(skip_audit=True)
             return self._serialize_detail(department)
         except Exception:
@@ -93,6 +151,15 @@ class DepartmentService:
             self.repo.rollback()
             raise
 
+    def _volunteer_for_user(self, user: User) -> Volunteer:
+        email = getattr(user, "email", None)
+        volunteer = self.repo.get_volunteer_by_email(email) if email else None
+        if not volunteer:
+            raise NotFoundError(
+                "Twoje konto nie jest powiązane z profilem wolontariusza"
+            )
+        return volunteer
+
     def _serialize_list_item(self, department: Department, member_count: int) -> dict:
         return {
             "id": department.id,
@@ -111,6 +178,7 @@ class DepartmentService:
                 "full_name": volunteer.full_name,
                 "email": volunteer.email,
                 "status": volunteer.status,
+                "membership_status": member.status,
                 "created_at": member.created_at,
             }
             for member, volunteer in self.repo.list_members(department.id)

@@ -4,11 +4,13 @@ import DepartmentFormModal from '@/features/departments/DepartmentFormModal';
 import { useDepartmentActions, useDepartmentDetail, useDepartmentList } from '@/hooks/useDepartments';
 import { useVolunteerList } from '@/hooks/useVolunteers';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { useAuthStore } from '@/stores/authStore';
 import { formatDate } from '@/lib/date';
 import type { DepartmentListItem } from '@/types';
 
 const DepartmentsPage: React.FC = () => {
   const { hasPermission: canManage } = useHasPermission('CAN_MANAGE_DEPARTMENTS');
+  const user = useAuthStore((state) => state.user);
   const [showArchived, setShowArchived] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editing, setEditing] = useState<DepartmentListItem | null>(null);
@@ -22,7 +24,14 @@ const DepartmentsPage: React.FC = () => {
     setEditing(null);
     setIsAdding(false);
   };
-  const { save, addMember, removeMember } = useDepartmentActions({ onSaved: closeForm });
+  const { save, addMember, removeMember, join, approveMember, leave } = useDepartmentActions({ onSaved: closeForm });
+
+  // The current user's own membership in the selected department, if any.
+  const myMembership = useMemo(() => {
+    const email = user?.email?.toLowerCase();
+    if (!email || !detail) return null;
+    return detail.members.find((member) => member.email.toLowerCase() === email) ?? null;
+  }, [detail, user?.email]);
 
   // Auto-select first department once the list arrives (condition turns false after set)
   if (departments?.length && selectedId === null) {
@@ -136,34 +145,64 @@ const DepartmentsPage: React.FC = () => {
                     <p className="mt-1 text-sm font-medium text-gray-500">{detail.description}</p>
                   )}
                 </div>
-                {canManage && (
-                  <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {!detail.is_archived && !myMembership && (
                     <button
                       type="button"
-                      onClick={() =>
-                        setEditing({
-                          id: detail.id,
-                          name: detail.name,
-                          icon: detail.icon,
-                          description: detail.description,
-                          is_archived: detail.is_archived,
-                          member_count: detail.members.length,
-                        })
-                      }
-                      className="min-h-9 rounded-lg bg-indigo-50 px-3 text-xs font-bold text-indigo-700 transition-colors hover:bg-indigo-100"
+                      disabled={join.isPending}
+                      onClick={() => join.mutate(detail.id)}
+                      className="min-h-9 rounded-lg bg-emerald-50 px-3 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50"
                     >
-                      ✏️ Edytuj
+                      ➕ Dołącz
                     </button>
+                  )}
+                  {myMembership?.membership_status === 'PENDING' && (
+                    <span className="inline-flex min-h-9 items-center rounded-lg bg-amber-50 px-3 text-xs font-bold text-amber-700">
+                      ⏳ Prośba oczekuje na akceptację
+                    </span>
+                  )}
+                  {myMembership?.membership_status === 'ACTIVE' && (
                     <button
                       type="button"
-                      onClick={toggleArchive}
-                      disabled={save.isPending}
-                      className="min-h-9 rounded-lg bg-amber-50 px-3 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50"
+                      disabled={leave.isPending}
+                      onClick={async () => {
+                        if (!confirm('Opuścić ten dział?')) return;
+                        leave.mutate(detail.id);
+                      }}
+                      className="min-h-9 rounded-lg bg-rose-50 px-3 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"
                     >
-                      {detail.is_archived ? '↩️ Przywróć' : '🗄️ Archiwizuj'}
+                      🚪 Opuść dział
                     </button>
-                  </div>
-                )}
+                  )}
+                  {canManage && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditing({
+                            id: detail.id,
+                            name: detail.name,
+                            icon: detail.icon,
+                            description: detail.description,
+                            is_archived: detail.is_archived,
+                            member_count: detail.members.length,
+                          })
+                        }
+                        className="min-h-9 rounded-lg bg-indigo-50 px-3 text-xs font-bold text-indigo-700 transition-colors hover:bg-indigo-100"
+                      >
+                        ✏️ Edytuj
+                      </button>
+                      <button
+                        type="button"
+                        onClick={toggleArchive}
+                        disabled={save.isPending}
+                        className="min-h-9 rounded-lg bg-amber-50 px-3 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50"
+                      >
+                        {detail.is_archived ? '↩️ Przywróć' : '🗄️ Archiwizuj'}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Tabs — only Członkowie in v1; more tools arrive in later tickets */}
@@ -217,23 +256,42 @@ const DepartmentsPage: React.FC = () => {
                     <tbody>
                       {detail.members.map((member) => (
                         <tr key={member.id} className="border-b border-gray-100 last:border-0 hover:bg-amber-50/40">
-                          <td className="px-3 py-3 font-bold text-gray-900">{member.full_name}</td>
+                          <td className="px-3 py-3 font-bold text-gray-900">
+                            <span className="flex items-center gap-2">
+                              {member.full_name}
+                              {member.membership_status === 'PENDING' && (
+                                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">OCZEKUJE</span>
+                              )}
+                            </span>
+                          </td>
                           <td className="px-3 py-3 font-medium text-gray-600">{member.email}</td>
                           <td className="px-3 py-3 font-semibold text-gray-600">{member.status}</td>
                           <td className="px-3 py-3 font-medium text-gray-500">{formatDate(member.created_at)}</td>
                           {canManage && (
                             <td className="px-3 py-3 text-center">
-                              <button
-                                type="button"
-                                disabled={removeMember.isPending}
-                                onClick={() => {
-                                  if (!confirm(`Usunąć ${member.full_name} z działu?`)) return;
-                                  removeMember.mutate({ id: detail.id, volunteerId: member.volunteer_id });
-                                }}
-                                className="min-h-9 rounded-md bg-rose-50 px-3 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"
-                              >
-                                Usuń
-                              </button>
+                              <div className="flex justify-center gap-2">
+                                {member.membership_status === 'PENDING' && (
+                                  <button
+                                    type="button"
+                                    disabled={approveMember.isPending}
+                                    onClick={() => approveMember.mutate({ id: detail.id, volunteerId: member.volunteer_id })}
+                                    className="min-h-9 rounded-md bg-emerald-50 px-3 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50"
+                                  >
+                                    Zatwierdź
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  disabled={removeMember.isPending}
+                                  onClick={() => {
+                                    if (!confirm(`Usunąć ${member.full_name} z działu?`)) return;
+                                    removeMember.mutate({ id: detail.id, volunteerId: member.volunteer_id });
+                                  }}
+                                  className="min-h-9 rounded-md bg-rose-50 px-3 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"
+                                >
+                                  Usuń
+                                </button>
+                              </div>
                             </td>
                           )}
                         </tr>
