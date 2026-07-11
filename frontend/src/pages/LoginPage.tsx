@@ -20,7 +20,6 @@ const LoginPage = () => {
   const [searchParams] = useSearchParams();
   const { login, isAuthenticated, user: currentUser } = useAuthStore();
   const [error, setError] = useState<string>('');
-  const [unverifiedEmail, setUnverifiedEmail] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -40,7 +39,6 @@ const LoginPage = () => {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     setError('');
-    setUnverifiedEmail('');
 
     try {
       // Pobierz tokeny z backendu
@@ -80,12 +78,6 @@ const LoginPage = () => {
       const axiosErr = err as AxiosError<{ detail?: string }>;
       if (axiosErr.response?.status === 401) {
         setError('Nieprawidłowy email lub hasło');
-      } else if (axiosErr.response?.status === 403) {
-        setUnverifiedEmail(data.email);
-        setError(
-          axiosErr.response.data?.detail ??
-            'Potwierdź swój adres e-mail, aby się zalogować.',
-        );
       } else if (axiosErr.response?.data?.detail) {
         setError(axiosErr.response.data.detail);
       } else {
@@ -105,19 +97,6 @@ const LoginPage = () => {
         {error && (
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
             {error}
-            {unverifiedEmail && (
-              <button
-                type="button"
-                onClick={() => {
-                  authService.resendVerification(unverifiedEmail);
-                  setError('Wysłaliśmy nowy link potwierdzający na Twój adres e-mail.');
-                  setUnverifiedEmail('');
-                }}
-                className="mt-2 block font-semibold underline"
-              >
-                Wyślij link potwierdzający ponownie
-              </button>
-            )}
           </div>
         )}
         
@@ -178,12 +157,6 @@ const LoginPage = () => {
         </form>
 
         <p className="mt-4 text-center text-sm text-gray-600">
-          <Link to="/forgot-password" className="text-blue-600 hover:text-blue-700">
-            Nie pamiętasz hasła?
-          </Link>
-        </p>
-
-        <p className="mt-2 text-center text-sm text-gray-600">
           Nie masz konta?{' '}
           <Link
             to={searchParams.get('recruitment') === '1' ? '/register?recruitment=1' : '/register'}
