@@ -42,8 +42,8 @@ const SurveyFieldModal = ({
     || placeholder !== (field?.placeholder ?? '')
     || optionsText !== (field?.options.join('\n') ?? '');
   const confirmDiscard = useUnsavedChanges(isDirty);
-  const close = () => {
-    if (confirmDiscard()) onClose();
+  const close = async () => {
+    if (await confirmDiscard()) onClose();
   };
 
   const submit = (event: React.FormEvent) => {

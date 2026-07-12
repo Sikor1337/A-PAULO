@@ -1,12 +1,14 @@
 """Departments API endpoints."""
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, status
 
 from app.modules.core_data.models import User
 from app.modules.departments.dependencies import get_department_service
 from app.modules.departments.schemas.departments import (
     DepartmentCreateRequest,
     DepartmentDetailResponse,
+    DepartmentInventoryItemInput,
+    DepartmentInventoryItemResponse,
     DepartmentListItem,
     DepartmentUpdateRequest,
     MemberAddRequest,
@@ -120,3 +122,58 @@ def remove_member(
 ):
     """Remove a volunteer from the department."""
     return service.remove_member(department_id, volunteer_id)
+
+
+@router.get(
+    "/{department_id}/inventory",
+    response_model=list[DepartmentInventoryItemResponse],
+)
+def list_inventory(
+    department_id: int,
+    service: DepartmentService = Depends(get_department_service),
+    _user: User = Depends(require_permission(CAN_VIEW_DEPARTMENTS)),
+):
+    return service.list_inventory(department_id)
+
+
+@router.post(
+    "/{department_id}/inventory",
+    response_model=DepartmentInventoryItemResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_inventory_item(
+    department_id: int,
+    request: DepartmentInventoryItemInput,
+    service: DepartmentService = Depends(get_department_service),
+    _user: User = Depends(require_permission(CAN_VIEW_DEPARTMENTS)),
+):
+    return service.create_inventory_item(department_id, **request.model_dump())
+
+
+@router.put(
+    "/{department_id}/inventory/{item_id}",
+    response_model=DepartmentInventoryItemResponse,
+)
+def update_inventory_item(
+    department_id: int,
+    item_id: int,
+    request: DepartmentInventoryItemInput,
+    service: DepartmentService = Depends(get_department_service),
+    _user: User = Depends(require_permission(CAN_VIEW_DEPARTMENTS)),
+):
+    return service.update_inventory_item(
+        department_id, item_id, **request.model_dump()
+    )
+
+
+@router.delete(
+    "/{department_id}/inventory/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_inventory_item(
+    department_id: int,
+    item_id: int,
+    service: DepartmentService = Depends(get_department_service),
+    _user: User = Depends(require_permission(CAN_MANAGE_DEPARTMENTS)),
+):
+    service.delete_inventory_item(department_id, item_id)

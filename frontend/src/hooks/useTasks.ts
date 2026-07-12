@@ -1,13 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { taskService } from '@/services/taskService';
 import { parseApiError } from '@/lib/errors';
+import { appDialog } from '@/lib/appDialog';
 import type { TaskCreateInput, TaskFilters, TaskUpdateInput } from '@/types';
 
 /** Task list with server-side filters. */
-export function useTaskList(filters: Partial<TaskFilters>) {
+export function useTaskList(filters: Partial<TaskFilters>, enabled = true) {
   return useQuery({
     queryKey: ['tasks', filters],
     queryFn: () => taskService.list(filters),
+    enabled,
   });
 }
 
@@ -16,7 +18,7 @@ export function useTaskActions(options?: { onSaved?: () => void }) {
   const queryClient = useQueryClient();
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['tasks'] });
-  const onError = (error: unknown) => alert(parseApiError(error));
+  const onError = (error: unknown) => appDialog.error(parseApiError(error));
 
   const save = useMutation({
     mutationFn: ({ id, data }: { id?: number | null; data: TaskCreateInput | TaskUpdateInput }) =>

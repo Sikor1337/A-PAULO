@@ -4,6 +4,7 @@ import Modal from '@/components/ui/Modal';
 import DateTimeField from '@/features/calendar/DateTimeField';
 import type { CalendarEvent, CalendarEventInput, CalendarEventStatus, CalendarEventVisibility } from '@/types';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { appDialog } from '@/lib/appDialog';
 
 interface Props {
   event: CalendarEvent | null;
@@ -56,8 +57,8 @@ const EventFormModal = ({ event, initialDate, isPending, onClose, onSave }: Prop
     defaultValues: defaults(event, initialDate),
   });
   const confirmDiscard = useUnsavedChanges(isDirty && !isPending);
-  const close = () => {
-    if (confirmDiscard()) onClose();
+  const close = async () => {
+    if (await confirmDiscard()) onClose();
   };
   const isAllDay = useWatch({ control, name: 'isAllDay' });
   const recurrenceRule = useWatch({ control, name: 'recurrenceRule' });
@@ -73,7 +74,7 @@ const EventFormModal = ({ event, initialDate, isPending, onClose, onSave }: Prop
     const start = new Date(isAllDay ? `${values.startsAt}T00:00:00` : values.startsAt);
     const end = new Date(isAllDay ? `${values.endsAt}T00:00:00` : values.endsAt);
     if (end < start) {
-      alert('Data zakończenia nie może być wcześniejsza od rozpoczęcia.');
+      appDialog.warning('Data zakończenia nie może być wcześniejsza od rozpoczęcia.');
       return;
     }
     const baseRule = values.recurrenceRule

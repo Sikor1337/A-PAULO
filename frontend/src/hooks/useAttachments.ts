@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { attachmentService } from '@/services/attachmentService';
 import { parseApiError } from '@/lib/errors';
+import { appDialog } from '@/lib/appDialog';
 import type {
   AttachmentUpdateInput,
   BOCardAttachment,
@@ -34,19 +35,19 @@ export function useBOCardAttachmentActions(groupId: number | null) {
   const uploadBOCard = useMutation({
     mutationFn: (input: BOCardUploadInput) => attachmentService.uploadBOCard(input),
     onSuccess: invalidate,
-    onError: (error) => alert(parseApiError(error)),
+    onError: (error) => appDialog.error(parseApiError(error)),
   });
 
   const updateAttachment = useMutation({
     mutationFn: ({ id, data }: { id: number; data: AttachmentUpdateInput }) => attachmentService.update(id, data),
     onSuccess: invalidate,
-    onError: (error) => alert(parseApiError(error)),
+    onError: (error) => appDialog.error(parseApiError(error)),
   });
 
   const deleteAttachment = useMutation({
     mutationFn: (id: number) => attachmentService.delete(id),
     onSuccess: invalidate,
-    onError: () => alert('Nie udało się usunąć pliku.'),
+    onError: () => appDialog.error('Nie udało się usunąć pliku.'),
   });
 
   return { uploadBOCard, updateAttachment, deleteAttachment };
@@ -62,18 +63,18 @@ export function useBOCardOverviewActions(filters: BOCardOverviewFilters) {
   const updateAttachment = useMutation({
     mutationFn: ({ id, data }: { id: number; data: AttachmentUpdateInput }) => attachmentService.update(id, data),
     onSuccess: invalidate,
-    onError: (error) => alert(parseApiError(error)),
+    onError: (error) => appDialog.error(parseApiError(error)),
   });
 
   const deleteAttachment = useMutation({
     mutationFn: (id: number) => attachmentService.delete(id),
     onSuccess: invalidate,
-    onError: () => alert('Nie udało się usunąć pliku.'),
+    onError: () => appDialog.error('Nie udało się usunąć pliku.'),
   });
 
   const downloadArchive = useMutation({
     mutationFn: () => attachmentService.downloadBOCardsArchive(filters),
-    onError: () => alert('Nie udało się pobrać załączników.'),
+    onError: () => appDialog.error('Nie udało się pobrać załączników.'),
   });
 
   return { updateAttachment, deleteAttachment, downloadArchive };

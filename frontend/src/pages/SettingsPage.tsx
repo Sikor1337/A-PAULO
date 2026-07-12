@@ -9,6 +9,7 @@ import { useMyPermissions, useSecurityGroups } from '@/hooks/usePermissions';
 import { useTableControls } from '@/hooks/useTableControls';
 import { useUsers } from '@/hooks/useUsers';
 import { exportRowsToCsv } from '@/lib/csv';
+import { appDialog } from '@/lib/appDialog';
 import { useAuthStore } from '@/stores/authStore';
 import type { Column } from '@/components/ui/DataTable';
 import type { AdminUser, UserStatus } from '@/types';
@@ -77,7 +78,9 @@ const SettingsPage = () => {
               <button
                 type="button"
                 disabled={user.id === currentUser?.id}
-                onClick={() => confirm(`Usunąć użytkownika ${user.email}?`) && remove.mutate(user.id)}
+                onClick={async () => {
+                  if (await appDialog.confirm(`Usunąć użytkownika ${user.email}?`, { title: 'Usuwanie użytkownika', confirmLabel: 'Usuń', tone: 'error' })) remove.mutate(user.id);
+                }}
                 className="rounded bg-rose-500 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-40"
               >
                 Usuń

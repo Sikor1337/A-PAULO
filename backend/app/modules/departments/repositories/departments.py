@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.sql.repository import SQLRepository
 from app.modules.departments.models.departments import (
     Department,
+    DepartmentInventoryItem,
     DepartmentMember,
     MembershipStatus,
 )
@@ -115,3 +116,49 @@ class DepartmentRepository(SQLRepository):
             .filter(func.lower(Volunteer.email) == email.lower())
             .first()
         )
+
+    def get_volunteer(self, volunteer_id: int) -> Volunteer | None:
+        return self.session.get(Volunteer, volunteer_id)
+
+    def list_inventory(
+        self, department_id: int
+    ) -> list[tuple[DepartmentInventoryItem, Volunteer | None]]:
+        return (
+            self.session.query(DepartmentInventoryItem, Volunteer)
+            .outerjoin(
+                Volunteer,
+                Volunteer.id == DepartmentInventoryItem.borrowed_by_volunteer_id,
+            )
+            .filter(DepartmentInventoryItem.department_id == department_id)
+            .order_by(DepartmentInventoryItem.name, DepartmentInventoryItem.id)
+            .all()
+        )
+
+    def get_inventory_item(
+        self, department_id: int, item_id: int
+    ) -> DepartmentInventoryItem | None:
+        return (
+            self.session.query(DepartmentInventoryItem)
+            .filter(
+                DepartmentInventoryItem.department_id == department_id,
+                DepartmentInventoryItem.id == item_id,
+            )
+            .first()
+        )
+
+    def create_inventory_item(
+        self, department_id: int, **values
+    ) -> DepartmentInventoryItem:
+        item = DepartmentInventoryItem(department_id=department_id, **values)
+        self.session.add(item)
+        return item
+
+    def update_inventory_item(
+        self, item: DepartmentInventoryItem, **values
+    ) -> DepartmentInventoryItem:
+        for key, value in values.items():
+            setattr(item, key, value)
+        return item
+
+    def delete_inventory_item(self, item: DepartmentInventoryItem) -> None:
+        self.session.delete(item)

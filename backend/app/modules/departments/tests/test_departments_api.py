@@ -162,3 +162,73 @@ def test_detail_and_update_of_unknown_department_return_404(api_client) -> None:
         ).status_code
         == 404
     )
+
+
+def test_department_inventory_crud(api_client) -> None:
+    department = _create_department(api_client, name="Logistyka")
+    volunteer = _create_volunteer(api_client, "magazynier@example.com")
+    path = f"/api/v1/departments/{department['id']}/inventory"
+
+    created = api_client.post(
+        path,
+        json={"name": "Projektor", "location": "Szafa A"},
+    )
+    assert created.status_code == 201
+    assert created.json()["borrowed_by_volunteer_id"] is None
+
+    item_id = created.json()["id"]
+    updated = api_client.put(
+        f"{path}/{item_id}",
+        json={
+            "name": "Projektor HD",
+            "location": "Biuro",
+            "borrowed_by_volunteer_id": volunteer["id"],
+            "borrowed_at": "2026-07-12",
+        },
+    )
+    assert updated.status_code == 200
+    assert updated.json()["borrowed_by_volunteer_name"] == "Wolontariusz Testowy"
+    assert updated.json()["borrowed_at"] == "2026-07-12"
+
+    listing = api_client.get(path)
+    assert listing.status_code == 200
+    assert [item["name"] for item in listing.json()] == ["Projektor HD"]
+
+    assert api_client.delete(f"{path}/{item_id}").status_code == 204
+    assert api_client.get(path).json() == []
+
+
+def test_department_inventory_validates_borrower_and_archive(api_client) -> None:
+    department = _create_department(api_client, name="Archiwalny")
+    path = f"/api/v1/departments/{department['id']}/inventory"
+
+    incomplete_borrow = api_client.post(
+        path,
+        json={
+            "name": "Klucz",
+            "location": "Recepcja",
+            "borrowed_at": "2026-07-12",
+        },
+    )
+    assert incomplete_borrow.status_code == 422
+
+    missing_volunteer = api_client.post(
+        path,
+        json={
+            "name": "Klucz",
+            "location": "Recepcja",
+            "borrowed_by_volunteer_id": 99999,
+            "borrowed_at": "2026-07-12",
+        },
+    )
+    assert missing_volunteer.status_code == 404
+
+    api_client.patch(
+        f"/api/v1/departments/{department['id']}",
+        json={"is_archived": True},
+    )
+    blocked = api_client.post(
+        path,
+        json={"name": "Klucz", "location": "Recepcja"},
+    )
+    assert blocked.status_code == 422

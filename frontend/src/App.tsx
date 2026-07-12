@@ -9,6 +9,7 @@ import {
 } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import BackendWakeupPopup from './components/BackendWakeupPopup';
+import AppDialogProvider from './components/ui/AppDialogProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -33,6 +34,9 @@ import DepartureEditorPage from './pages/recruitment/DepartureEditorPage';
 import DepartureResponsesPage from './pages/recruitment/DepartureResponsesPage';
 import RecruitmentEntryPage from './pages/recruitment/RecruitmentEntryPage';
 import RecruitmentAccessRequiredPage from './pages/recruitment/RecruitmentAccessRequiredPage';
+import BeneficiaryApplicationPage from './pages/recruitment/BeneficiaryApplicationPage';
+import BeneficiaryRecruitmentEditorPage from './pages/recruitment/BeneficiaryRecruitmentEditorPage';
+import BeneficiaryRecruitmentResponsesPage from './pages/recruitment/BeneficiaryRecruitmentResponsesPage';
 import { queryClient } from './lib/queryClient';
 import { authService } from './services/authService';
 import { useAuthStore } from './stores/authStore';
@@ -87,6 +91,7 @@ const router = createBrowserRouter(createRoutesFromElements(
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
     <Route path="/recrutation/:token" element={<RecruitmentEntryPage />} />
+    <Route path="/beneficiary-application/:token" element={<BeneficiaryApplicationPage />} />
     <Route element={<ProtectedRoute allowedStatuses={['new_volunteer']} />}>
       <Route path="/recruitment-required" element={<RecruitmentAccessRequiredPage />} />
     </Route>
@@ -137,6 +142,8 @@ const router = createBrowserRouter(createRoutesFromElements(
           <Route path="surveys/recruitment/responses" element={<RecruitmentResponsesPage />} />
           <Route path="surveys/departure/editor" element={<DepartureEditorPage />} />
           <Route path="surveys/departure/responses" element={<DepartureResponsesPage />} />
+          <Route path="surveys/beneficiary/editor" element={<BeneficiaryRecruitmentEditorPage />} />
+          <Route path="surveys/beneficiary/responses" element={<BeneficiaryRecruitmentResponsesPage />} />
           <Route path="onboarding" element={<RecruitmentOnboardingPage />} />
           {/* Back-compat redirects for old bookmarks. */}
           <Route path="form" element={<Navigate to="/recruitment/surveys/recruitment/editor" replace />} />
@@ -153,7 +160,9 @@ const router = createBrowserRouter(createRoutesFromElements(
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <AppDialogProvider>
+        <RouterProvider router={router} />
+      </AppDialogProvider>
     </QueryClientProvider>
   );
 }

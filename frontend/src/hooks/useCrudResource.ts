@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseApiError } from '@/lib/errors';
+import { appDialog } from '@/lib/appDialog';
 
 interface CrudService<T, TInput> {
   getAll: () => Promise<T[]>;
@@ -42,13 +43,13 @@ export function useCrudResource<T, TInput>(
       invalidate();
       options?.onSaved?.();
     },
-    onError: (error) => alert(parseApiError(error)),
+    onError: (error) => appDialog.error(parseApiError(error)),
   });
 
   const remove = useMutation({
     mutationFn: (id: number) => service.delete(id),
     onSuccess: invalidate,
-    onError: () => alert('Nie udało się usunąć.'),
+    onError: () => appDialog.error('Nie udało się usunąć.'),
   });
 
   return { data: list.data, isLoading: list.isLoading, save, remove };

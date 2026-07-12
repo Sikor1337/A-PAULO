@@ -1,5 +1,11 @@
 import apiClient from '@/lib/api';
-import type { DepartmentDetail, DepartmentInput, DepartmentListItem } from '@/types';
+import type {
+  DepartmentDetail,
+  DepartmentInput,
+  DepartmentInventoryItem,
+  DepartmentInventoryItemInput,
+  DepartmentListItem,
+} from '@/types';
 
 export const departmentService = {
   list: async (includeArchived = false): Promise<DepartmentListItem[]> => {
@@ -49,5 +55,24 @@ export const departmentService = {
   leave: async (id: number): Promise<DepartmentDetail> => {
     const response = await apiClient.delete<DepartmentDetail>(`v1/departments/${id}/members/me`);
     return response.data;
+  },
+
+  getInventory: async (id: number): Promise<DepartmentInventoryItem[]> => {
+    const response = await apiClient.get<DepartmentInventoryItem[]>(`v1/departments/${id}/inventory`);
+    return response.data;
+  },
+
+  createInventoryItem: async (id: number, data: DepartmentInventoryItemInput): Promise<DepartmentInventoryItem> => {
+    const response = await apiClient.post<DepartmentInventoryItem>(`v1/departments/${id}/inventory`, data);
+    return response.data;
+  },
+
+  updateInventoryItem: async (id: number, itemId: number, data: DepartmentInventoryItemInput): Promise<DepartmentInventoryItem> => {
+    const response = await apiClient.put<DepartmentInventoryItem>(`v1/departments/${id}/inventory/${itemId}`, data);
+    return response.data;
+  },
+
+  deleteInventoryItem: async (id: number, itemId: number): Promise<void> => {
+    await apiClient.delete(`v1/departments/${id}/inventory/${itemId}`);
   },
 };

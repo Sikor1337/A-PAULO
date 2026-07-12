@@ -4,6 +4,7 @@ import SubmissionDetailModal from '@/features/recruitment/SubmissionDetailModal'
 import SubmissionList from '@/features/recruitment/SubmissionList';
 import { useRecruitmentSubmissions } from '@/hooks/useRecruitment';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { appDialog } from '@/lib/appDialog';
 import type { RecruitmentStatus, RecruitmentSubmission } from '@/types';
 
 const tabs: { status: RecruitmentStatus; label: string; empty: string }[] = [
@@ -28,21 +29,21 @@ const RecruitmentOnboardingPage = () => {
     ))
     : data;
 
-  const returnSubmission = (submission: RecruitmentSubmission) => {
-    const note = window.prompt('Co kandydat ma poprawić?');
+  const returnSubmission = async (submission: RecruitmentSubmission) => {
+    const note = await appDialog.prompt('Co kandydat ma poprawić?', { title: 'Zwróć formularz', confirmLabel: 'Zwróć' });
     if (note === null) return;
     action.mutate({ id: submission.id, action: 'return', note });
   };
 
-  const decide = (submission: RecruitmentSubmission, nextAction: 'accept' | 'reject') => {
+  const decide = async (submission: RecruitmentSubmission, nextAction: 'accept' | 'reject') => {
     const label = nextAction === 'accept' ? 'wdrożenia' : 'odrzucenia';
-    const note = window.prompt(`Komentarz do ${label} (opcjonalnie):`);
+    const note = await appDialog.prompt(`Komentarz do ${label} (opcjonalnie):`, { title: 'Decyzja rekrutacyjna' });
     if (note === null) return;
     action.mutate({ id: submission.id, action: nextAction, note });
   };
 
-  const restore = (submission: RecruitmentSubmission) => {
-    if (!window.confirm(`Cofnąć ${submission.full_name} do etapu wdrażania?`)) return;
+  const restore = async (submission: RecruitmentSubmission) => {
+    if (!await appDialog.confirm(`Cofnąć ${submission.full_name} do etapu wdrażania?`, { title: 'Przywróć kandydata' })) return;
     action.mutate({ id: submission.id, action: 'restore-onboarding' });
   };
 

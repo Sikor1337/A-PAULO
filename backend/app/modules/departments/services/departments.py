@@ -2,7 +2,11 @@
 
 from app.core.errors import ConflictError, NotFoundError, ValidationException
 from app.modules.core_data.models import User
-from app.modules.departments.models.departments import Department, MembershipStatus
+from app.modules.departments.models.departments import (
+    Department,
+    DepartmentInventoryItem,
+    MembershipStatus,
+)
 from app.modules.departments.repositories.departments import DepartmentRepository
 from app.modules.pi.models.volunteer import Volunteer
 
@@ -151,6 +155,81 @@ class DepartmentService:
             self.repo.rollback()
             raise
 
+    def list_inventory(self, department_id: int) -> list[dict]:
+        self.get_department(department_id)
+        return [
+            self._serialize_inventory_item(item, volunteer)
+            for item, volunteer in self.repo.list_inventory(department_id)
+        ]
+
+    def create_inventory_item(self, department_id: int, **values) -> dict:
+        try:
+            department = self.get_department(department_id)
+            if department.is_archived:
+                raise ValidationException(
+                    "Nie można dodawać przedmiotów do zarchiwizowanego działu"
+                )
+            self._validate_inventory_volunteer(
+                values.get("borrowed_by_volunteer_id")
+            )
+            item = self.repo.create_inventory_item(department_id, **values)
+            self.repo.flush()
+            self.repo.commit(skip_audit=True)
+            return self._serialize_inventory_item(
+                item,
+                self._inventory_volunteer(item.borrowed_by_volunteer_id),
+            )
+        except Exception:
+            self.repo.rollback()
+            raise
+
+    def update_inventory_item(
+        self, department_id: int, item_id: int, **values
+    ) -> dict:
+        try:
+            department = self.get_department(department_id)
+            if department.is_archived:
+                raise ValidationException(
+                    "Nie można edytować magazynu zarchiwizowanego działu"
+                )
+            item = self.repo.get_inventory_item(department_id, item_id)
+            if not item:
+                raise NotFoundError("Przedmiot nie istnieje w magazynie działu")
+            self._validate_inventory_volunteer(
+                values.get("borrowed_by_volunteer_id")
+            )
+            self.repo.update_inventory_item(item, **values)
+            self.repo.flush()
+            self.repo.commit(skip_audit=True)
+            return self._serialize_inventory_item(
+                item,
+                self._inventory_volunteer(item.borrowed_by_volunteer_id),
+            )
+        except Exception:
+            self.repo.rollback()
+            raise
+
+    def delete_inventory_item(self, department_id: int, item_id: int) -> None:
+        try:
+            self.get_department(department_id)
+            item = self.repo.get_inventory_item(department_id, item_id)
+            if not item:
+                raise NotFoundError("Przedmiot nie istnieje w magazynie działu")
+            self.repo.delete_inventory_item(item)
+            self.repo.commit(skip_audit=True)
+        except Exception:
+            self.repo.rollback()
+            raise
+
+    def _validate_inventory_volunteer(self, volunteer_id: int | None) -> None:
+        if volunteer_id is not None and not self.repo.volunteer_exists(volunteer_id):
+            raise NotFoundError("Wolontariusz nie istnieje")
+
+    def _inventory_volunteer(self, volunteer_id: int | None) -> Volunteer | None:
+        if volunteer_id is None:
+            return None
+        return self.repo.get_volunteer(volunteer_id)
+
     def _volunteer_for_user(self, user: User) -> Volunteer:
         email = getattr(user, "email", None)
         volunteer = self.repo.get_volunteer_by_email(email) if email else None
@@ -192,4 +271,20 @@ class DepartmentService:
             "created_at": department.created_at,
             "updated_at": department.updated_at,
             "members": members,
+        }
+
+    @staticmethod
+    def _serialize_inventory_item(
+        item: DepartmentInventoryItem, volunteer: Volunteer | None
+    ) -> dict:
+        return {
+            "id": item.id,
+            "department_id": item.department_id,
+            "name": item.name,
+            "location": item.location,
+            "borrowed_by_volunteer_id": item.borrowed_by_volunteer_id,
+            "borrowed_by_volunteer_name": volunteer.full_name if volunteer else None,
+            "borrowed_at": item.borrowed_at,
+            "created_at": item.created_at,
+            "updated_at": item.updated_at,
         }

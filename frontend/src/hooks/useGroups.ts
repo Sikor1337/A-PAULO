@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { groupService } from '@/services/groupService';
 import { parseApiError } from '@/lib/errors';
+import { appDialog } from '@/lib/appDialog';
 import type { GroupListItem, GroupDetail, GroupSaveInput } from '@/types';
 
 const invalidateKeys = ['groups', 'beneficiaries', 'group-detail'];
@@ -16,13 +17,13 @@ export function useGroups() {
     mutationFn: ({ id, data }: { id: number | null; data: GroupSaveInput }) =>
       id ? groupService.update(id, data) : groupService.create(data),
     onSuccess: invalidate,
-    onError: (error) => alert(parseApiError(error)),
+    onError: (error) => appDialog.error(parseApiError(error)),
   });
 
   const deleteGroup = useMutation({
     mutationFn: (id: number) => groupService.delete(id),
     onSuccess: invalidate,
-    onError: () => alert('Nie udało się usunąć grupy.'),
+    onError: () => appDialog.error('Nie udało się usunąć grupy.'),
   });
 
   return { groups: list.data as GroupListItem[] | undefined, saveGroup, deleteGroup };

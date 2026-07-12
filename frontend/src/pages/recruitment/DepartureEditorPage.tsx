@@ -66,7 +66,7 @@ const DepartureEditorPage = () => {
         {canManage && draft ? (
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setEditingIndex(null)} className="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">+ Dodaj pytanie</button>
-            <button type="button" onClick={() => confirmDiscard() && setDraft(null)} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Anuluj</button>
+            <button type="button" onClick={async () => { if (await confirmDiscard()) setDraft(null); }} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Anuluj</button>
             <button type="button" onClick={save} disabled={fieldsQuery.save.isPending} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Zapisz</button>
           </div>
         ) : canManage ? (

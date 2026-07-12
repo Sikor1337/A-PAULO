@@ -7,6 +7,7 @@ import { useVolunteerList } from '@/hooks/useVolunteers';
 import { useTaskActions, useTaskList } from '@/hooks/useTasks';
 import { useHasPermission } from '@/hooks/usePermissions';
 import { formatDate } from '@/lib/date';
+import { appDialog } from '@/lib/appDialog';
 import type { Task, TaskStatus } from '@/types';
 
 const STATUS_OPTIONS: TaskStatus[] = ['DO_ZROBIENIA', 'W_TRAKCIE', 'ZROBIONE'];
@@ -25,7 +26,8 @@ const TasksPage: React.FC = () => {
   // Derived live from the URL, so sidebar navigation to plain /tasks clears it.
   const filterEvent: number | '' = Number(searchParams.get('event')) || '';
 
-  const [filterDepartment, setFilterDepartment] = useState<number | ''>('');
+  const initialDepartment = Number(searchParams.get('department')) || '';
+  const [filterDepartment, setFilterDepartment] = useState<number | ''>(initialDepartment);
   const [filterStatus, setFilterStatus] = useState<'' | TaskStatus>('');
   const [filterVolunteer, setFilterVolunteer] = useState<number | ''>('');
   const [editing, setEditing] = useState<Task | null>(null);
@@ -177,8 +179,8 @@ const TasksPage: React.FC = () => {
                         <button
                           type="button"
                           disabled={remove.isPending}
-                          onClick={() => {
-                            if (!confirm(`Usunąć zadanie „${task.title}”?`)) return;
+                          onClick={async () => {
+                            if (!await appDialog.confirm(`Usunąć zadanie „${task.title}”?`, { title: 'Usuwanie zadania', confirmLabel: 'Usuń', tone: 'error' })) return;
                             remove.mutate(task.id);
                           }}
                           className="min-h-9 rounded-md bg-rose-50 px-3 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"

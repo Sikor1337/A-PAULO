@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
 import { useCalendarSubscription } from '@/hooks/useCalendar';
+import { appDialog } from '@/lib/appDialog';
 
 const CalendarSubscriptionModal = ({ onClose }: { onClose: () => void }) => {
   const { status, generate, revoke } = useCalendarSubscription();
   const [copied, setCopied] = useState(false);
   const feedUrl = generate.data?.feed_url;
-  const generateAddress = () => {
-    if (status.data?.has_active_token && !confirm('Wygenerowanie nowego adresu unieważni poprzedni. Kontynuować?')) return;
+  const generateAddress = async () => {
+    if (status.data?.has_active_token && !await appDialog.confirm('Wygenerowanie nowego adresu unieważni poprzedni. Kontynuować?', { title: 'Nowy adres subskrypcji', confirmLabel: 'Wygeneruj', tone: 'warning' })) return;
     generate.mutate();
   };
   const copy = async () => {
@@ -45,7 +46,9 @@ const CalendarSubscriptionModal = ({ onClose }: { onClose: () => void }) => {
       )}
       <div className="mt-6 flex flex-wrap justify-end gap-2">
         {status.data?.has_active_token && (
-          <button type="button" onClick={() => confirm('Unieważnić adres subskrypcji?') && revoke.mutate()} className="rounded-lg bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700">Unieważnij</button>
+          <button type="button" onClick={async () => {
+            if (await appDialog.confirm('Unieważnić adres subskrypcji?', { title: 'Unieważnij subskrypcję', confirmLabel: 'Unieważnij', tone: 'error' })) revoke.mutate();
+          }} className="rounded-lg bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700">Unieważnij</button>
         )}
         <button type="button" disabled={generate.isPending} onClick={generateAddress} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
           {status.data?.has_active_token ? 'Wygeneruj nowy adres' : 'Wygeneruj adres'}

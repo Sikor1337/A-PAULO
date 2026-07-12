@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Modal from '@/components/ui/Modal';
 import { parseApiError } from '@/lib/errors';
+import { appDialog } from '@/lib/appDialog';
 import { permissionService } from '@/services/permissionService';
 import type { AdminUser, SecurityGroup } from '@/types';
 
@@ -28,7 +29,7 @@ const UserGroupsModal = ({ user, groups, onClose }: Props) => {
       if (user.id) queryClient.invalidateQueries({ queryKey: ['my-permissions'] });
       onClose();
     },
-    onError: (error) => alert(parseApiError(error, 'Nie udało się przypisać grup.')),
+    onError: (error) => appDialog.error(parseApiError(error, 'Nie udało się przypisać grup.')),
   });
 
   return (

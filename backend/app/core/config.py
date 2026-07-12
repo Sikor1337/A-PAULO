@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -18,7 +18,13 @@ class Settings(BaseSettings):
     # Attachments
     attachment_storage_path: str = "storage/attachments"
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    # A deployment may retain variables used by an older/newer application
+    # version. They must not prevent the backend from starting after a rollback.
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 @lru_cache

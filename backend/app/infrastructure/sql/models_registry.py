@@ -3,12 +3,18 @@ from app.modules.audit.models import AuditEvent
 from app.modules.bug_reports.models.bug_reports import BugReport
 from app.modules.calendar.models import CalendarAudit, CalendarEvent, CalendarFeedToken
 from app.modules.core_data.models.user import User
-from app.modules.departments.models.departments import Department, DepartmentMember
+from app.modules.departments.models.departments import (
+    Department,
+    DepartmentInventoryItem,
+    DepartmentMember,
+)
 from app.modules.pi.models.beneficiary import Beneficiary
 from app.modules.pi.models.function import Function
 from app.modules.pi.models.group import BeneficiaryAssignment, Group
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.models import (
+    BeneficiaryRecruitmentField,
+    BeneficiaryRecruitmentSubmission,
     DepartureField,
     DepartureInterview,
     RecruitmentField,
@@ -23,11 +29,14 @@ __all__ = [
     "AuditEvent",
     "Beneficiary",
     "BeneficiaryAssignment",
+    "BeneficiaryRecruitmentField",
+    "BeneficiaryRecruitmentSubmission",
     "BugReport",
     "CalendarAudit",
     "CalendarEvent",
     "CalendarFeedToken",
     "Department",
+    "DepartmentInventoryItem",
     "DepartmentMember",
     "DepartureField",
     "DepartureInterview",

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import SurveyFieldModal from '@/features/surveys/SurveyFieldModal';
 import { useRecruitmentAccessLink, useRecruitmentFields } from '@/hooks/useRecruitment';
+import { appDialog } from '@/lib/appDialog';
 import { useHasPermission } from '@/hooks/usePermissions';
 import type { RecruitmentFieldDraft, RecruitmentFieldType } from '@/types';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
@@ -73,8 +74,8 @@ const RecruitmentFormBuilderPage = () => {
     )) ?? current);
   };
 
-  const remove = (index: number) => {
-    if (!window.confirm('Usunąć to pole? Zapisane odpowiedzi pozostaną w archiwum.')) return;
+  const remove = async (index: number) => {
+    if (!await appDialog.confirm('Usunąć to pole? Zapisane odpowiedzi pozostaną w archiwum.', { title: 'Usuwanie pola ankiety', confirmLabel: 'Usuń', tone: 'warning' })) return;
     setDraft((current) => current?.filter((_, itemIndex) => itemIndex !== index) ?? current);
   };
 
@@ -126,7 +127,7 @@ const RecruitmentFormBuilderPage = () => {
         {draft ? (
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setEditingIndex(null)} className="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">+ Dodaj pole</button>
-            <button type="button" onClick={() => confirmDiscard() && setDraft(null)} disabled={save.isPending} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Anuluj</button>
+            <button type="button" onClick={async () => { if (await confirmDiscard()) setDraft(null); }} disabled={save.isPending} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Anuluj</button>
             <button type="button" onClick={saveDraft} disabled={save.isPending} className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-bold text-white disabled:opacity-50">
               {save.isPending ? 'Zapisywanie…' : 'Zapisz formularz'}
             </button>

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseApiError } from '@/lib/errors';
+import { appDialog } from '@/lib/appDialog';
 import { permissionService } from '@/services/permissionService';
 import { useAuthStore } from '@/stores/authStore';
 import type { PermissionCode, SecurityGroupInput, SecurityGroupSaveInput } from '@/types';
@@ -38,7 +39,7 @@ export function useSecurityGroups(enabled = true) {
     queryClient.invalidateQueries({ queryKey: ['security-groups'] });
     queryClient.invalidateQueries({ queryKey: ['my-permissions'] });
   };
-  const onError = (error: unknown) => alert(parseApiError(error, 'Nie udało się zapisać uprawnień.'));
+  const onError = (error: unknown) => appDialog.error(parseApiError(error, 'Nie udało się zapisać uprawnień.'));
 
   const create = useMutation({
     mutationFn: (input: SecurityGroupInput) => permissionService.createGroup(input),

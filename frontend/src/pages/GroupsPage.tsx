@@ -11,6 +11,7 @@ import { attachmentService, BO_CARD_ACCEPT, BO_CARD_MAX_SIZE_BYTES, BO_CARD_SUPP
 import { volunteerDetailFields } from '@/features/volunteers/volunteerDetail';
 import { beneficiaryDetailFields } from '@/features/beneficiaries/beneficiaryDetail';
 import HistoryButton from '@/features/audit/HistoryButton';
+import { appDialog } from '@/lib/appDialog';
 import type {
   Volunteer,
   Beneficiary,
@@ -154,8 +155,8 @@ const GroupsPage: React.FC = () => {
     setSelectedGroupId(null);
   };
 
-  const cancelNewGroup = () => {
-    if (!confirmDiscard()) return;
+  const cancelNewGroup = async () => {
+    if (!await confirmDiscard()) return;
     setShowKartyBO(false);
     setIsEditing(false);
     setSelectedGroupId(previousGroupId ?? groups?.[0]?.id ?? null);
@@ -174,10 +175,10 @@ const GroupsPage: React.FC = () => {
     setFormDirty(false);
   };
 
-  const handleDeleteGroup = () => {
+  const handleDeleteGroup = async () => {
     if (selectedGroupId === null) return;
     const name = groups?.find((g) => g.id === selectedGroupId)?.name ?? '';
-    if (confirm(`Usunąć grupę „${name}"? Podopieczni zostaną odłączeni, a ich przypisania wolontariuszy usunięte.`)) {
+    if (await appDialog.confirm(`Usunąć grupę „${name}"? Podopieczni zostaną odłączeni, a ich przypisania wolontariuszy usunięte.`, { title: 'Usuwanie grupy', confirmLabel: 'Usuń', tone: 'error' })) {
       deleteGroup.mutate(selectedGroupId, {
         onSuccess: () => {
           setPreviousGroupId(null);
@@ -273,7 +274,7 @@ const GroupsPage: React.FC = () => {
     const file = files?.item(0);
     if (!file || selectedGroupId === null) return;
     if (file.size > BO_CARD_MAX_SIZE_BYTES) {
-      alert('Plik jest za duży. Maksymalny rozmiar to 10 MB.');
+      appDialog.warning('Plik jest za duży. Maksymalny rozmiar to 10 MB.');
       return;
     }
     uploadBOCard.mutate({
@@ -289,18 +290,18 @@ const GroupsPage: React.FC = () => {
     try {
       await attachmentService.openContent(attachment);
     } catch {
-      alert('Nie udało się otworzyć pliku.');
+      appDialog.error('Nie udało się otworzyć pliku.');
     }
   };
 
-  const handleRenameAttachment = (attachment: BOCardAttachment) => {
-    const nextName = prompt('Nazwa pliku', attachment.display_name)?.trim();
+  const handleRenameAttachment = async (attachment: BOCardAttachment) => {
+    const nextName = (await appDialog.prompt('Nazwa pliku', { title: 'Zmień nazwę pliku', defaultValue: attachment.display_name, required: true }))?.trim();
     if (!nextName || nextName === attachment.display_name) return;
     updateAttachment.mutate({ id: attachment.id, data: { display_name: nextName } });
   };
 
-  const handleDeleteAttachment = (attachment: BOCardAttachment) => {
-    if (!confirm(`Usunąć plik „${attachment.display_name}”?`)) return;
+  const handleDeleteAttachment = async (attachment: BOCardAttachment) => {
+    if (!await appDialog.confirm(`Usunąć plik „${attachment.display_name}”?`, { title: 'Usuwanie pliku', confirmLabel: 'Usuń', tone: 'error' })) return;
     deleteAttachment.mutate(attachment.id);
   };
 
@@ -1060,8 +1061,8 @@ const GroupsPage: React.FC = () => {
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:gap-3">
               <button
                 type="button"
-                onClick={isNewGroup ? cancelNewGroup : () => {
-                  if (!confirmDiscard()) return;
+                onClick={isNewGroup ? cancelNewGroup : async () => {
+                  if (!await confirmDiscard()) return;
                   setIsEditing(false);
                   setShowKartyBO(false);
                   setFormDirty(false);

@@ -3,6 +3,7 @@ import { useSecurityGroups } from '@/hooks/usePermissions';
 import HistoryButton from '@/features/audit/HistoryButton';
 import type { AdminUser, PermissionCode } from '@/types';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { appDialog } from '@/lib/appDialog';
 
 interface Props {
   users: AdminUser[];
@@ -45,8 +46,8 @@ const SecurityGroupsPanel = ({ users, canManage }: Props) => {
     return [...result.entries()];
   }, [permissions]);
 
-  const addGroup = () => {
-    const groupName = prompt('Nazwa nowej grupy użytkowników:')?.trim();
+  const addGroup = async () => {
+    const groupName = (await appDialog.prompt('Nazwa nowej grupy użytkowników:', { title: 'Nowa grupa', required: true }))?.trim();
     if (!groupName) return;
     create.mutate(
       { name: groupName, description: '', permission_codes: [] },
@@ -166,7 +167,9 @@ const SecurityGroupsPanel = ({ users, canManage }: Props) => {
               {!selected.is_system && (
                 <button
                   type="button"
-                  onClick={() => confirm(`Usunąć grupę ${selected.name}?`) && remove.mutate(selected.id)}
+                  onClick={async () => {
+                    if (await appDialog.confirm(`Usunąć grupę ${selected.name}?`, { title: 'Usuwanie grupy', confirmLabel: 'Usuń', tone: 'error' })) remove.mutate(selected.id);
+                  }}
                   className="rounded-lg bg-rose-100 px-4 py-2 text-sm font-bold text-rose-700"
                 >
                   Usuń grupę

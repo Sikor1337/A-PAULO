@@ -73,21 +73,26 @@ class BeneficiaryService:
         beneficiaries = [self._enrich_beneficiary(b) for b in beneficiaries]
         return beneficiaries, count
 
+    def prepare_beneficiary(self, actor: User, **kwargs) -> Beneficiary:
+        """Create and audit a beneficiary without committing the transaction."""
+        beneficiary = self.repo.create(**kwargs)
+        self.repo.flush()
+        self.repo.refresh(beneficiary)
+        self._record(
+            "CREATE",
+            beneficiary.id,
+            actor,
+            {},
+            beneficiary_audit_state(beneficiary),
+        )
+        return self._enrich_beneficiary(beneficiary)
+
     def create_beneficiary(self, actor: User, **kwargs) -> Beneficiary:
         """Create new beneficiary."""
         try:
-            beneficiary = self.repo.create(**kwargs)
-            self.repo.flush()
-            self.repo.refresh(beneficiary)
-            self._record(
-                "CREATE",
-                beneficiary.id,
-                actor,
-                {},
-                beneficiary_audit_state(beneficiary),
-            )
+            beneficiary = self.prepare_beneficiary(actor, **kwargs)
             self.repo.commit()
-            return self._enrich_beneficiary(beneficiary)
+            return beneficiary
         except Exception:
             self.repo.rollback()
             raise

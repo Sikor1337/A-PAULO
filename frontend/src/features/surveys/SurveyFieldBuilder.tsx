@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import SurveyFieldModal from './SurveyFieldModal';
+import { appDialog } from '@/lib/appDialog';
 import type { RecruitmentFieldDraft, RecruitmentFieldType } from '@/types';
 
 const typeLabels: Record<RecruitmentFieldType, string> = {
@@ -52,8 +53,8 @@ const SurveyFieldBuilder = ({
     [copy[index], copy[index + offset]] = [copy[index + offset]!, copy[index]!];
     return copy;
   });
-  const remove = (index: number) => {
-    if (!window.confirm('Usunąć to pole? Zapisane odpowiedzi pozostaną w archiwum.')) return;
+  const remove = async (index: number) => {
+    if (!await appDialog.confirm('Usunąć to pole? Zapisane odpowiedzi pozostaną w archiwum.', { title: 'Usuwanie pola ankiety', confirmLabel: 'Usuń', tone: 'warning' })) return;
     setDraft((current) => current?.filter((_, fieldIndex) => fieldIndex !== index) ?? current);
   };
 

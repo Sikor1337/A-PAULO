@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseApiError } from '@/lib/errors';
+import { appDialog } from '@/lib/appDialog';
 import { recruitmentService } from '@/services/recruitmentService';
 import type {
   OnboardingMeetingType,
@@ -32,7 +33,7 @@ export function useRecruitmentFields() {
       queryClient.setQueryData(['recruitment-fields'], fields);
       queryClient.invalidateQueries({ queryKey: ['recruitment-form'] });
     },
-    onError: (error) => alert(parseApiError(error, 'Nie udało się zapisać formularza.')),
+    onError: (error) => appDialog.error(parseApiError(error, 'Nie udało się zapisać formularza.')),
   });
   return { data: list.data, isLoading: list.isLoading, save };
 }
@@ -57,7 +58,7 @@ export function useRecruitmentSubmissions(status?: RecruitmentStatus) {
       queryClient.invalidateQueries({ queryKey: ['recruitment-submissions'] });
       queryClient.invalidateQueries({ queryKey: ['volunteers'] });
     },
-    onError: (error) => alert(parseApiError(error, 'Nie udało się zmienić etapu rekrutacji.')),
+    onError: (error) => appDialog.error(parseApiError(error, 'Nie udało się zmienić etapu rekrutacji.')),
   });
   const meeting = useMutation({
     mutationFn: ({
@@ -79,7 +80,7 @@ export function useRecruitmentSubmissions(status?: RecruitmentStatus) {
           : current,
       );
     },
-    onError: (error) => alert(parseApiError(error, 'Nie udało się zapisać obecności.')),
+    onError: (error) => appDialog.error(parseApiError(error, 'Nie udało się zapisać obecności.')),
   });
   return { data: list.data, isLoading: list.isLoading, action, meeting };
 }

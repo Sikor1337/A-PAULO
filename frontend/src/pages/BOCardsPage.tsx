@@ -6,6 +6,7 @@ import { useHasPermission } from '@/hooks/usePermissions';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { formatDate } from '@/lib/date';
 import { parseApiError } from '@/lib/errors';
+import { appDialog } from '@/lib/appDialog';
 import { attachmentService } from '@/services/attachmentService';
 import type {
   BOCardOverviewAttachment,
@@ -160,12 +161,12 @@ const BOCardsPage: React.FC = () => {
     try {
       await attachmentService.openContent(attachment);
     } catch {
-      alert('Nie udało się otworzyć pliku.');
+      appDialog.error('Nie udało się otworzyć pliku.');
     }
   };
 
-  const removeAttachment = (attachment: BOCardOverviewAttachment) => {
-    if (!confirm(`Usunąć plik „${attachment.display_name}”?`)) return;
+  const removeAttachment = async (attachment: BOCardOverviewAttachment) => {
+    if (!await appDialog.confirm(`Usunąć plik „${attachment.display_name}”?`, { title: 'Usuwanie pliku', confirmLabel: 'Usuń', tone: 'error' })) return;
     deleteAttachment.mutate(attachment.id, {
       onSuccess: () => {
         if (items.length === 1 && page > 1) setPage((current) => current - 1);
