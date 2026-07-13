@@ -9,17 +9,13 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import ConflictError, NotFoundError, ValidationException
 from app.modules.core_data.models import User
-from app.modules.recruitment.departure_constants import (
-    DEFAULT_DEPARTURE_FIELDS,
-    DEPARTURE_CHOICE_TYPES,
-)
+from app.modules.recruitment.departure_constants import DEPARTURE_CHOICE_TYPES
 from app.modules.recruitment.models import DepartureField, DepartureInterview
 from app.modules.recruitment.repositories.departures import DepartureRepository
 from app.modules.recruitment.schemas.commands import DepartureInterviewWrite
 from app.modules.recruitment.schemas.departures import DepartureFieldDraft
 from app.modules.recruitment.services.form_fields import (
     FieldSaveErrors,
-    ensure_default_fields,
     save_field_drafts,
 )
 
@@ -39,15 +35,10 @@ class DepartureService:
         self.session = session
         self.repo = DepartureRepository(session)
 
-    def _ensure_default_fields(self) -> None:
-        ensure_default_fields(self.repo, DEFAULT_DEPARTURE_FIELDS)
-
     def list_fields(self, *, active_only: bool = False) -> list[DepartureField]:
-        self._ensure_default_fields()
         return self.repo.list_fields(active_only=active_only)
 
     def save_fields(self, drafts: list[DepartureFieldDraft]) -> list[DepartureField]:
-        self._ensure_default_fields()
         return save_field_drafts(
             self.repo,
             drafts,

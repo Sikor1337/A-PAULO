@@ -16,6 +16,7 @@ python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 alembic upgrade head
+python -m scripts.seed_required_data
 .\venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 

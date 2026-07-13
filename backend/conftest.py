@@ -38,12 +38,15 @@ from app.modules.security.dependencies import (  # noqa: E402
     require_admin,
 )
 from app.modules.security.models import (  # noqa: E402
-    Permission,
     UserGroup,
     security_user_groups,
 )
-from app.modules.security.models.constants import PERMISSION_CATALOG  # noqa: E402
 from app.modules.tasks.api import router as tasks_router  # noqa: E402
+from scripts.seed_required_data import (  # noqa: E402
+    seed_recruitment_fields,
+    seed_security_reference_data,
+    seed_system_functions,
+)
 
 
 @pytest.fixture
@@ -80,6 +83,10 @@ def db_session(db_engine: Engine) -> Generator[Session, None, None]:
 
 @pytest.fixture
 def admin_user(db_session: Session) -> User:
+    seed_security_reference_data(db_session)
+    seed_recruitment_fields(db_session)
+    seed_system_functions(db_session)
+    db_session.flush()
     user = User(
         id=999,
         username="admin",
@@ -92,18 +99,8 @@ def admin_user(db_session: Session) -> User:
         created_at=datetime(2026, 1, 1),
         updated_at=datetime(2026, 1, 1),
     )
-    permissions = [
-        Permission(code=code, name=name, category=category)
-        for code, name, category in PERMISSION_CATALOG
-    ]
-    admin_group = UserGroup(
-        name="Admin",
-        description="System test administrator group",
-        is_system=True,
-        system_key="admin",
-        permissions=permissions,
-    )
-    db_session.add_all([user, admin_group])
+    admin_group = db_session.query(UserGroup).filter_by(system_key="admin").one()
+    db_session.add(user)
     db_session.flush()
     db_session.execute(
         security_user_groups.insert(),

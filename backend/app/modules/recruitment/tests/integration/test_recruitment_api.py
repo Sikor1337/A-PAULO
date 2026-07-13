@@ -289,9 +289,11 @@ def test_form_draft_is_saved_once_and_multiselect_is_snapshotted(
     ]
 
 
-def test_form_restores_missing_system_fields_without_deleting_custom_fields(
+def test_form_read_does_not_create_missing_reference_data(
     api_client, db_session, admin_user
 ):
+    full_name = db_session.query(RecruitmentField).filter_by(key="full_name").one()
+    db_session.delete(full_name)
     custom = RecruitmentField(
         key="custom_question",
         label="Pytanie dodatkowe",
@@ -311,13 +313,8 @@ def test_form_restores_missing_system_fields_without_deleting_custom_fields(
 
     assert response.status_code == 200
     fields = response.json()
-    assert [field["key"] for field in fields[:3]] == [
-        "full_name",
-        "email",
-        "phone",
-    ]
-    assert fields[3]["key"] == "custom_question"
-    assert all(field["is_system"] for field in fields[:3])
+    assert "full_name" not in {field["key"] for field in fields}
+    assert "custom_question" in {field["key"] for field in fields}
 
 
 def test_schema_rejects_invalid_public_values(api_client, db_session):

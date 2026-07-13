@@ -5,7 +5,11 @@ from sqlalchemy.orm import Session
 
 from app.infrastructure.sql.repository import SQLRepository
 from app.modules.pi.models.beneficiary import Beneficiary
-from app.modules.pi.models.function import Function, volunteer_function
+from app.modules.pi.models.function import (
+    Function,
+    SystemFunctionKey,
+    volunteer_function,
+)
 from app.modules.pi.models.group import BeneficiaryAssignment, Group
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.pi.schemas.volunteers import (
@@ -118,6 +122,27 @@ class VolunteerRepository(SQLRepository):
         """List all volunteer emails (for bulk-import duplicate checks)."""
         return [row[0] for row in self.session.query(Volunteer.email).all()]
 
+    def _system_function_names(
+        self, keys: list[SystemFunctionKey]
+    ) -> dict[SystemFunctionKey, str]:
+        """Resolve display names from seeded SQL reference data."""
+        if not keys:
+            return {}
+        rows = (
+            self.session.query(Function.system_key, Function.name)
+            .filter(Function.system_key.in_([key.value for key in keys]))
+            .all()
+        )
+        names = {SystemFunctionKey(key): name for key, name in rows if key is not None}
+        missing = set(keys) - set(names)
+        if missing:
+            missing_keys = ", ".join(sorted(key.value for key in missing))
+            raise RuntimeError(
+                "Missing required system functions in SQL. "
+                f"Run the required-data seed; missing: {missing_keys}"
+            )
+        return names
+
     def enrich(self, volunteer: Volunteer) -> Volunteer:
         """Populate volunteer projection fields used by API responses."""
         manual_functions = (
@@ -161,11 +186,13 @@ class VolunteerRepository(SQLRepository):
             .all()
         )
         volunteer.main_for_beneficiaries = [row[0] for row in main_rows]
-        derived = []
+        derived_keys: list[SystemFunctionKey] = []
         if volunteer.led_group:
-            derived.append("Przewodnik")
+            derived_keys.append(SystemFunctionKey.GROUP_GUIDE)
         if volunteer.main_for_beneficiaries:
-            derived.append("Lider Podopiecznego")
+            derived_keys.append(SystemFunctionKey.BENEFICIARY_LEADER)
+        system_function_names = self._system_function_names(derived_keys)
+        derived = [system_function_names[key] for key in derived_keys]
         volunteer.derived_functions = derived
         volunteer.functions = list(
             dict.fromkeys([*volunteer.manual_functions, *derived])

@@ -10,7 +10,6 @@ from app.modules.core_data.audit_state import user_audit_state
 from app.modules.core_data.models import User
 from app.modules.pi.audit_state import volunteer_audit_state
 from app.modules.recruitment.constants import (
-    DEFAULT_FIELDS,
     NEW_VOLUNTEER_STATUS,
     ONBOARDING_MEETING_TYPES,
     SUBMISSION_STATUSES,
@@ -31,7 +30,6 @@ from app.modules.recruitment.schemas.commands import (
 )
 from app.modules.recruitment.services.form_fields import (
     FieldSaveErrors,
-    ensure_default_fields,
     save_field_drafts,
 )
 from app.modules.security.models.constants import STAFF_GROUP_KEY
@@ -69,18 +67,13 @@ class RecruitmentService:
             )
         )
 
-    def _ensure_default_fields(self) -> None:
-        ensure_default_fields(self.repo, DEFAULT_FIELDS)
-
     def list_fields(self, *, active_only: bool = False) -> list[RecruitmentField]:
-        self._ensure_default_fields()
         return self.repo.list_fields(active_only=active_only)
 
     def save_fields(
         self, drafts: list[RecruitmentFieldDraft]
     ) -> list[RecruitmentField]:
         """Persist the complete editor draft in one transaction."""
-        self._ensure_default_fields()
         return save_field_drafts(
             self.repo,
             drafts,

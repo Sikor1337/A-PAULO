@@ -32,9 +32,7 @@ def _volunteer(db_session, suffix: str = "departure") -> Volunteer:
 def _grant_departure_submit(db_session, user: User) -> None:
     """Give a user the self-service departure-survey permission (PAP-96)."""
     perm = (
-        db_session.query(Permission)
-        .filter_by(code=CAN_SUBMIT_DEPARTURE_SURVEY)
-        .one()
+        db_session.query(Permission).filter_by(code=CAN_SUBMIT_DEPARTURE_SURVEY).one()
     )
     group = UserGroup(
         name=f"Odejście-{user.username}",
@@ -233,7 +231,13 @@ def test_departure_fields_are_saved_atomically(api_client):
     assert response.json()[-1]["label"] == "Co warto poprawić?"
 
 
-def test_departure_fields_restore_missing_system_fields(api_client, db_session):
+def test_departure_field_read_does_not_create_missing_reference_data(
+    api_client, db_session
+):
+    departure_date = (
+        db_session.query(DepartureField).filter_by(key="departure_date").one()
+    )
+    db_session.delete(departure_date)
     custom = DepartureField(
         key="custom_question",
         label="Pytanie dodatkowe",
@@ -252,13 +256,8 @@ def test_departure_fields_restore_missing_system_fields(api_client, db_session):
 
     assert response.status_code == 200
     fields = response.json()
-    assert [field["key"] for field in fields[:3]] == [
-        "departure_date",
-        "departure_reason",
-        "stay_in_contact",
-    ]
-    assert fields[3]["key"] == "custom_question"
-    assert all(field["is_system"] for field in fields[:3])
+    assert "departure_date" not in {field["key"] for field in fields}
+    assert "custom_question" in {field["key"] for field in fields}
 
 
 def test_departure_fields_reject_whitespace_question(api_client):

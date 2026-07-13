@@ -23,11 +23,14 @@ from app.modules.pi.services.beneficiaries import BeneficiaryService
 from app.modules.pi.services.functions import FunctionService
 from app.modules.pi.services.groups import GroupService
 from app.modules.pi.services.volunteers import VolunteerService
+from scripts.seed_required_data import seed_system_functions
 
 
 def test_services_create_group_assignments_and_enriched_volunteer(
     db_session: Session,
 ) -> None:
+    seed_system_functions(db_session)
+    db_session.flush()
     audit = SqlAuditService(AuditRepository(db_session))
     actor = SimpleNamespace(id=999, email="system@example.com")
     function_service = FunctionService(FunctionRepository(db_session))

@@ -11,7 +11,6 @@ from app.modules.recruitment.beneficiary_access import (
     create_form_token,
     is_valid_form_token,
 )
-from app.modules.recruitment.beneficiary_constants import BENEFICIARY_DEFAULT_FIELDS
 from app.modules.recruitment.repositories.beneficiary_recruitment import (
     BeneficiaryRecruitmentRepository,
 )
@@ -25,7 +24,6 @@ from app.modules.recruitment.schemas.recruitment import (
 )
 from app.modules.recruitment.services.form_fields import (
     FieldSaveErrors,
-    ensure_default_fields,
     save_field_drafts,
 )
 
@@ -39,11 +37,7 @@ class BeneficiaryRecruitmentService:
         self.repo = repo
         self.beneficiaries = beneficiaries
 
-    def _ensure_default_fields(self) -> None:
-        ensure_default_fields(self.repo, BENEFICIARY_DEFAULT_FIELDS)
-
     def list_fields(self, *, active_only: bool = False):
-        self._ensure_default_fields()
         return self.repo.list_fields(active_only=active_only)
 
     def get_public_form(self) -> dict:
@@ -53,7 +47,6 @@ class BeneficiaryRecruitmentService:
         }
 
     def save_fields(self, drafts: list[RecruitmentFieldDraft]):
-        self._ensure_default_fields()
         return save_field_drafts(
             self.repo,
             drafts,
