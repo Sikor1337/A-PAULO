@@ -17,6 +17,8 @@ from app.modules.pi.repositories import (
     GroupRepository,
     VolunteerRepository,
 )
+from app.modules.pi.schemas.beneficiaries import BeneficiaryCreateRequest
+from app.modules.pi.schemas.volunteers import VolunteerCreateRequest
 from app.modules.pi.services.beneficiaries import BeneficiaryService
 from app.modules.pi.services.functions import FunctionService
 from app.modules.pi.services.groups import GroupService
@@ -36,11 +38,13 @@ def test_services_create_group_assignments_and_enriched_volunteer(
     function = function_service.create_function(name="Odwiedziny")
     volunteer = volunteer_service.create_volunteer(
         actor=actor,
-        full_name="Anna Wolontariusz",
-        email="anna.w@example.com",
-        phone="+48 123 456 789",
-        join_date=datetime(2026, 1, 10, 9, 0),
-        function_ids=[function.id],
+        request=VolunteerCreateRequest(
+            full_name="Anna Wolontariusz",
+            email="anna.w@example.com",
+            phone="+48 123 456 789",
+            join_date=datetime(2026, 1, 10, 9, 0),
+            function_ids=[function.id],
+        ),
     )
     group = group_service.create_group(
         actor=actor,
@@ -49,10 +53,12 @@ def test_services_create_group_assignments_and_enriched_volunteer(
     )
     beneficiary = beneficiary_service.create_beneficiary(
         actor=actor,
-        full_name="Jan Podopieczny",
-        address="ul. Testowa 1",
-        group_id=group["id"],
-        bo_enrolled=True,
+        request=BeneficiaryCreateRequest(
+            full_name="Jan Podopieczny",
+            address="ul. Testowa 1",
+            group_id=group["id"],
+            bo_enrolled=True,
+        ),
     )
 
     detail = group_service.update_group(

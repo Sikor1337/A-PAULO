@@ -1,7 +1,5 @@
 """Business rules for configurable forms and candidate onboarding."""
 
-import re
-import unicodedata
 from datetime import UTC, datetime
 
 from sqlalchemy.exc import IntegrityError
@@ -27,15 +25,17 @@ from app.modules.recruitment.schemas import (
     RecruitmentFieldDraft,
     RecruitmentSubmissionCreate,
 )
+from app.modules.recruitment.schemas.commands import (
+    RecruitmentSubmissionWrite,
+    RecruitmentVolunteerWrite,
+)
+from app.modules.recruitment.services.form_fields import (
+    FieldSaveErrors,
+    ensure_default_fields,
+    save_field_drafts,
+)
 from app.modules.security.models.constants import STAFF_GROUP_KEY
 from app.modules.security.services.permissions import PermissionService
-
-
-def _slugify(value: str) -> str:
-    normalized = (
-        unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode().lower()
-    )
-    return re.sub(r"[^a-z0-9]+", "_", normalized).strip("_") or "pytanie"
 
 
 class RecruitmentService:
@@ -70,60 +70,7 @@ class RecruitmentService:
         )
 
     def _ensure_default_fields(self) -> None:
-        current = self.repo.list_fields()
-        defaults = (
-            DEFAULT_FIELDS
-            if not current
-            else [values for values in DEFAULT_FIELDS if values["is_system"]]
-        )
-        by_key = {field.key: field for field in current}
-        changed = False
-
-        for values in defaults:
-            field = by_key.get(values["key"])
-            if field is None:
-                field = self.repo.create_field(
-                    position=0,
-                    options=[],
-                    is_active=True,
-                    **values,
-                )
-                by_key[values["key"]] = field
-                changed = True
-                continue
-
-            if values["is_system"]:
-                protected_values = {
-                    "field_type": values["field_type"],
-                    "required": values["required"],
-                    "is_active": True,
-                    "is_system": True,
-                }
-                for attribute, expected in protected_values.items():
-                    if getattr(field, attribute) != expected:
-                        setattr(field, attribute, expected)
-                        changed = True
-
-        if not changed:
-            return
-
-        system_keys = [
-            values["key"] for values in DEFAULT_FIELDS if values["is_system"]
-        ]
-        ordered = [by_key[key] for key in system_keys]
-        if current:
-            ordered.extend(field for field in current if field.key not in system_keys)
-        else:
-            ordered.extend(
-                by_key[values["key"]]
-                for values in DEFAULT_FIELDS
-                if not values["is_system"]
-            )
-        for position, field in enumerate(ordered):
-            if field.position != position:
-                field.position = position
-
-        self.repo.commit(skip_audit=True)
+        ensure_default_fields(self.repo, DEFAULT_FIELDS)
 
     def list_fields(self, *, active_only: bool = False) -> list[RecruitmentField]:
         self._ensure_default_fields()
@@ -133,68 +80,23 @@ class RecruitmentService:
         self, drafts: list[RecruitmentFieldDraft]
     ) -> list[RecruitmentField]:
         """Persist the complete editor draft in one transaction."""
-
-        try:
-            current = self.list_fields()
-            by_id = {field.id: field for field in current}
-            submitted_ids = {draft.id for draft in drafts if draft.id is not None}
-            unknown_ids = submitted_ids - set(by_id)
-            if unknown_ids:
-                raise NotFoundError("Co najmniej jedno pole formularza nie istnieje")
-
-            system_ids = {field.id for field in current if field.is_system}
-            if not system_ids.issubset(submitted_ids):
-                raise ConflictError("Nie można usunąć podstawowego pola formularza")
-
-            used_keys = {field.key for field in current}
-            for position, draft in enumerate(drafts):
-                if draft.id is None:
-                    base_key = _slugify(draft.label)
-                    key = base_key
-                    suffix = 2
-                    while key in used_keys:
-                        key = f"{base_key}_{suffix}"
-                        suffix += 1
-                    used_keys.add(key)
-                    self.repo.create_field(
-                        key=key,
-                        label=draft.label,
-                        field_type=draft.field_type,
-                        required=draft.required,
-                        placeholder=draft.placeholder,
-                        options=draft.options,
-                        position=position,
-                        is_active=draft.is_active,
-                        is_system=False,
-                    )
-                    continue
-
-                field = by_id[draft.id]
-                if field.is_system and (
-                    draft.field_type != field.field_type
-                    or not draft.required
-                    or not draft.is_active
-                ):
-                    raise ConflictError(
-                        "Podstawowe pola kontaktowe muszą pozostać aktywne i wymagane"
-                    )
-                field.label = draft.label
-                field.field_type = draft.field_type
-                field.required = draft.required
-                field.placeholder = draft.placeholder
-                field.options = draft.options
-                field.position = position
-                field.is_active = draft.is_active
-
-            for field in current:
-                if field.id not in submitted_ids:
-                    self.repo.delete_field(field)
-
-            self.repo.commit(skip_audit=True)
-            return self.repo.list_fields()
-        except Exception:
-            self.repo.rollback()
-            raise
+        self._ensure_default_fields()
+        return save_field_drafts(
+            self.repo,
+            drafts,
+            system_field_is_valid=lambda field, draft: (
+                draft.field_type == field.field_type
+                and draft.required
+                and draft.is_active
+            ),
+            errors=FieldSaveErrors(
+                unknown_field="Co najmniej jedno pole formularza nie istnieje",
+                missing_system_field="Nie można usunąć podstawowego pola formularza",
+                invalid_system_field=(
+                    "Podstawowe pola kontaktowe muszą pozostać aktywne i wymagane"
+                ),
+            ),
+        )
 
     def get_submission_for_user(self, user_id: int) -> RecruitmentSubmission | None:
         return self.repo.get_submission_by_user_id(user_id)
@@ -222,26 +124,24 @@ class RecruitmentService:
                 )
 
             now = datetime.now(UTC)
-            values = {
-                "user_id": user.id,
-                "full_name": str(indexed["full_name"]).strip(),
-                "email": email,
-                "phone": str(indexed["phone"]).strip(),
-                "social_link": str(indexed.get("social_link") or "").strip(),
-                "availability": str(indexed.get("availability") or "").strip(),
-                "answers": answers,
-                "status": "SUBMITTED",
-                "return_reason": None,
-                "decision_comment": None,
-                "submitted_at": now,
-                "status_changed_at": now,
-            }
+            command = RecruitmentSubmissionWrite(
+                user_id=user.id,
+                full_name=str(indexed["full_name"]).strip(),
+                email=email,
+                phone=str(indexed["phone"]).strip(),
+                social_link=str(indexed.get("social_link") or "").strip(),
+                availability=str(indexed.get("availability") or "").strip(),
+                answers=answers,
+                status="SUBMITTED",
+                return_reason=None,
+                decision_comment=None,
+                submitted_at=now,
+                status_changed_at=now,
+            )
             if existing:
-                for key, value in values.items():
-                    setattr(existing, key, value)
-                submission = existing
+                submission = self.repo.update_submission(existing, command)
             else:
-                submission = self.repo.create_submission(**values)
+                submission = self.repo.create_submission(command)
             self.repo.commit(skip_audit=True)
             self.repo.refresh(submission)
             return submission
@@ -371,14 +271,16 @@ class RecruitmentService:
 
             if volunteer is None:
                 volunteer = self.repo.create_volunteer(
-                    full_name=submission.full_name,
-                    email=submission.email,
-                    phone=submission.phone,
-                    social_link=submission.social_link or None,
-                    status="Aktywny",
-                    join_date=datetime.now(UTC),
-                    notes="",
-                    history="",
+                    RecruitmentVolunteerWrite(
+                        full_name=submission.full_name,
+                        email=submission.email,
+                        phone=submission.phone,
+                        social_link=submission.social_link or None,
+                        status="Aktywny",
+                        join_date=datetime.now(UTC),
+                        notes="",
+                        history="",
+                    )
                 )
             else:
                 volunteer.full_name = submission.full_name

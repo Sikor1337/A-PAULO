@@ -39,6 +39,18 @@ class BeneficiaryRecruitmentSubmissionCreate(BaseModel):
         return self
 
 
+class BeneficiaryRecruitmentSubmissionWrite(BaseModel):
+    """Validated values persisted after the public answers are normalized."""
+
+    full_name: str
+    address: str
+    phone: str | None
+    reporter_name: str
+    reporter_phone: str
+    help_needed: str
+    answers: list[dict[str, Any]]
+
+
 class BeneficiaryRecruitmentSubmissionResponse(BaseModel):
     id: int
     full_name: str

@@ -24,7 +24,9 @@ def get_beneficiary_access_token() -> str:
 
 
 def is_valid_beneficiary_access_token(token: str | None) -> bool:
-    return bool(token) and hmac.compare_digest(token, get_beneficiary_access_token())
+    return token is not None and hmac.compare_digest(
+        token, get_beneficiary_access_token()
+    )
 
 
 def get_beneficiary_frontend_path() -> str:

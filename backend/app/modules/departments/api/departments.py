@@ -40,7 +40,7 @@ def create_department(
     _user: User = Depends(require_permission(CAN_MANAGE_DEPARTMENTS)),
 ):
     """Create a new department."""
-    return service.create_department(**request.model_dump())
+    return service.create_department(request)
 
 
 @router.get("/{department_id}", response_model=DepartmentDetailResponse)
@@ -61,8 +61,7 @@ def update_department(
     _user: User = Depends(require_permission(CAN_MANAGE_DEPARTMENTS)),
 ):
     """Update a department; set is_archived to archive/restore (no hard delete)."""
-    update_data = request.model_dump(exclude_unset=True)
-    return service.update_department(department_id, **update_data)
+    return service.update_department(department_id, request)
 
 
 @router.post("/{department_id}/members", response_model=DepartmentDetailResponse)
@@ -147,7 +146,7 @@ def create_inventory_item(
     service: DepartmentService = Depends(get_department_service),
     _user: User = Depends(require_permission(CAN_VIEW_DEPARTMENTS)),
 ):
-    return service.create_inventory_item(department_id, **request.model_dump())
+    return service.create_inventory_item(department_id, request)
 
 
 @router.put(
@@ -161,9 +160,7 @@ def update_inventory_item(
     service: DepartmentService = Depends(get_department_service),
     _user: User = Depends(require_permission(CAN_VIEW_DEPARTMENTS)),
 ):
-    return service.update_inventory_item(
-        department_id, item_id, **request.model_dump()
-    )
+    return service.update_inventory_item(department_id, item_id, request)
 
 
 @router.delete(

@@ -1,4 +1,5 @@
 """Volunteer model for PI domain."""
+
 from datetime import datetime
 
 from sqlalchemy import DateTime, String, func
@@ -12,6 +13,15 @@ class Volunteer(Base):
     """Volunteer model."""
 
     __tablename__ = "volunteers"
+    __allow_unmapped__ = True
+
+    function_ids: list[int]
+    manual_functions: list[str]
+    derived_functions: list[str]
+    functions: list[str]
+    led_group: str | None
+    assigned_groups: str
+    main_for_beneficiaries: list[str]
 
     id: Mapped[int] = mapped_column(primary_key=True)
     full_name: Mapped[str] = mapped_column(String(200), index=True)
@@ -37,7 +47,6 @@ class Volunteer(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
-
 
     @validates("status")
     def _validate_status(self, key: str, value: str) -> str:

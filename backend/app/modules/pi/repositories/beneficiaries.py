@@ -6,6 +6,10 @@ from sqlalchemy.orm import Session
 from app.infrastructure.sql.repository import SQLRepository
 from app.modules.pi.models.beneficiary import Beneficiary
 from app.modules.pi.models.group import Group
+from app.modules.pi.schemas.beneficiaries import (
+    BeneficiaryCreateRequest,
+    BeneficiaryUpdateRequest,
+)
 
 
 class BeneficiaryRepository(SQLRepository):
@@ -68,17 +72,51 @@ class BeneficiaryRepository(SQLRepository):
 
         return query.scalar() or 0
 
-    def create(self, **kwargs) -> Beneficiary:
+    def create(self, request: BeneficiaryCreateRequest) -> Beneficiary:
         """Create new beneficiary."""
-        beneficiary = Beneficiary(**kwargs)
+        beneficiary = Beneficiary(
+            full_name=request.full_name,
+            address=request.address,
+            phone=request.phone,
+            family_phone=request.family_phone,
+            description=request.description,
+            group_id=request.group_id,
+            status=request.status,
+            bo_enrolled=request.bo_enrolled,
+            last_priest_visit=request.last_priest_visit,
+            last_volunteer_meeting=request.last_volunteer_meeting,
+            history=request.history,
+        )
         self.session.add(beneficiary)
         return beneficiary
 
-    def update(self, beneficiary: Beneficiary, **kwargs) -> Beneficiary:
+    def update(
+        self, beneficiary: Beneficiary, request: BeneficiaryUpdateRequest
+    ) -> Beneficiary:
         """Update beneficiary."""
-        for key, value in kwargs.items():
-            if hasattr(beneficiary, key):
-                setattr(beneficiary, key, value)
+        fields = request.model_fields_set
+        if "full_name" in fields and request.full_name is not None:
+            beneficiary.full_name = request.full_name
+        if "address" in fields and request.address is not None:
+            beneficiary.address = request.address
+        if "phone" in fields:
+            beneficiary.phone = request.phone
+        if "family_phone" in fields:
+            beneficiary.family_phone = request.family_phone
+        if "description" in fields and request.description is not None:
+            beneficiary.description = request.description
+        if "group_id" in fields:
+            beneficiary.group_id = request.group_id
+        if "status" in fields and request.status is not None:
+            beneficiary.status = request.status
+        if "bo_enrolled" in fields and request.bo_enrolled is not None:
+            beneficiary.bo_enrolled = request.bo_enrolled
+        if "last_priest_visit" in fields:
+            beneficiary.last_priest_visit = request.last_priest_visit
+        if "last_volunteer_meeting" in fields:
+            beneficiary.last_volunteer_meeting = request.last_volunteer_meeting
+        if "history" in fields and request.history is not None:
+            beneficiary.history = request.history
         return beneficiary
 
     def delete(self, beneficiary: Beneficiary) -> None:

@@ -123,9 +123,12 @@ class AttachmentService:
         rows: Iterable[BOCardOverviewRow],
     ) -> tuple[BinaryIO, int]:
         """Write rows to a bounded spooled ZIP and count included files."""
-        archive_file: BinaryIO = SpooledTemporaryFile(  # noqa: SIM115
-            max_size=BO_CARD_ARCHIVE_MEMORY_THRESHOLD_BYTES,
-            mode="w+b",
+        archive_file = cast(
+            BinaryIO,
+            SpooledTemporaryFile(  # noqa: SIM115
+                max_size=BO_CARD_ARCHIVE_MEMORY_THRESHOLD_BYTES,
+                mode="w+b",
+            ),
         )
         used_names: set[str] = set()
         included_count = 0

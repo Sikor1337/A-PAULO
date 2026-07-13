@@ -1,4 +1,5 @@
 """Department schemas."""
+
 from datetime import date, datetime
 from typing import Self
 
@@ -81,6 +82,8 @@ class DepartmentInventoryItemResponse(BaseModel):
     borrowed_at: date | None
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DepartmentDetailResponse(BaseModel):

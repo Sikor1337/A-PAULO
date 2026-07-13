@@ -24,6 +24,8 @@ from app.modules.pi.repositories import (
     GroupRepository,
     VolunteerRepository,
 )
+from app.modules.pi.schemas.beneficiaries import BeneficiaryCreateRequest
+from app.modules.pi.schemas.volunteers import VolunteerCreateRequest
 from app.modules.pi.services.beneficiaries import BeneficiaryService
 from app.modules.pi.services.functions import FunctionService
 from app.modules.pi.services.groups import GroupService
@@ -44,10 +46,12 @@ def test_bo_card_attachment_api_flow(
         VolunteerRepository(db_session), audit
     ).create_volunteer(
         actor=admin_user,
-        full_name="Anna Wolontariusz",
-        email="anna.bo@example.com",
-        join_date=datetime(2026, 1, 10, 9, 0),
-        function_ids=[function.id],
+        request=VolunteerCreateRequest(
+            full_name="Anna Wolontariusz",
+            email="anna.bo@example.com",
+            join_date=datetime(2026, 1, 10, 9, 0),
+            function_ids=[function.id],
+        ),
     )
     group_service = GroupService(GroupRepository(db_session), audit)
     group = group_service.create_group(name="Grupa BO", actor=admin_user)
@@ -55,10 +59,12 @@ def test_bo_card_attachment_api_flow(
         BeneficiaryRepository(db_session), audit
     ).create_beneficiary(
         actor=admin_user,
-        full_name="Jan BO",
-        address="ul. Testowa 1",
-        group_id=group["id"],
-        bo_enrolled=True,
+        request=BeneficiaryCreateRequest(
+            full_name="Jan BO",
+            address="ul. Testowa 1",
+            group_id=group["id"],
+            bo_enrolled=True,
+        ),
     )
     group_service.update_group(
         group["id"],

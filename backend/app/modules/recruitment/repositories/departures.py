@@ -10,6 +10,8 @@ from app.modules.recruitment.models import (
     DepartureInterview,
     RecruitmentSubmission,
 )
+from app.modules.recruitment.schemas.commands import DepartureInterviewWrite
+from app.modules.recruitment.schemas.form_fields import FormFieldWrite
 
 
 class DepartureRepository(SQLRepository):
@@ -22,8 +24,18 @@ class DepartureRepository(SQLRepository):
             query = query.filter(DepartureField.is_active.is_(True))
         return query.order_by(DepartureField.position, DepartureField.id).all()
 
-    def create_field(self, **values) -> DepartureField:
-        field = DepartureField(**values)
+    def create_field(self, request: FormFieldWrite) -> DepartureField:
+        field = DepartureField(
+            key=request.key,
+            label=request.label,
+            field_type=request.field_type,
+            required=request.required,
+            placeholder=request.placeholder,
+            options=request.options,
+            position=request.position,
+            is_active=request.is_active,
+            is_system=request.is_system,
+        )
         self.session.add(field)
         return field
 
@@ -77,7 +89,14 @@ class DepartureRepository(SQLRepository):
             .all()
         )
 
-    def create(self, **values) -> DepartureInterview:
-        interview = DepartureInterview(**values)
+    def create(self, request: DepartureInterviewWrite) -> DepartureInterview:
+        interview = DepartureInterview(
+            volunteer_id=request.volunteer_id,
+            departure_date=request.departure_date,
+            departure_reason=request.departure_reason,
+            stay_in_contact=request.stay_in_contact,
+            answers=request.answers,
+            completed_by_id=request.completed_by_id,
+        )
         self.session.add(interview)
         return interview

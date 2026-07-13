@@ -46,7 +46,10 @@ def get_application_form(
         or user.username
     )
     return RecruitmentFormResponse(
-        fields=service.list_fields(active_only=True),
+        fields=[
+            RecruitmentFieldResponse.model_validate(field)
+            for field in service.list_fields(active_only=True)
+        ],
         applicant_name=applicant_name,
         applicant_email=user.email,
         initial_answers=initial_answers,

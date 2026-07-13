@@ -6,6 +6,11 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from app.infrastructure.sql.repository import SQLRepository
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.models import RecruitmentField, RecruitmentSubmission
+from app.modules.recruitment.schemas.commands import (
+    RecruitmentSubmissionWrite,
+    RecruitmentVolunteerWrite,
+)
+from app.modules.recruitment.schemas.form_fields import FormFieldWrite
 
 
 class RecruitmentRepository(SQLRepository):
@@ -21,8 +26,18 @@ class RecruitmentRepository(SQLRepository):
     def get_field(self, field_id: int) -> RecruitmentField | None:
         return self.session.get(RecruitmentField, field_id)
 
-    def create_field(self, **values) -> RecruitmentField:
-        field = RecruitmentField(**values)
+    def create_field(self, request: FormFieldWrite) -> RecruitmentField:
+        field = RecruitmentField(
+            key=request.key,
+            label=request.label,
+            field_type=request.field_type,
+            required=request.required,
+            placeholder=request.placeholder,
+            options=request.options,
+            position=request.position,
+            is_active=request.is_active,
+            is_system=request.is_system,
+        )
         self.session.add(field)
         return field
 
@@ -85,9 +100,43 @@ class RecruitmentRepository(SQLRepository):
             .all()
         )
 
-    def create_submission(self, **values) -> RecruitmentSubmission:
-        submission = RecruitmentSubmission(**values)
+    def create_submission(
+        self, request: RecruitmentSubmissionWrite
+    ) -> RecruitmentSubmission:
+        submission = RecruitmentSubmission(
+            user_id=request.user_id,
+            full_name=request.full_name,
+            email=request.email,
+            phone=request.phone,
+            social_link=request.social_link,
+            availability=request.availability,
+            answers=request.answers,
+            status=request.status,
+            return_reason=request.return_reason,
+            decision_comment=request.decision_comment,
+            submitted_at=request.submitted_at,
+            status_changed_at=request.status_changed_at,
+        )
         self.session.add(submission)
+        return submission
+
+    def update_submission(
+        self,
+        submission: RecruitmentSubmission,
+        request: RecruitmentSubmissionWrite,
+    ) -> RecruitmentSubmission:
+        submission.user_id = request.user_id
+        submission.full_name = request.full_name
+        submission.email = request.email
+        submission.phone = request.phone
+        submission.social_link = request.social_link
+        submission.availability = request.availability
+        submission.answers = request.answers
+        submission.status = request.status
+        submission.return_reason = request.return_reason
+        submission.decision_comment = request.decision_comment
+        submission.submitted_at = request.submitted_at
+        submission.status_changed_at = request.status_changed_at
         return submission
 
     def get_volunteer_by_email(self, email: str) -> Volunteer | None:
@@ -100,8 +149,17 @@ class RecruitmentRepository(SQLRepository):
     def get_volunteer(self, volunteer_id: int) -> Volunteer | None:
         return self.session.get(Volunteer, volunteer_id)
 
-    def create_volunteer(self, **values) -> Volunteer:
-        volunteer = Volunteer(**values)
+    def create_volunteer(self, request: RecruitmentVolunteerWrite) -> Volunteer:
+        volunteer = Volunteer(
+            full_name=request.full_name,
+            email=request.email,
+            phone=request.phone,
+            social_link=request.social_link,
+            status=request.status,
+            join_date=request.join_date,
+            notes=request.notes,
+            history=request.history,
+        )
         self.session.add(volunteer)
         self.session.flush()
         return volunteer

@@ -124,7 +124,7 @@ class UserService:
 
     def create_access_token(self, user_id: int) -> str:
         """Create JWT access token."""
-        data = {
+        data: dict[str, object] = {
             "sub": str(user_id),
             "type": "access",
         }

@@ -2,13 +2,20 @@
 
 Departments are archived, never hard-deleted, so member history survives.
 """
+
+from __future__ import annotations
+
 from datetime import date, datetime
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, DateTime, ForeignKey, String, UniqueConstraint, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.sql.base import Base
+
+if TYPE_CHECKING:
+    from app.modules.pi.models.volunteer import Volunteer
 
 
 class MembershipStatus(StrEnum):
@@ -98,6 +105,10 @@ class DepartmentInventoryItem(Base):
     borrowed_by_volunteer_id: Mapped[int | None] = mapped_column(
         ForeignKey("volunteers.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    borrowed_by_volunteer: Mapped[Volunteer | None] = relationship(
+        foreign_keys=[borrowed_by_volunteer_id],
+        lazy="joined",
+    )
     borrowed_at: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -108,3 +119,8 @@ class DepartmentInventoryItem(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+    @property
+    def borrowed_by_volunteer_name(self) -> str | None:
+        volunteer = self.borrowed_by_volunteer
+        return volunteer.full_name if volunteer else None

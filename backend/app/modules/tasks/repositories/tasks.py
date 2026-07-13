@@ -43,9 +43,7 @@ class TaskRepository(SQLRepository):
             query = query.join(TaskAssignee).filter(
                 TaskAssignee.volunteer_id == volunteer_id
             )
-        return (
-            query.order_by(Task.created_at.desc()).offset(skip).limit(limit).all()
-        )
+        return query.order_by(Task.created_at.desc()).offset(skip).limit(limit).all()
 
     def create(self, **kwargs) -> Task:
         task = Task(**kwargs)
@@ -133,7 +131,7 @@ class TaskRepository(SQLRepository):
             .filter(Department.id.in_(department_ids))
             .all()
         )
-        return dict(rows)
+        return {department_id: name for department_id, name in rows}
 
     def event_titles(self, event_ids: set[int]) -> dict[int, str]:
         if not event_ids:
@@ -143,7 +141,7 @@ class TaskRepository(SQLRepository):
             .filter(CalendarEvent.id.in_(event_ids))
             .all()
         )
-        return dict(rows)
+        return {event_id: title for event_id, title in rows}
 
     def volunteer_names(self, volunteer_ids: list[int]) -> dict[int, str]:
         if not volunteer_ids:
@@ -153,4 +151,4 @@ class TaskRepository(SQLRepository):
             .filter(Volunteer.id.in_(volunteer_ids))
             .all()
         )
-        return dict(rows)
+        return {volunteer_id: name for volunteer_id, name in rows}

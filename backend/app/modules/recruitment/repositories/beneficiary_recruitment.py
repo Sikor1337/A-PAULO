@@ -7,6 +7,10 @@ from app.modules.recruitment.models import (
     BeneficiaryRecruitmentField,
     BeneficiaryRecruitmentSubmission,
 )
+from app.modules.recruitment.schemas.beneficiary_recruitment import (
+    BeneficiaryRecruitmentSubmissionWrite,
+)
+from app.modules.recruitment.schemas.form_fields import FormFieldWrite
 
 
 class BeneficiaryRecruitmentRepository(SQLRepository):
@@ -23,8 +27,18 @@ class BeneficiaryRecruitmentRepository(SQLRepository):
             BeneficiaryRecruitmentField.position, BeneficiaryRecruitmentField.id
         ).all()
 
-    def create_field(self, **values) -> BeneficiaryRecruitmentField:
-        field = BeneficiaryRecruitmentField(**values)
+    def create_field(self, request: FormFieldWrite) -> BeneficiaryRecruitmentField:
+        field = BeneficiaryRecruitmentField(
+            key=request.key,
+            label=request.label,
+            field_type=request.field_type,
+            required=request.required,
+            placeholder=request.placeholder,
+            options=request.options,
+            position=request.position,
+            is_active=request.is_active,
+            is_system=request.is_system,
+        )
         self.session.add(field)
         return field
 
@@ -66,8 +80,18 @@ class BeneficiaryRecruitmentRepository(SQLRepository):
             .first()
         )
 
-    def create_submission(self, **values) -> BeneficiaryRecruitmentSubmission:
-        submission = BeneficiaryRecruitmentSubmission(**values)
+    def create_submission(
+        self, request: BeneficiaryRecruitmentSubmissionWrite
+    ) -> BeneficiaryRecruitmentSubmission:
+        submission = BeneficiaryRecruitmentSubmission(
+            full_name=request.full_name,
+            address=request.address,
+            phone=request.phone,
+            reporter_name=request.reporter_name,
+            reporter_phone=request.reporter_phone,
+            help_needed=request.help_needed,
+            answers=request.answers,
+        )
         self.session.add(submission)
         return submission
 

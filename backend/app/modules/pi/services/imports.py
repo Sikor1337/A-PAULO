@@ -18,6 +18,8 @@ from datetime import date, datetime, time
 from enum import Enum
 from typing import Any
 
+from sqlalchemy import String
+
 from app.core.constants import MEGABYTE
 from app.core.errors import ValidationException
 from app.core.uploads import ensure_upload_size
@@ -28,7 +30,9 @@ from app.modules.pi.models import Beneficiary, Volunteer
 from app.modules.pi.models.enums import BeneficiaryStatus, VolunteerStatus
 from app.modules.pi.repositories.beneficiaries import BeneficiaryRepository
 from app.modules.pi.repositories.volunteers import VolunteerRepository
+from app.modules.pi.schemas.beneficiaries import BeneficiaryCreateRequest
 from app.modules.pi.schemas.imports import ImportReport, ImportRowIssue
+from app.modules.pi.schemas.volunteers import VolunteerCreateRequest
 
 MAX_FILE_BYTES = 2 * MEGABYTE
 MAX_ROWS = 5000
@@ -47,7 +51,10 @@ def _is_false_word(value: str) -> bool:
 
 def _column_length(model: type[Base], field: str) -> int:
     """Max length of a string column, read from the model definition."""
-    return model.__table__.columns[field].type.length
+    column_type = model.__table__.columns[field].type
+    if not isinstance(column_type, String) or column_type.length is None:
+        raise TypeError(f"{model.__name__}.{field} is not a bounded string column")
+    return column_type.length
 
 
 class RowValidationError(Exception):
@@ -152,8 +159,9 @@ VOLUNTEER_COLUMNS: tuple[ColumnSpec, ...] = (
     ColumnSpec(
         "Link społecznościowy",
         "social_link",
-        lambda r, h: r.text(h, max_length=_column_length(Volunteer, "social_link"))
-        or None,
+        lambda r, h: (
+            r.text(h, max_length=_column_length(Volunteer, "social_link")) or None
+        ),
     ),
     ColumnSpec(
         "Status",
@@ -201,9 +209,7 @@ BENEFICIARY_COLUMNS: tuple[ColumnSpec, ...] = (
         lambda r, h: r.choice(h, BeneficiaryStatus, BeneficiaryStatus.OBECNY),
     ),
     ColumnSpec("BO", "bo_enrolled", lambda r, h: r.flag(h)),
-    ColumnSpec(
-        "Ostatnia wizyta księdza", "last_priest_visit", lambda r, h: r.date(h)
-    ),
+    ColumnSpec("Ostatnia wizyta księdza", "last_priest_visit", lambda r, h: r.date(h)),
     ColumnSpec(
         "Ostatnie spotkanie wolontariusza",
         "last_volunteer_meeting",
@@ -318,9 +324,7 @@ def _split_duplicates(
                 ImportRowIssue(row=line_number, message=already_exists(payload))
             )
         elif key in seen:
-            skipped.append(
-                ImportRowIssue(row=line_number, message=repeated(payload))
-            )
+            skipped.append(ImportRowIssue(row=line_number, message=repeated(payload)))
         else:
             seen.add(key)
             to_create.append(payload)
@@ -353,6 +357,9 @@ class CsvImportService:
             data,
             specs=VOLUNTEER_COLUMNS,
             repo=self.volunteer_repo,
+            create=lambda payload: self.volunteer_repo.create(
+                VolunteerCreateRequest.model_validate(payload)
+            ),
             existing_keys=lambda: {
                 email.lower() for email in self.volunteer_repo.list_emails()
             },
@@ -370,6 +377,9 @@ class CsvImportService:
             data,
             specs=BENEFICIARY_COLUMNS,
             repo=self.beneficiary_repo,
+            create=lambda payload: self.beneficiary_repo.create(
+                BeneficiaryCreateRequest.model_validate(payload)
+            ),
             existing_keys=lambda: {
                 " ".join(name.split()).lower()
                 for name in self.beneficiary_repo.list_full_names()
@@ -389,6 +399,7 @@ class CsvImportService:
         *,
         specs: tuple[ColumnSpec, ...],
         repo: VolunteerRepository | BeneficiaryRepository,
+        create: Callable[[dict[str, Any]], object],
         existing_keys: Callable[[], set[str]],
         key_of: Callable[[dict[str, Any]], str],
         already_exists: Callable[[dict[str, Any]], str],
@@ -406,11 +417,12 @@ class CsvImportService:
         to_create, skipped = _split_duplicates(
             parsed, existing_keys(), key_of, already_exists, repeated
         )
-        return self._finalize(repo, rows, to_create, skipped, errors)
+        return self._finalize(repo, create, rows, to_create, skipped, errors)
 
     def _finalize(
         self,
         repo: VolunteerRepository | BeneficiaryRepository,
+        create: Callable[[dict[str, Any]], object],
         rows: list,
         to_create: list[dict],
         skipped: list[ImportRowIssue],
@@ -426,7 +438,7 @@ class CsvImportService:
             )
         try:
             for payload in to_create:
-                repo.create(**payload)
+                create(payload)
             repo.commit(skip_audit=True)
         except Exception:
             repo.rollback()

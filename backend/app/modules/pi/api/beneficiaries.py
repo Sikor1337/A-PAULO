@@ -50,7 +50,7 @@ def create_beneficiary(
     user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
 ):
     """Create new beneficiary."""
-    return service.create_beneficiary(actor=user, **request.model_dump())
+    return service.create_beneficiary(actor=user, request=request)
 
 
 @router.get("/{beneficiary_id}", response_model=BeneficiaryResponse)
@@ -71,9 +71,7 @@ def update_beneficiary(
     user: User = Depends(require_permission(CAN_MANAGE_BENEFICIARIES)),
 ):
     """Update beneficiary."""
-    # Only update provided fields
-    update_data = request.model_dump(exclude_unset=True)
-    return service.update_beneficiary(beneficiary_id, actor=user, **update_data)
+    return service.update_beneficiary(beneficiary_id, actor=user, request=request)
 
 
 @router.delete("/{beneficiary_id}")
