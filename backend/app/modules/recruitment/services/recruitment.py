@@ -30,15 +30,16 @@ from app.modules.recruitment.schemas.commands import (
     RecruitmentVolunteerWrite,
 )
 from app.modules.recruitment.services.form_fields import (
+    ConfigurableFormFieldService,
     FieldSaveErrors,
-    ensure_default_fields,
-    save_field_drafts,
 )
 from app.modules.security.models.constants import STAFF_GROUP_KEY
 from app.modules.security.services.permissions import PermissionService
 
 
-class RecruitmentService:
+class RecruitmentService(
+    ConfigurableFormFieldService[RecruitmentField, RecruitmentFieldDraft]
+):
     def __init__(
         self,
         repo: RecruitmentRepository,
@@ -48,6 +49,17 @@ class RecruitmentService:
         self.repo = repo
         self.permissions = permissions
         self.audit = audit
+        super().__init__(
+            repo,
+            defaults=DEFAULT_FIELDS,
+            errors=FieldSaveErrors(
+                unknown_field="Co najmniej jedno pole formularza nie istnieje",
+                missing_system_field="Nie można usunąć podstawowego pola formularza",
+                invalid_system_field=(
+                    "Podstawowe pola kontaktowe muszą pozostać aktywne i wymagane"
+                ),
+            ),
+        )
 
     def _record_entity(
         self,
@@ -67,35 +79,6 @@ class RecruitmentService:
                 actor_display_name=actor.email,
                 changes=calculate_delta(old_state, new_state),
             )
-        )
-
-    def _ensure_default_fields(self) -> None:
-        ensure_default_fields(self.repo, DEFAULT_FIELDS)
-
-    def list_fields(self, *, active_only: bool = False) -> list[RecruitmentField]:
-        self._ensure_default_fields()
-        return self.repo.list_fields(active_only=active_only)
-
-    def save_fields(
-        self, drafts: list[RecruitmentFieldDraft]
-    ) -> list[RecruitmentField]:
-        """Persist the complete editor draft in one transaction."""
-        self._ensure_default_fields()
-        return save_field_drafts(
-            self.repo,
-            drafts,
-            system_field_is_valid=lambda field, draft: (
-                draft.field_type == field.field_type
-                and draft.required
-                and draft.is_active
-            ),
-            errors=FieldSaveErrors(
-                unknown_field="Co najmniej jedno pole formularza nie istnieje",
-                missing_system_field="Nie można usunąć podstawowego pola formularza",
-                invalid_system_field=(
-                    "Podstawowe pola kontaktowe muszą pozostać aktywne i wymagane"
-                ),
-            ),
         )
 
     def get_submission_for_user(self, user_id: int) -> RecruitmentSubmission | None:

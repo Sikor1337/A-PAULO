@@ -12,6 +12,7 @@ from app.modules.recruitment.beneficiary_access import (
     is_valid_form_token,
 )
 from app.modules.recruitment.beneficiary_constants import BENEFICIARY_DEFAULT_FIELDS
+from app.modules.recruitment.models import BeneficiaryRecruitmentField
 from app.modules.recruitment.repositories.beneficiary_recruitment import (
     BeneficiaryRecruitmentRepository,
 )
@@ -24,13 +25,17 @@ from app.modules.recruitment.schemas.recruitment import (
     RecruitmentSubmissionCreate,
 )
 from app.modules.recruitment.services.form_fields import (
+    ConfigurableFormFieldService,
     FieldSaveErrors,
-    ensure_default_fields,
-    save_field_drafts,
 )
 
 
-class BeneficiaryRecruitmentService:
+class BeneficiaryRecruitmentService(
+    ConfigurableFormFieldService[
+        BeneficiaryRecruitmentField,
+        RecruitmentFieldDraft,
+    ]
+):
     def __init__(
         self,
         repo: BeneficiaryRecruitmentRepository,
@@ -38,30 +43,9 @@ class BeneficiaryRecruitmentService:
     ):
         self.repo = repo
         self.beneficiaries = beneficiaries
-
-    def _ensure_default_fields(self) -> None:
-        ensure_default_fields(self.repo, BENEFICIARY_DEFAULT_FIELDS)
-
-    def list_fields(self, *, active_only: bool = False):
-        self._ensure_default_fields()
-        return self.repo.list_fields(active_only=active_only)
-
-    def get_public_form(self) -> dict:
-        return {
-            "fields": self.list_fields(active_only=True),
-            "form_token": create_form_token(),
-        }
-
-    def save_fields(self, drafts: list[RecruitmentFieldDraft]):
-        self._ensure_default_fields()
-        return save_field_drafts(
-            self.repo,
-            drafts,
-            system_field_is_valid=lambda field, draft: (
-                draft.field_type == field.field_type
-                and draft.required == field.required
-                and draft.is_active
-            ),
+        super().__init__(
+            repo,
+            defaults=BENEFICIARY_DEFAULT_FIELDS,
             errors=FieldSaveErrors(
                 unknown_field="Co najmniej jedno pole formularza nie istnieje",
                 missing_system_field="Nie można usunąć podstawowego pola formularza",
@@ -70,6 +54,12 @@ class BeneficiaryRecruitmentService:
                 ),
             ),
         )
+
+    def get_public_form(self) -> dict:
+        return {
+            "fields": self.list_fields(active_only=True),
+            "form_token": create_form_token(),
+        }
 
     def submit(self, request: BeneficiaryRecruitmentSubmissionCreate):
         if request.website:

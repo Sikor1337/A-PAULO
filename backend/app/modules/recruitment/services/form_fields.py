@@ -2,9 +2,9 @@
 
 import re
 import unicodedata
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from app.core.errors import ConflictError, NotFoundError
 from app.modules.recruitment.schemas.form_fields import FormFieldWrite
@@ -46,7 +46,7 @@ class FormFieldDraft(Protocol):
     def is_active(self) -> bool: ...
 
 
-class FormFieldRepository[FieldT: FormFieldEntity](Protocol):
+class FormFieldRepository[FieldT](Protocol):
     def list_fields(self, *, active_only: bool = False) -> list[FieldT]: ...
 
     def create_field(self, request: FormFieldWrite) -> FieldT: ...
@@ -63,6 +63,36 @@ class FieldSaveErrors:
     unknown_field: str
     missing_system_field: str
     invalid_system_field: str
+
+
+class ConfigurableFormFieldService[
+    FieldT,
+    DraftT: FormFieldDraft,
+]:
+    """Shared field-list and field-editor workflow for configurable forms."""
+
+    def __init__(
+        self,
+        repo: FormFieldRepository[FieldT],
+        *,
+        defaults: Sequence[Mapping[str, Any]],
+        errors: FieldSaveErrors,
+    ) -> None:
+        self._form_field_repo = repo
+        self._form_field_defaults = defaults
+        self._form_field_errors = errors
+
+    def list_fields(self, *, active_only: bool = False) -> list[FieldT]:
+        ensure_default_fields(self._form_field_repo, self._form_field_defaults)
+        return self._form_field_repo.list_fields(active_only=active_only)
+
+    def save_fields(self, drafts: list[DraftT]) -> list[FieldT]:
+        ensure_default_fields(self._form_field_repo, self._form_field_defaults)
+        return save_field_drafts(
+            self._form_field_repo,
+            drafts,
+            errors=self._form_field_errors,
+        )
 
 
 def allocate_field_key(label: str, used_keys: set[str]) -> str:
@@ -84,7 +114,12 @@ def allocate_field_key(label: str, used_keys: set[str]) -> str:
     return key
 
 
-def ensure_default_fields[FieldT: FormFieldEntity](
+def _as_form_field(field: object) -> FormFieldEntity:
+    """Bridge SQLAlchemy mapped attributes to the structural field contract."""
+    return cast(FormFieldEntity, field)
+
+
+def ensure_default_fields[FieldT](
     repo: FormFieldRepository[FieldT],
     defaults: Sequence[Mapping[str, Any]],
 ) -> None:
@@ -96,7 +131,7 @@ def ensure_default_fields[FieldT: FormFieldEntity](
             if not current
             else [values for values in defaults if values.get("is_system")]
         )
-        by_key = {field.key: field for field in current}
+        by_key = {_as_form_field(field).key: field for field in current}
         changed = False
 
         for values in defaults_to_ensure:
@@ -120,20 +155,21 @@ def ensure_default_fields[FieldT: FormFieldEntity](
                 changed = True
                 continue
 
+            field_data = _as_form_field(field)
             if values.get("is_system"):
                 expected_type = str(values["field_type"])
                 expected_required = bool(values["required"])
-                if field.field_type != expected_type:
-                    field.field_type = expected_type
+                if field_data.field_type != expected_type:
+                    field_data.field_type = expected_type
                     changed = True
-                if field.required != expected_required:
-                    field.required = expected_required
+                if field_data.required != expected_required:
+                    field_data.required = expected_required
                     changed = True
-                if not field.is_active:
-                    field.is_active = True
+                if not field_data.is_active:
+                    field_data.is_active = True
                     changed = True
-                if not field.is_system:
-                    field.is_system = True
+                if not field_data.is_system:
+                    field_data.is_system = True
                     changed = True
 
         system_keys = [
@@ -141,7 +177,11 @@ def ensure_default_fields[FieldT: FormFieldEntity](
         ]
         ordered = [by_key[key] for key in system_keys]
         if current:
-            ordered.extend(field for field in current if field.key not in system_keys)
+            ordered.extend(
+                field
+                for field in current
+                if _as_form_field(field).key not in system_keys
+            )
         else:
             ordered.extend(
                 by_key[str(values["key"])]
@@ -149,8 +189,9 @@ def ensure_default_fields[FieldT: FormFieldEntity](
                 if not values.get("is_system")
             )
         for position, field in enumerate(ordered):
-            if field.position != position:
-                field.position = position
+            field_data = _as_form_field(field)
+            if field_data.position != position:
+                field_data.position = position
                 changed = True
 
         if changed:
@@ -160,26 +201,29 @@ def ensure_default_fields[FieldT: FormFieldEntity](
         raise
 
 
-def save_field_drafts[FieldT: FormFieldEntity, DraftT: FormFieldDraft](
+def save_field_drafts[FieldT, DraftT: FormFieldDraft](
     repo: FormFieldRepository[FieldT],
     drafts: Sequence[DraftT],
     *,
-    system_field_is_valid: Callable[[FieldT, DraftT], bool],
     errors: FieldSaveErrors,
 ) -> list[FieldT]:
     """Replace the editable form definition in one transaction."""
     try:
         current = repo.list_fields()
-        by_id = {field.id: field for field in current}
+        by_id = {_as_form_field(field).id: field for field in current}
         submitted_ids = {draft.id for draft in drafts if draft.id is not None}
         if submitted_ids - set(by_id):
             raise NotFoundError(errors.unknown_field)
 
-        system_ids = {field.id for field in current if field.is_system}
+        system_ids = {
+            field_data.id
+            for field in current
+            if (field_data := _as_form_field(field)).is_system
+        }
         if not system_ids.issubset(submitted_ids):
             raise ConflictError(errors.missing_system_field)
 
-        used_keys = {field.key for field in current}
+        used_keys = {_as_form_field(field).key for field in current}
         for position, draft in enumerate(drafts):
             if draft.id is None:
                 repo.create_field(
@@ -198,18 +242,23 @@ def save_field_drafts[FieldT: FormFieldEntity, DraftT: FormFieldDraft](
                 continue
 
             field = by_id[draft.id]
-            if field.is_system and not system_field_is_valid(field, draft):
+            field_data = _as_form_field(field)
+            if field_data.is_system and (
+                draft.field_type != field_data.field_type
+                or draft.required != field_data.required
+                or not draft.is_active
+            ):
                 raise ConflictError(errors.invalid_system_field)
-            field.label = draft.label
-            field.field_type = draft.field_type
-            field.required = draft.required
-            field.placeholder = draft.placeholder
-            field.options = draft.options
-            field.position = position
-            field.is_active = draft.is_active
+            field_data.label = draft.label
+            field_data.field_type = draft.field_type
+            field_data.required = draft.required
+            field_data.placeholder = draft.placeholder
+            field_data.options = draft.options
+            field_data.position = position
+            field_data.is_active = draft.is_active
 
         for field in current:
-            if field.id not in submitted_ids:
+            if _as_form_field(field).id not in submitted_ids:
                 repo.delete_field(field)
 
         repo.commit(skip_audit=True)

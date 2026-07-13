@@ -34,7 +34,7 @@ class RecruitmentField(Base):
     field_type: Mapped[str] = mapped_column(String(30), default="text")
     required: Mapped[bool] = mapped_column(Boolean, default=False)
     placeholder: Mapped[str] = mapped_column(String(250), default="")
-    options: Mapped[list] = mapped_column(JSON, default=list)
+    options: Mapped[list[str]] = mapped_column(JSON, default=list)
     position: Mapped[int] = mapped_column(Integer, default=0, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_system: Mapped[bool] = mapped_column(Boolean, default=False)

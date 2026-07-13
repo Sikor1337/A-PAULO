@@ -18,9 +18,8 @@ from app.modules.recruitment.repositories.departures import DepartureRepository
 from app.modules.recruitment.schemas.commands import DepartureInterviewWrite
 from app.modules.recruitment.schemas.departures import DepartureFieldDraft
 from app.modules.recruitment.services.form_fields import (
+    ConfigurableFormFieldService,
     FieldSaveErrors,
-    ensure_default_fields,
-    save_field_drafts,
 )
 
 
@@ -34,28 +33,15 @@ class DepartureAnswerField:
     options: list[str]
 
 
-class DepartureService:
+class DepartureService(
+    ConfigurableFormFieldService[DepartureField, DepartureFieldDraft]
+):
     def __init__(self, session: Session):
         self.session = session
         self.repo = DepartureRepository(session)
-
-    def _ensure_default_fields(self) -> None:
-        ensure_default_fields(self.repo, DEFAULT_DEPARTURE_FIELDS)
-
-    def list_fields(self, *, active_only: bool = False) -> list[DepartureField]:
-        self._ensure_default_fields()
-        return self.repo.list_fields(active_only=active_only)
-
-    def save_fields(self, drafts: list[DepartureFieldDraft]) -> list[DepartureField]:
-        self._ensure_default_fields()
-        return save_field_drafts(
+        super().__init__(
             self.repo,
-            drafts,
-            system_field_is_valid=lambda field, draft: (
-                draft.field_type == field.field_type
-                and draft.required == field.required
-                and draft.is_active
-            ),
+            defaults=DEFAULT_DEPARTURE_FIELDS,
             errors=FieldSaveErrors(
                 unknown_field="Nie znaleziono pola ankiety odejścia",
                 missing_system_field="Nie można usunąć podstawowych pól ankiety",
