@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import SurveyFieldModal from './SurveyFieldModal';
 import { appDialog } from '@/lib/appDialog';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import type { RecruitmentFieldDraft, RecruitmentFieldType } from '@/types';
 
 const typeLabels: Record<RecruitmentFieldType, string> = {
@@ -32,6 +33,7 @@ const SurveyFieldBuilder = ({
 }: Props) => {
   const [draft, setDraft] = useState<RecruitmentFieldDraft[] | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null | undefined>(undefined);
+  const confirmDiscard = useUnsavedChanges(draft !== null && !isSaving);
   const fields = draft ?? savedFields;
   const editingField = useMemo(() => (
     editingIndex === undefined || editingIndex === null || !draft
@@ -57,6 +59,9 @@ const SurveyFieldBuilder = ({
     if (!await appDialog.confirm('Usunąć to pole? Zapisane odpowiedzi pozostaną w archiwum.', { title: 'Usuwanie pola ankiety', confirmLabel: 'Usuń', tone: 'warning' })) return;
     setDraft((current) => current?.filter((_, fieldIndex) => fieldIndex !== index) ?? current);
   };
+  const cancelEditing = async () => {
+    if (await confirmDiscard()) setDraft(null);
+  };
 
   return (
     <section>
@@ -68,7 +73,7 @@ const SurveyFieldBuilder = ({
         {draft ? (
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setEditingIndex(null)} className="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">+ Dodaj pytanie</button>
-            <button type="button" onClick={() => setDraft(null)} disabled={isSaving} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Anuluj</button>
+            <button type="button" onClick={cancelEditing} disabled={isSaving} className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-600">Anuluj</button>
             <button type="button" onClick={() => onSave(draft, () => setDraft(null))} disabled={isSaving} className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-bold text-white disabled:opacity-50">{isSaving ? 'Zapisywanie…' : 'Zapisz formularz'}</button>
           </div>
         ) : canManage ? (
