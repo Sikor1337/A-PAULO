@@ -75,7 +75,7 @@ const GroupsPage: React.FC = () => {
 
   const [showBeneficiaryPicker, setShowBeneficiaryPicker] = useState(false);
   const [beneficiaryPickerSearch, setBeneficiaryPickerSearch] = useState('');
-  const [sidebarDropdownOpen, setSidebarDropdownOpen] = useState(false);
+  const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
 
   const { groups, saveGroup, deleteGroup } = useGroups();
   const { data: volunteers } = useVolunteerList();
@@ -409,20 +409,23 @@ const GroupsPage: React.FC = () => {
     );
   };
 
-  const sidebarSlot = (
+  const groupDropdown = (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setSidebarDropdownOpen((prev) => !prev)}
-        className="flex items-center gap-1 bg-[#3d4558] hover:bg-[#4a5268] text-white text-xs font-bold px-2 py-1 rounded-md transition-colors max-w-[90px]"
+        onClick={() => setGroupDropdownOpen((prev) => !prev)}
+        className="flex min-h-9 max-w-[220px] items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-100"
+        aria-haspopup="listbox"
+        aria-expanded={groupDropdownOpen}
       >
         <span className="truncate">{isNewGroup ? '—' : (groups?.find((g) => g.id === selectedGroupId)?.name ?? '—')}</span>
-        <span className="shrink-0 opacity-60">▾</span>
+        <span className="shrink-0 text-gray-400">▾</span>
       </button>
-      {sidebarDropdownOpen && (
+      {groupDropdownOpen && (
         <div
-          className="absolute right-0 top-full mt-1 bg-[#2d3345] rounded-xl shadow-2xl z-50 py-1.5 min-w-[140px] border border-white/10"
-          onMouseLeave={() => setSidebarDropdownOpen(false)}
+          className="absolute left-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-xl border border-gray-200 bg-white py-1.5 shadow-2xl"
+          onMouseLeave={() => setGroupDropdownOpen(false)}
+          role="listbox"
         >
           {groups?.map((g) => (
             <button
@@ -430,9 +433,11 @@ const GroupsPage: React.FC = () => {
               type="button"
               onClick={() => {
                 setSelectedGroupId(g.id);
-                setSidebarDropdownOpen(false);
+                setGroupDropdownOpen(false);
               }}
-              className={`w-full text-left px-3 py-1.5 text-xs font-bold transition-colors hover:bg-[#3d4558] ${g.id === selectedGroupId ? 'text-indigo-300' : 'text-white'}`}
+              className={`w-full px-3 py-2 text-left text-xs font-bold transition-colors hover:bg-indigo-50 ${g.id === selectedGroupId ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'}`}
+              role="option"
+              aria-selected={g.id === selectedGroupId}
             >
               {g.name}
             </button>
@@ -443,12 +448,13 @@ const GroupsPage: React.FC = () => {
   );
 
   return (
-    <PageShell sidebarSlot={sidebarSlot} cardClassName={GROUPS_CARD}>
+    <PageShell cardClassName={GROUPS_CARD}>
       {/* ── HEADER ── */}
       <div className="flex shrink-0 flex-col gap-3 border-b px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-2xl">👥</span>
           <h1 className="text-xl font-bold text-gray-900 uppercase">Grupy</h1>
+          {groupDropdown}
           {canManageGroups && (isNewGroup ? (
             <button
               type="button"

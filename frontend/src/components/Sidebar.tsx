@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useMyPermissions } from '@/hooks/usePermissions';
@@ -7,7 +6,6 @@ import GuideModal from '@/features/guide/GuideModal';
 import type { PermissionCode, UserStatus } from '@/types';
 
 interface SidebarProps {
-  groupsSlot?: ReactNode;
   isOpen?: boolean;
   onClose?: () => void;
 }
@@ -60,7 +58,7 @@ const sections: SidebarSection[] = [
   },
 ];
 
-const Sidebar = ({ groupsSlot, isOpen = true, onClose }: SidebarProps) => {
+const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
@@ -143,11 +141,6 @@ const Sidebar = ({ groupsSlot, isOpen = true, onClose }: SidebarProps) => {
                       {item.icon}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.name}</span>
-                    {item.path === '/groups' && groupsSlot && (
-                      <div className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
-                        {groupsSlot}
-                      </div>
-                    )}
                   </div>
                 ))}
             </nav>
