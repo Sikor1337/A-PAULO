@@ -148,9 +148,7 @@ def test_reporter_deletes_only_own_report(
     db_session.add(regular)
     db_session.flush()
     submit_perm = (
-        db_session.query(Permission)
-        .filter_by(code=CAN_SUBMIT_BUG_REPORTS)
-        .one()
+        db_session.query(Permission).filter_by(code=CAN_SUBMIT_BUG_REPORTS).one()
     )
     reporter_group = UserGroup(
         name="Zgłaszający",
@@ -171,12 +169,9 @@ def test_reporter_deletes_only_own_report(
         ).json()
 
         assert (
-            api_client.delete(f"/api/v1/bug-reports/{foreign['id']}").status_code
-            == 403
+            api_client.delete(f"/api/v1/bug-reports/{foreign['id']}").status_code == 403
         )
-        assert (
-            api_client.delete(f"/api/v1/bug-reports/{own['id']}").status_code == 204
-        )
+        assert api_client.delete(f"/api/v1/bug-reports/{own['id']}").status_code == 204
     finally:
         api_client.app.dependency_overrides[get_current_user] = lambda: admin_user
 

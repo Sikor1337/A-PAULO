@@ -51,7 +51,11 @@ class RecruitmentService(
         self.audit = audit
         super().__init__(
             repo,
-            defaults=DEFAULT_FIELDS,
+            system_field_is_valid=lambda field, draft: (
+                draft.field_type == field.field_type
+                and draft.required
+                and draft.is_active
+            ),
             errors=FieldSaveErrors(
                 unknown_field="Co najmniej jedno pole formularza nie istnieje",
                 missing_system_field="Nie można usunąć podstawowego pola formularza",

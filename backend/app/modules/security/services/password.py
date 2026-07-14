@@ -23,7 +23,9 @@ def _verify_pbkdf2_sha256(plain: str, encoded: str) -> bool:
     try:
         _, iterations_str, salt, hash_b64 = encoded.split("$", 3)
         iterations = int(iterations_str)
-        dk = hashlib.pbkdf2_hmac("sha256", plain.encode("utf-8"), salt.encode("utf-8"), iterations)
+        dk = hashlib.pbkdf2_hmac(
+            "sha256", plain.encode("utf-8"), salt.encode("utf-8"), iterations
+        )
         expected = base64.b64encode(dk).decode("utf-8")
         return hmac.compare_digest(expected, hash_b64)
     except Exception:

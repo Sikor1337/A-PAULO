@@ -1,4 +1,5 @@
 """Bug report schemas."""
+
 from datetime import datetime
 from pathlib import Path
 from typing import Self

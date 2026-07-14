@@ -11,6 +11,7 @@ from app.modules.recruitment.beneficiary_access import (
     create_form_token,
     is_valid_form_token,
 )
+from app.modules.recruitment.models import BeneficiaryRecruitmentField
 from app.modules.recruitment.repositories.beneficiary_recruitment import (
     BeneficiaryRecruitmentRepository,
 )
@@ -42,15 +43,24 @@ class BeneficiaryRecruitmentService(
     ):
         self.repo = repo
         self.beneficiaries = beneficiaries
+        super().__init__(
+            repo,
+            system_field_is_valid=lambda field, draft: (
+                draft.field_type == field.field_type
+                and draft.required == field.required
+                and draft.is_active
+            ),
+            errors=FieldSaveErrors(
+                unknown_field="Co najmniej jedno pole formularza nie istnieje",
+                missing_system_field="Nie można usunąć podstawowego pola formularza",
+                invalid_system_field=(
+                    "Podstawowe pola muszą pozostać aktywne w wymaganej postaci"
+                ),
+            ),
+        )
 
     def list_fields(self, *, active_only: bool = False):
         return self.repo.list_fields(active_only=active_only)
-
-    def get_public_form(self) -> dict:
-        return {
-            "fields": self.list_fields(active_only=True),
-            "form_token": create_form_token(),
-        }
 
     def save_fields(self, drafts: list[RecruitmentFieldDraft]):
         return save_field_drafts(

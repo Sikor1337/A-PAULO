@@ -140,9 +140,7 @@ class TaskService:
         try:
             task = self.get_task(task_id)
             self._ensure_volunteer_exists(request.volunteer_id)
-            position = (
-                max((item.position for item in task.checklist), default=-1) + 1
-            )
+            position = max((item.position for item in task.checklist), default=-1) + 1
             self.repo.add_checklist_item(
                 task.id, request.label, position, request.volunteer_id
             )
@@ -226,9 +224,7 @@ class TaskService:
         assignee_ids: list[int],
     ) -> None:
         """Business validation: all referenced records must exist."""
-        if department_id is not None and not self.repo.department_exists(
-            department_id
-        ):
+        if department_id is not None and not self.repo.department_exists(department_id):
             raise NotFoundError("Dział nie istnieje")
         if event_id is not None and not self.repo.event_exists(event_id):
             raise NotFoundError("Wydarzenie nie istnieje")
@@ -255,9 +251,7 @@ class TaskService:
             for item in task.checklist
             if item.volunteer_id is not None
         }
-        volunteer_names = self.repo.volunteer_names(
-            list(assignee_ids | item_owner_ids)
-        )
+        volunteer_names = self.repo.volunteer_names(list(assignee_ids | item_owner_ids))
         return [
             self._to_response(task, department_names, event_titles, volunteer_names)
             for task in tasks
@@ -294,9 +288,7 @@ class TaskService:
             department_id=task.department_id,
             department_name=department_names.get(task.department_id),
             event_id=task.event_id,
-            event_title=(
-                event_titles.get(task.event_id) if task.event_id else None
-            ),
+            event_title=(event_titles.get(task.event_id) if task.event_id else None),
             due_date=task.due_date,
             completed_at=task.completed_at,
             created_at=task.created_at,

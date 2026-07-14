@@ -1,4 +1,5 @@
 """Task models."""
+
 from datetime import date, datetime
 from enum import StrEnum
 

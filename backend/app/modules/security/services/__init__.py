@@ -2,9 +2,8 @@
 
 from .auth import AuthService
 from .password import hash_password, verify_password
-from .token import TokenService
-
 from .permissions import PermissionService
+from .token import TokenService
 
 __all__ = [
     "AuthService",

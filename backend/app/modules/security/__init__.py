@@ -10,12 +10,12 @@ from app.modules.security.services import (
 )
 
 __all__ = [
-    "security_router",
+    "AuthService",
     "LoginRequest",
     "Token",
     "TokenRefresh",
-    "AuthService",
     "TokenService",
     "hash_password",
+    "security_router",
     "verify_password",
 ]

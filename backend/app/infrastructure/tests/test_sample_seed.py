@@ -68,6 +68,6 @@ def test_sample_seed_restores_expected_people_and_group_assignments(
     assert meeting_count == 16
 
     assert load_onboarding_scenarios(db_session) == 0
-    assert db_session.scalar(
-        select(func.count()).select_from(RecruitmentSubmission)
-    ) == 5
+    assert (
+        db_session.scalar(select(func.count()).select_from(RecruitmentSubmission)) == 5
+    )

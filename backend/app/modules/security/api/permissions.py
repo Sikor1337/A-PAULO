@@ -63,7 +63,7 @@ def create_group(
     user: User = Depends(require_permission(CAN_MANAGE_SECURITY)),
     service: PermissionService = Depends(get_permission_service),
 ):
-    return service.create_group(actor=user, **request.model_dump())
+    return service.create_group(request, actor=user)
 
 
 @router.patch("/groups/{group_id}", response_model=UserGroupResponse)
@@ -73,9 +73,7 @@ def update_group(
     user: User = Depends(require_permission(CAN_MANAGE_SECURITY)),
     service: PermissionService = Depends(get_permission_service),
 ):
-    return service.update_group(
-        group_id, actor=user, **request.model_dump(exclude_unset=True)
-    )
+    return service.update_group(group_id, request, actor=user)
 
 
 @router.put("/groups/{group_id}", response_model=UserGroupResponse)
@@ -85,7 +83,7 @@ def save_group(
     user: User = Depends(require_permission(CAN_MANAGE_SECURITY)),
     service: PermissionService = Depends(get_permission_service),
 ):
-    return service.save_group(group_id, actor=user, **request.model_dump())
+    return service.save_group(group_id, request, actor=user)
 
 
 @router.put("/groups/{group_id}/permissions", response_model=UserGroupResponse)

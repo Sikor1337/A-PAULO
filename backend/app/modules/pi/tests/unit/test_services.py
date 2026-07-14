@@ -6,6 +6,7 @@ import pytest
 
 from app.core.errors import ConflictError, NotFoundError, ValidationException
 from app.modules.pi.schemas.beneficiaries import BeneficiaryCreateRequest
+from app.modules.pi.schemas.functions import FunctionCreateRequest
 from app.modules.pi.schemas.volunteers import VolunteerCreateRequest
 from app.modules.pi.services.beneficiaries import BeneficiaryService
 from app.modules.pi.services.functions import FunctionService
@@ -40,7 +41,7 @@ def test_function_create_trims_name_and_commits(session: MagicMock) -> None:
     repo.get_by_name.return_value = None
     repo.create.return_value = function
 
-    result = service.create_function(name="  Koordynator  ")
+    result = service.create_function(FunctionCreateRequest(name="  Koordynator  "))
 
     assert result is function
     repo.get_by_name.assert_called_once_with("Koordynator")
@@ -57,7 +58,7 @@ def test_function_create_rejects_blank_name_and_rolls_back(
     service = build_service(FunctionService, session, repo)
 
     with pytest.raises(ValidationException):
-        service.create_function(name="   ")
+        service.create_function(FunctionCreateRequest(name="   "))
 
     repo.create.assert_not_called()
     session.rollback.assert_called_once()

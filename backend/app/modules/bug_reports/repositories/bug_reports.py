@@ -13,9 +13,7 @@ class BugReportRepository(SQLRepository):
         self.session = session
 
     def get_by_id(self, report_id: int) -> BugReport | None:
-        return (
-            self.session.query(BugReport).filter(BugReport.id == report_id).first()
-        )
+        return self.session.query(BugReport).filter(BugReport.id == report_id).first()
 
     def list_all(
         self, status: str | None = None, skip: int = 0, limit: int = 100
@@ -24,10 +22,7 @@ class BugReportRepository(SQLRepository):
         if status:
             query = query.filter(BugReport.status == status)
         return (
-            query.order_by(BugReport.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
+            query.order_by(BugReport.created_at.desc()).offset(skip).limit(limit).all()
         )
 
     def list_for_reporter(

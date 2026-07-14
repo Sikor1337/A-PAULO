@@ -2,8 +2,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi import HTTPException
 
+from app.core.errors import AuthenticationError, BadRequestError, ConflictError
 from app.modules.security.schemas import LoginRequest, ProfileUpdateRequest
 from app.modules.security.services.auth import AuthService
 
@@ -130,7 +130,7 @@ def test_register_rolls_back_when_username_exists(
 ) -> None:
     repo.get_by_username.return_value = SimpleNamespace(id=1)
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(ConflictError) as exc_info:
         service.register(
             username="existing",
             email="new@example.com",
@@ -229,7 +229,7 @@ def test_login_rejects_invalid_credentials(
         lambda plain, hashed: True,
     )
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(AuthenticationError) as exc_info:
         service.login(LoginRequest(username="user@example.com", password="bad"))
 
     assert exc_info.value.status_code == 401
@@ -245,7 +245,7 @@ def test_update_profile_requires_current_password_for_password_change(
         hashed_password="stored-hash",
     )
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(BadRequestError) as exc_info:
         service.update_profile(
             user,
             ProfileUpdateRequest(new_password="NewStrongPass123"),
@@ -261,7 +261,7 @@ def test_refresh_rejects_non_refresh_token(
 ) -> None:
     token_service.decode_token.return_value = {"sub": "42", "type": "access"}
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(AuthenticationError) as exc_info:
         service.refresh("access-token")
 
     assert exc_info.value.status_code == 401

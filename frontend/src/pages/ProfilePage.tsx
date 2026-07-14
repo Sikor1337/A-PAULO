@@ -26,7 +26,7 @@ const ProfilePage = () => {
   const { updateUser } = useAuthStore();
   const { data: profile, isLoading: isProfileLoading, refetch } = useQuery({
     queryKey: ['me'],
-    queryFn: authService.getUserProfile,
+    queryFn: () => authService.getUserProfile(),
   });
   const [isEditing, setIsEditing] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');

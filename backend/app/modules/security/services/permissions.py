@@ -1,9 +1,12 @@
 """Permission resolution and user-group management rules."""
 
-from fastapi import HTTPException, status
-
 from app.core.audit import AuditEntry, AuditPort, EntityType, calculate_delta
-from app.core.errors import ConflictError, NotFoundError
+from app.core.errors import (
+    BadRequestError,
+    ConflictError,
+    NotFoundError,
+    ValidationException,
+)
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
 from app.modules.security.audit_state import security_group_audit_state
@@ -13,6 +16,11 @@ from app.modules.security.models.constants import (
     STAFF_GROUP_KEY,
 )
 from app.modules.security.repositories import PermissionRepository
+from app.modules.security.schemas.permissions import (
+    UserGroupCreateRequest,
+    UserGroupSaveRequest,
+    UserGroupUpdateRequest,
+)
 
 
 class PermissionService:
@@ -108,20 +116,21 @@ class PermissionService:
 
     def create_group(
         self,
+        request: UserGroupCreateRequest,
         *,
-        name: str,
-        description: str,
-        permission_codes: list[str],
         actor: User,
     ) -> dict:
         try:
             if any(
-                group.name.casefold() == name.casefold()
+                group.name.casefold() == request.name.casefold()
                 for group in self.repo.list_groups()
             ):
                 raise ConflictError("Grupa o tej nazwie już istnieje")
-            group = self.repo.create_group(name=name, description=description)
-            group.permissions = self._resolve_permissions(permission_codes)
+            group = self.repo.create_group(
+                name=request.name,
+                description=request.description,
+            )
+            group.permissions = self._resolve_permissions(request.permission_codes)
             self.repo.flush()
             self.repo.refresh(group)
             self._record_group("CREATE", group, actor, {}, self._group_state(group))
@@ -131,22 +140,28 @@ class PermissionService:
             self.repo.rollback()
             raise
 
-    def update_group(self, group_id: int, actor: User, **values) -> dict:
+    def update_group(
+        self,
+        group_id: int,
+        request: UserGroupUpdateRequest,
+        actor: User,
+    ) -> dict:
         try:
             group = self.get_group(group_id)
             old_state = self._group_state(group)
             self._ensure_custom_group(group)
-            if "name" in values:
+            if request.name is not None:
                 duplicate = any(
                     candidate.id != group.id
-                    and candidate.name.casefold() == values["name"].casefold()
+                    and candidate.name.casefold() == request.name.casefold()
                     for candidate in self.repo.list_groups()
                 )
                 if duplicate:
                     raise ConflictError("Grupa o tej nazwie już istnieje")
-            for key, value in values.items():
-                if value is not None:
-                    setattr(group, key, value)
+            if request.name is not None:
+                group.name = request.name
+            if request.description is not None:
+                group.description = request.description
             self.repo.flush()
             self.repo.refresh(group)
             new_state = self._group_state(group)
@@ -186,11 +201,8 @@ class PermissionService:
     def save_group(
         self,
         group_id: int,
+        request: UserGroupSaveRequest,
         *,
-        name: str,
-        description: str,
-        permission_codes: list[str],
-        user_ids: list[int],
         actor: User,
     ) -> dict:
         """Save metadata, permissions and members atomically."""
@@ -198,33 +210,37 @@ class PermissionService:
         try:
             group = self.get_group(group_id)
             old_state = self._group_state(group)
-            member_ids = set(user_ids)
+            member_ids = set(request.user_ids)
             changed_user_ids = set(old_state["user_ids"]) ^ member_ids
             user_groups_before = self._capture_user_groups(changed_user_ids)
             self._validate_users(member_ids)
             self._protect_last_admin(group, member_ids)
 
             if group.is_system:
-                if name != group.name or description != group.description:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Nazwy i opisu grupy systemowej nie można zmieniać",
+                if (
+                    request.name != group.name
+                    or request.description != group.description
+                ):
+                    raise BadRequestError(
+                        "Nazwy i opisu grupy systemowej nie można zmieniać"
                     )
                 current_codes = {permission.code for permission in group.permissions}
-                if set(permission_codes) != current_codes:
+                if set(request.permission_codes) != current_codes:
                     self._ensure_permissions_editable(group)
-                    group.permissions = self._resolve_permissions(permission_codes)
+                    group.permissions = self._resolve_permissions(
+                        request.permission_codes
+                    )
             else:
                 duplicate = any(
                     candidate.id != group.id
-                    and candidate.name.casefold() == name.casefold()
+                    and candidate.name.casefold() == request.name.casefold()
                     for candidate in self.repo.list_groups()
                 )
                 if duplicate:
                     raise ConflictError("Grupa o tej nazwie już istnieje")
-                group.name = name
-                group.description = description
-                group.permissions = self._resolve_permissions(permission_codes)
+                group.name = request.name
+                group.description = request.description
+                group.permissions = self._resolve_permissions(request.permission_codes)
 
             self.repo.replace_group_users(group.id, member_ids)
             self.repo.flush()
@@ -292,9 +308,8 @@ class PermissionService:
                     and admin_group.id not in ids
                     and len(existing_admins) == 1
                 ):
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Nie można usunąć ostatniego użytkownika z grupy Admin",
+                    raise BadRequestError(
+                        "Nie można usunąć ostatniego użytkownika z grupy Admin"
                     )
             self.repo.replace_user_groups(user_id, ids)
             self.repo.flush()
@@ -393,9 +408,8 @@ class PermissionService:
         found_codes = {permission.code for permission in permissions}
         unknown = unique_codes - found_codes
         if unknown:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Nieznane uprawnienia: {', '.join(sorted(unknown))}",
+            raise ValidationException(
+                f"Nieznane uprawnienia: {', '.join(sorted(unknown))}"
             )
         return permissions
 
@@ -408,18 +422,14 @@ class PermissionService:
         if group.system_key != ADMIN_GROUP_KEY:
             return
         if not new_user_ids:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Grupa Admin musi mieć co najmniej jednego użytkownika",
+            raise BadRequestError(
+                "Grupa Admin musi mieć co najmniej jednego użytkownika"
             )
 
     @staticmethod
     def _ensure_custom_group(group: UserGroup) -> None:
         if group.is_system:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Grupy systemowej nie można modyfikować",
-            )
+            raise BadRequestError("Grupy systemowej nie można modyfikować")
 
     @staticmethod
     def _ensure_permissions_editable(group: UserGroup) -> None:
@@ -427,9 +437,8 @@ class PermissionService:
         stay locked — Admin especially, so administrators cannot cut off
         their own access."""
         if group.is_system and group.system_key != STAFF_GROUP_KEY:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Uprawnień tej grupy systemowej nie można modyfikować",
+            raise BadRequestError(
+                "Uprawnień tej grupy systemowej nie można modyfikować"
             )
 
     def _serialize_group(self, group: UserGroup) -> dict:

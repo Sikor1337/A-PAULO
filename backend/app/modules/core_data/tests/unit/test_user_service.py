@@ -2,9 +2,9 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi import HTTPException
 
-from app.core.errors import ConflictError, NotFoundError
+from app.core.errors import BadRequestError, ConflictError, NotFoundError
+from app.modules.core_data.schemas.users import UserCreateRequest, UserUpdateRequest
 from app.modules.core_data.services.users import UserService
 
 
@@ -65,13 +65,15 @@ def test_create_user_normalizes_credentials_hashes_password_and_commits(
     )
 
     result = service.create_user(
-        username="  AdminUser  ",
-        email="  ADMIN@EXAMPLE.COM ",
-        password="StrongPass123",
-        first_name="Ala",
-        last_name="Admin",
-        status="admin",
-        is_active=False,
+        UserCreateRequest(
+            username="  AdminUser  ",
+            email="  ADMIN@EXAMPLE.COM ",
+            password="StrongPass123",
+            first_name="Ala",
+            last_name="Admin",
+            status="admin",
+            is_active=False,
+        ),
         actor=actor(),
     )
 
@@ -102,9 +104,11 @@ def test_create_user_rolls_back_on_duplicate_email(
 
     with pytest.raises(ConflictError):
         service.create_user(
-            username="new-user",
-            email="taken@example.com",
-            password="StrongPass123",
+            UserCreateRequest(
+                username="new-user",
+                email="taken@example.com",
+                password="StrongPass123",
+            ),
             actor=actor(),
         )
 
@@ -138,9 +142,11 @@ def test_update_user_normalizes_unique_fields_and_hashes_password(
 
     result = service.update_user(
         1,
-        username=" NewName ",
-        email=" New@Example.com ",
-        password="NewStrongPass123",
+        UserUpdateRequest(
+            username=" NewName ",
+            email=" New@Example.com ",
+            password="NewStrongPass123",
+        ),
         actor=actor(),
     )
 
@@ -149,6 +155,10 @@ def test_update_user_normalizes_unique_fields_and_hashes_password(
         user,
         username="newname",
         email="new@example.com",
+        first_name=None,
+        last_name=None,
+        status=None,
+        is_active=None,
         hashed_password="hashed:NewStrongPass123",
     )
     session.commit.assert_called_once()
@@ -172,7 +182,11 @@ def test_update_user_rejects_duplicate_username(
     repo.get_by_username.return_value = SimpleNamespace(id=2)
 
     with pytest.raises(ConflictError):
-        service.update_user(1, actor=actor(), username="taken")
+        service.update_user(
+            1,
+            UserUpdateRequest(username="taken"),
+            actor=actor(),
+        )
 
     repo.update.assert_not_called()
     session.rollback.assert_called_once()
@@ -183,7 +197,7 @@ def test_delete_user_rejects_self_delete(
     repo: MagicMock,
     session: MagicMock,
 ) -> None:
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(BadRequestError) as exc_info:
         service.delete_user(7, actor=actor(7))
 
     assert exc_info.value.status_code == 400

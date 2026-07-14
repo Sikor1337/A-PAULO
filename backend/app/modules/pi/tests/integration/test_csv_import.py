@@ -49,10 +49,7 @@ def test_import_volunteers_happy_path(api_client) -> None:
 
 
 def test_import_volunteers_comma_delimiter(api_client) -> None:
-    csv_text = (
-        "Imię i nazwisko,Email\r\n"
-        "Ola Przecinek,ola.przecinek@example.com\r\n"
-    )
+    csv_text = "Imię i nazwisko,Email\r\nOla Przecinek,ola.przecinek@example.com\r\n"
     response = _upload(api_client, "/api/v1/imports/volunteers", csv_text)
     assert response.status_code == 200
     assert response.json()["imported"] == 1
@@ -115,10 +112,7 @@ def test_import_volunteers_rejects_unknown_columns(api_client) -> None:
 
 
 def test_import_volunteers_cp1250_fallback(api_client) -> None:
-    csv_text = (
-        "Imię i nazwisko;Email\r\n"
-        "Stanisław Żółć;zolc@example.com\r\n"
-    )
+    csv_text = "Imię i nazwisko;Email\r\nStanisław Żółć;zolc@example.com\r\n"
     response = _upload(
         api_client, "/api/v1/imports/volunteers", csv_text, encoding="cp1250"
     )

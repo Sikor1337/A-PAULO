@@ -1,4 +1,5 @@
 """Authentication API endpoints."""
+
 from fastapi import APIRouter, Depends
 
 from app.modules.core_data.models import User
@@ -36,9 +37,7 @@ def login(data: LoginRequest, svc: AuthService = Depends(get_auth_service)):
 
 
 @router.post("/token/refresh", response_model=Token)
-def refresh_token(
-    body: TokenRefresh, svc: AuthService = Depends(get_auth_service)
-):
+def refresh_token(body: TokenRefresh, svc: AuthService = Depends(get_auth_service)):
     """Refresh access token using refresh token."""
     return svc.refresh(body.refresh)
 

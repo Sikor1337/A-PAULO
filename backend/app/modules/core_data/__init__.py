@@ -2,16 +2,16 @@
 
 from app.modules.core_data.models import User
 from app.modules.core_data.schemas import (
-    UserRegisterRequest,
-    UserLoginRequest,
     TokenResponse,
+    UserLoginRequest,
+    UserRegisterRequest,
     UserResponse,
 )
 
 __all__ = [
-    "User",
-    "UserRegisterRequest",
-    "UserLoginRequest",
     "TokenResponse",
+    "User",
+    "UserLoginRequest",
+    "UserRegisterRequest",
     "UserResponse",
 ]

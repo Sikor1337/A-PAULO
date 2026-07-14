@@ -26,11 +26,12 @@ from app.modules.tasks.api import router as tasks_router
 async def lifespan(application: FastAPI):
     # Tables are managed by Alembic migrations.
     yield
+
+
 app = FastAPI(
     title="PaPka",
     version="1.0.0",
     lifespan=lifespan,
-
 )
 
 app.add_middleware(
@@ -43,6 +44,7 @@ app.add_middleware(
 
 register_error_handlers(app)
 install_calendar_access_log_filter()
+
 
 @app.get("/", include_in_schema=False)
 def root_redirect():
@@ -65,4 +67,3 @@ app.include_router(departments_router, prefix="/api/v1")
 app.include_router(recruitment_router, prefix="/api/v1")
 app.include_router(calendar_router, prefix="/api/v1")
 app.include_router(tasks_router, prefix="/api/v1")
-

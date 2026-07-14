@@ -6,9 +6,7 @@ from app.modules.calendar.models import CalendarEvent
 
 
 def _create_department(api_client, name: str = "Remonty") -> dict:
-    response = api_client.post(
-        "/api/v1/departments", json={"name": name, "icon": "🔨"}
-    )
+    response = api_client.post("/api/v1/departments", json={"name": name, "icon": "🔨"})
     assert response.status_code == 200
     return response.json()
 
@@ -127,9 +125,7 @@ def test_task_filters_and_manual_status(api_client, db_session, admin_user) -> N
     ).json()
     assert manual["completed_at"] is not None
 
-    by_status = api_client.get(
-        "/api/v1/tasks", params={"status": "ZROBIONE"}
-    ).json()
+    by_status = api_client.get("/api/v1/tasks", params={"status": "ZROBIONE"}).json()
     assert [item["id"] for item in by_status] == [task_a["id"]]
 
     reopened = api_client.patch(

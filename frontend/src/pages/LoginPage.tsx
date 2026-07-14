@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { AxiosError } from 'axios';
 import { useAuthStore } from '../stores/authStore';
 import { authService } from '../services/authService';
-import { markSessionChanged } from '../lib/sessionLifecycle';
 import {
   clearRecruitmentAccessToken,
   destinationForUser,
@@ -45,13 +44,9 @@ const LoginPage = () => {
       const { access, refresh } = await authService.login(data);
 
       // Zapisz tymczasowo tokeny aby pobrać profil
-      markSessionChanged();
-      localStorage.setItem('access_token', access);
-      localStorage.setItem('refresh_token', refresh);
 
       // Get user profile
-      try {
-        const userProfile = await authService.getUserProfile();
+        const userProfile = await authService.getUserProfile(access);
         
         // Map backend user to frontend user format
         const user = {
@@ -66,12 +61,6 @@ const LoginPage = () => {
         login(access, refresh, user);
         if (user.status !== 'new_volunteer') clearRecruitmentAccessToken();
         navigate(destinationForUser(user.status));
-      } catch (profileError) {
-        // Clear tokens if profile fetch fails
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        throw profileError;
-      }
 
     } catch (err) {
       console.error('Login error:', err);

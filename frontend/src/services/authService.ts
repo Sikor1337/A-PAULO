@@ -122,8 +122,10 @@ export const authService = {
   },
 
   // Get current user profile
-  async getUserProfile(): Promise<UserProfile> {
-    const response = await authClient.get<UserProfile>('/auth/user');
+  async getUserProfile(accessToken?: string): Promise<UserProfile> {
+    const response = await authClient.get<UserProfile>('/auth/user', {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    });
     return response.data;
   },
 

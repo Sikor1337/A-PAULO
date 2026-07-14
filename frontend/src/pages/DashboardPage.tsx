@@ -1,29 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import PageShell from '@/components/layout/PageShell';
 import { useAuthStore } from '../stores/authStore';
-import { beneficiaryService } from '../services/beneficiaryService';
-import { volunteerService } from '../services/volunteerService';
-import { groupService } from '../services/groupService';
+import { useBeneficiaryList } from '@/hooks/useBeneficiaries';
+import { useVolunteerList } from '@/hooks/useVolunteers';
+import { useGroupList } from '@/hooks/useGroups';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
-  const { data: beneficiaries } = useQuery({
-    queryKey: ['beneficiaries'],
-    queryFn: beneficiaryService.getAll,
-  });
-
-  const { data: volunteers } = useQuery({
-    queryKey: ['volunteers'],
-    queryFn: volunteerService.getAll,
-  });
-
-  const { data: groups } = useQuery({
-    queryKey: ['groups'],
-    queryFn: groupService.getAll,
-  });
+  const { data: beneficiaries } = useBeneficiaryList();
+  const { data: volunteers } = useVolunteerList();
+  const { data: groups } = useGroupList();
 
   return (
     <PageShell cardClassName="min-h-[calc(100dvh-88px)] text-white lg:min-h-[calc(100dvh-48px)]">

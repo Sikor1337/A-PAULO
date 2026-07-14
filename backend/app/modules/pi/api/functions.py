@@ -42,7 +42,7 @@ def create_function(
     _user: User = Depends(require_permission(CAN_MANAGE_FUNCTIONS)),
 ):
     """Create new function."""
-    return service.create_function(**request.model_dump())
+    return service.create_function(request)
 
 
 @router.patch("/{function_id}", response_model=FunctionResponse)
@@ -53,9 +53,7 @@ def update_function(
     _user: User = Depends(require_permission(CAN_MANAGE_FUNCTIONS)),
 ):
     """Update function."""
-    return service.update_function(
-        function_id, **request.model_dump(exclude_unset=True)
-    )
+    return service.update_function(function_id, request)
 
 
 @router.delete("/{function_id}")

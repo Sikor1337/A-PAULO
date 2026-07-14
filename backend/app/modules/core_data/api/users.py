@@ -51,7 +51,7 @@ def create_user(
     user: User = Depends(require_permission(CAN_MANAGE_USERS)),
 ):
     """Create new user."""
-    return service.create_user(actor=user, **request.model_dump())
+    return service.create_user(request, actor=user)
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -72,9 +72,7 @@ def update_user(
     user: User = Depends(require_permission(CAN_MANAGE_USERS)),
 ):
     """Update user."""
-    return service.update_user(
-        user_id, actor=user, **request.model_dump(exclude_unset=True)
-    )
+    return service.update_user(user_id, request, actor=user)
 
 
 @router.delete("/{user_id}")
