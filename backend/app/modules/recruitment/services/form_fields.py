@@ -2,9 +2,9 @@
 
 import re
 import unicodedata
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any, Protocol, cast
+from typing import Protocol
 
 from app.core.errors import ConflictError, NotFoundError
 from app.modules.recruitment.schemas.form_fields import FormFieldWrite
@@ -114,94 +114,7 @@ def allocate_field_key(label: str, used_keys: set[str]) -> str:
     return key
 
 
-def _as_form_field(field: object) -> FormFieldEntity:
-    """Bridge SQLAlchemy mapped attributes to the structural field contract."""
-    return cast(FormFieldEntity, field)
-
-
-def ensure_default_fields[FieldT](
-    repo: FormFieldRepository[FieldT],
-    defaults: Sequence[Mapping[str, Any]],
-) -> None:
-    """Create missing defaults and restore invariants of protected fields."""
-    try:
-        current = repo.list_fields()
-        defaults_to_ensure = (
-            defaults
-            if not current
-            else [values for values in defaults if values.get("is_system")]
-        )
-        by_key = {_as_form_field(field).key: field for field in current}
-        changed = False
-
-        for values in defaults_to_ensure:
-            key = str(values["key"])
-            field = by_key.get(key)
-            if field is None:
-                field = repo.create_field(
-                    FormFieldWrite(
-                        key=key,
-                        label=str(values["label"]),
-                        field_type=str(values["field_type"]),
-                        required=bool(values["required"]),
-                        placeholder=str(values.get("placeholder", "")),
-                        options=[],
-                        position=0,
-                        is_active=True,
-                        is_system=bool(values.get("is_system", False)),
-                    )
-                )
-                by_key[key] = field
-                changed = True
-                continue
-
-            field_data = _as_form_field(field)
-            if values.get("is_system"):
-                expected_type = str(values["field_type"])
-                expected_required = bool(values["required"])
-                if field_data.field_type != expected_type:
-                    field_data.field_type = expected_type
-                    changed = True
-                if field_data.required != expected_required:
-                    field_data.required = expected_required
-                    changed = True
-                if not field_data.is_active:
-                    field_data.is_active = True
-                    changed = True
-                if not field_data.is_system:
-                    field_data.is_system = True
-                    changed = True
-
-        system_keys = [
-            str(values["key"]) for values in defaults if values.get("is_system")
-        ]
-        ordered = [by_key[key] for key in system_keys]
-        if current:
-            ordered.extend(
-                field
-                for field in current
-                if _as_form_field(field).key not in system_keys
-            )
-        else:
-            ordered.extend(
-                by_key[str(values["key"])]
-                for values in defaults
-                if not values.get("is_system")
-            )
-        for position, field in enumerate(ordered):
-            field_data = _as_form_field(field)
-            if field_data.position != position:
-                field_data.position = position
-                changed = True
-
-        if changed:
-            repo.commit(skip_audit=True)
-    except Exception:
-        repo.rollback()
-        raise
-
-
-def save_field_drafts[FieldT, DraftT: FormFieldDraft](
+def save_field_drafts[FieldT: FormFieldEntity, DraftT: FormFieldDraft](
     repo: FormFieldRepository[FieldT],
     drafts: Sequence[DraftT],
     *,

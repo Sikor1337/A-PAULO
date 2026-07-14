@@ -1,14 +1,14 @@
 """Group and assignment models for PI domain."""
+
 from datetime import datetime
 
 from sqlalchemy import (
-    String,
+    Column,
     DateTime,
     ForeignKey,
-    Boolean,
-    Table,
-    Column,
     Integer,
+    String,
+    Table,
     UniqueConstraint,
     func,
 )
@@ -20,8 +20,18 @@ from app.infrastructure.sql.base import Base
 group_volunteer = Table(
     "group_volunteer",
     Base.metadata,
-    Column("group_id", Integer, ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True),
-    Column("volunteer_id", Integer, ForeignKey("volunteers.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "group_id",
+        Integer,
+        ForeignKey("groups.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "volunteer_id",
+        Integer,
+        ForeignKey("volunteers.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
 )
 
 
@@ -32,6 +42,9 @@ class Group(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), index=True)
+    system_key: Mapped[str | None] = mapped_column(
+        String(50), unique=True, nullable=True, index=True
+    )
     leader_id: Mapped[int | None] = mapped_column(
         ForeignKey("volunteers.id", ondelete="SET NULL"), nullable=True
     )
@@ -56,7 +69,9 @@ class BeneficiaryAssignment(Base):
 
     __tablename__ = "beneficiary_assignments"
     __table_args__ = (
-        UniqueConstraint("beneficiary_id", "volunteer_id", name="uq_beneficiary_volunteer"),
+        UniqueConstraint(
+            "beneficiary_id", "volunteer_id", name="uq_beneficiary_volunteer"
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -75,4 +90,8 @@ class BeneficiaryAssignment(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<BeneficiaryAssignment beneficiary_id={self.beneficiary_id} volunteer_id={self.volunteer_id}>"
+        return (
+            "<BeneficiaryAssignment "
+            f"beneficiary_id={self.beneficiary_id} "
+            f"volunteer_id={self.volunteer_id}>"
+        )

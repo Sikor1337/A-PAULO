@@ -9,10 +9,7 @@ from app.core.dependencies import get_db
 from app.modules.audit.dependencies import get_audit_service
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
-from app.modules.security.models.constants import (
-    ALL_PERMISSION_CODES,
-    CAN_MANAGE_SECURITY,
-)
+from app.modules.security.models.constants import CAN_MANAGE_SECURITY
 from app.modules.security.repositories import PermissionRepository
 from app.modules.security.services.auth import AuthService
 from app.modules.security.services.permissions import PermissionService
@@ -141,7 +138,20 @@ def require_any_permission(*permission_codes: str) -> Callable[..., User]:
     return dependency
 
 
+def require_assigned_permission(
+    user: User = Depends(get_current_user),
+    permissions: PermissionService = Depends(get_permission_service),
+) -> User:
+    """Require any permission currently present in the SQL catalog."""
+    if not permissions.permissions_for_user(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
+    return user
+
+
 # Backward-compatible aliases for code that has not yet moved to an
 # action-specific permission. They are group-based and never inspect User.status.
 require_admin = require_permission(CAN_MANAGE_SECURITY)
-require_staff = require_any_permission(*ALL_PERMISSION_CODES)
+require_staff = require_assigned_permission

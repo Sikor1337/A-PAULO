@@ -18,6 +18,9 @@ alembic revision --autogenerate -m "Add users table"
 # Apply all pending migrations
 alembic upgrade head
 
+# Load required reference data after the schema is current
+python -m scripts.seed_required_data
+
 # Revert last migration
 alembic downgrade -1
 
@@ -88,3 +91,9 @@ alembic upgrade head
 4. **Write meaningful messages** - describe what the migration does
 5. **Include downgrade** - ensure migrations can be reverted
 6. **Never edit applied migrations** - create new migrations instead
+7. **Keep reference data out of migrations** - permissions, system groups,
+   questions and dictionaries are owned by `scripts.seed_required_data`
+
+The current PAP-98 baseline is intended for fresh environments. A non-production
+schema stamped with an older revision must be reset before using this baseline;
+do not stamp it over an existing populated schema.

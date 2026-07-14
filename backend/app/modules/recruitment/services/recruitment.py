@@ -10,7 +10,6 @@ from app.modules.core_data.audit_state import user_audit_state
 from app.modules.core_data.models import User
 from app.modules.pi.audit_state import volunteer_audit_state
 from app.modules.recruitment.constants import (
-    DEFAULT_FIELDS,
     NEW_VOLUNTEER_STATUS,
     ONBOARDING_MEETING_TYPES,
     SUBMISSION_STATUSES,
@@ -32,6 +31,7 @@ from app.modules.recruitment.schemas.commands import (
 from app.modules.recruitment.services.form_fields import (
     ConfigurableFormFieldService,
     FieldSaveErrors,
+    save_field_drafts,
 )
 from app.modules.security.models.constants import STAFF_GROUP_KEY
 from app.modules.security.services.permissions import PermissionService
@@ -79,6 +79,30 @@ class RecruitmentService(
                 actor_display_name=actor.email,
                 changes=calculate_delta(old_state, new_state),
             )
+        )
+
+    def list_fields(self, *, active_only: bool = False) -> list[RecruitmentField]:
+        return self.repo.list_fields(active_only=active_only)
+
+    def save_fields(
+        self, drafts: list[RecruitmentFieldDraft]
+    ) -> list[RecruitmentField]:
+        """Persist the complete editor draft in one transaction."""
+        return save_field_drafts(
+            self.repo,
+            drafts,
+            system_field_is_valid=lambda field, draft: (
+                draft.field_type == field.field_type
+                and draft.required
+                and draft.is_active
+            ),
+            errors=FieldSaveErrors(
+                unknown_field="Co najmniej jedno pole formularza nie istnieje",
+                missing_system_field="Nie można usunąć podstawowego pola formularza",
+                invalid_system_field=(
+                    "Podstawowe pola kontaktowe muszą pozostać aktywne i wymagane"
+                ),
+            ),
         )
 
     def get_submission_for_user(self, user_id: int) -> RecruitmentSubmission | None:

@@ -10,7 +10,6 @@ from app.modules.security.audit_state import security_group_audit_state
 from app.modules.security.models import UserGroup
 from app.modules.security.models.constants import (
     ADMIN_GROUP_KEY,
-    ALL_PERMISSION_CODES,
     STAFF_GROUP_KEY,
 )
 from app.modules.security.repositories import PermissionRepository
@@ -390,17 +389,13 @@ class PermissionService:
 
     def _resolve_permissions(self, codes: list[str]):
         unique_codes = set(codes)
-        unknown = unique_codes - ALL_PERMISSION_CODES
+        permissions = self.repo.get_permissions_by_codes(unique_codes)
+        found_codes = {permission.code for permission in permissions}
+        unknown = unique_codes - found_codes
         if unknown:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Nieznane uprawnienia: {', '.join(sorted(unknown))}",
-            )
-        permissions = self.repo.get_permissions_by_codes(unique_codes)
-        if len(permissions) != len(unique_codes):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Katalog uprawnień nie jest zsynchronizowany z bazą",
             )
         return permissions
 

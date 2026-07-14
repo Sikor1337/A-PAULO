@@ -1,48 +1,5 @@
 """Shared constants for the recruitment domain."""
 
-DEFAULT_FIELDS = [
-    {
-        "key": "full_name",
-        "label": "Imię i nazwisko",
-        "field_type": "text",
-        "required": True,
-        "placeholder": "np. Jan Kowalski",
-        "is_system": True,
-    },
-    {
-        "key": "email",
-        "label": "Adres e-mail",
-        "field_type": "email",
-        "required": True,
-        "placeholder": "email@example.com",
-        "is_system": True,
-    },
-    {
-        "key": "phone",
-        "label": "Telefon",
-        "field_type": "tel",
-        "required": True,
-        "placeholder": "+48 123 456 789",
-        "is_system": True,
-    },
-    {
-        "key": "social_link",
-        "label": "Link do profilu społecznościowego",
-        "field_type": "text",
-        "required": False,
-        "placeholder": "https://...",
-        "is_system": False,
-    },
-    {
-        "key": "availability",
-        "label": "Dyspozycyjność",
-        "field_type": "textarea",
-        "required": False,
-        "placeholder": "Napisz, w jakie dni i godziny jesteś dostępny/a",
-        "is_system": False,
-    },
-]
-
 ALLOWED_FIELD_TYPES = {
     "text",
     "textarea",

@@ -36,6 +36,9 @@ class Department(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200), unique=True, index=True)
+    system_key: Mapped[str | None] = mapped_column(
+        String(50), unique=True, nullable=True, index=True
+    )
     icon: Mapped[str] = mapped_column(String(16), default="")
     description: Mapped[str] = mapped_column(default="")
     is_archived: Mapped[bool] = mapped_column(default=False)

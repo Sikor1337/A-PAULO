@@ -6,14 +6,14 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 
-from app.core.audit import AuditEntry, AuditPort
+from app.core.audit import AuditEntry
 from app.core.config import get_settings
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
 from app.modules.pi.models.beneficiary import Beneficiary
 from app.modules.pi.models.group import Group, group_volunteer
 from app.modules.pi.models.volunteer import Volunteer
-from app.modules.recruitment.constants import DEFAULT_FIELDS, ONBOARDING_MEETING_TYPES
+from app.modules.recruitment.constants import ONBOARDING_MEETING_TYPES
 from app.modules.recruitment.models import (
     RecruitmentField,
     RecruitmentOnboardingMeeting,
@@ -24,6 +24,7 @@ from app.modules.recruitment.services import RecruitmentService
 from app.modules.security.repositories import PermissionRepository
 from app.modules.security.services.password import hash_password
 from app.modules.security.services.permissions import PermissionService
+from scripts.seed_required_data import PI_GROUPS, load_required_data
 
 DEMO_PASSWORD = "DemoChangeMe123!"
 SAMPLE_VOLUNTEER_COUNT = 10
@@ -33,7 +34,7 @@ SAMPLE_ONBOARDING_COUNT = 4
 
 
 class NoOpAudit:
-    """No-op audit adapter for seed scripts - seed operations don't need to be logged."""
+    """Skip audit records for non-production sample data."""
 
     def record(self, entry: AuditEntry) -> None:
         pass
@@ -41,8 +42,7 @@ class NoOpAudit:
 
 def load_sample_data(session: Session) -> None:
     """Populate an empty schema with a complete, deterministic demo data set."""
-    if session.query(User).first():
-        raise RuntimeError("public already contains users; refusing duplicate seed")
+    load_required_data(session)
 
     admin = User(
         username="demo.admin",
@@ -94,15 +94,13 @@ def load_sample_data(session: Session) -> None:
     audit = NoOpAudit()
     PermissionService(perm_repo, users_repo, audit).assign_default_group(admin)
 
-    group_names = [
-        "Grupa Północ",
-        "Grupa Południe",
-        "Grupa Wschód",
-        "Grupa Zachód",
-    ]
-    groups = [Group(name=name) for name in group_names]
-    session.add_all(groups)
-    session.flush()
+    group_keys = [definition["system_key"] for definition in PI_GROUPS]
+    groups = (
+        session.query(Group)
+        .filter(Group.system_key.in_(group_keys))
+        .order_by(Group.system_key)
+        .all()
+    )
     session.execute(
         group_volunteer.insert(),
         [
@@ -145,17 +143,7 @@ def load_sample_data(session: Session) -> None:
     session.add_all(beneficiaries)
     session.flush()
 
-    fields: list[RecruitmentField] = []
-    for position, values in enumerate(DEFAULT_FIELDS):
-        field = RecruitmentField(
-            position=position,
-            options=[],
-            is_active=True,
-            **values,
-        )
-        fields.append(field)
-        session.add(field)
-    session.flush()
+    fields = session.query(RecruitmentField).order_by(RecruitmentField.position).all()
     answer_values = {
         "full_name": "Anna Kandydatka",
         "email": candidate.email,
@@ -193,6 +181,7 @@ def load_sample_data(session: Session) -> None:
 def load_onboarding_scenarios(session: Session) -> int:
     """Add stable candidates with 0/4, 2/4, 3/4 and 4/4 progress."""
 
+    load_required_data(session)
     audit = NoOpAudit()
     perm_repo = PermissionRepository(session)
     users_repo = UserRepository(session)
@@ -273,9 +262,7 @@ def load_onboarding_scenarios(session: Session) -> int:
                         else None
                     ),
                 )
-                for meeting_index, meeting_type in enumerate(
-                    ONBOARDING_MEETING_TYPES
-                )
+                for meeting_index, meeting_type in enumerate(ONBOARDING_MEETING_TYPES)
             ]
         )
         created += 1
@@ -293,16 +280,18 @@ def main() -> None:
     )
     args = parser.parse_args()
     settings = get_settings()
-    if settings.database_schema != "public":
-        raise SystemExit("Sample data may only be loaded into the public schema")
 
     engine = create_engine(settings.database_url, pool_pre_ping=True)
+
+
+    schema = settings.database_schema or "public"
 
     @event.listens_for(engine, "connect")
     def set_search_path(dbapi_connection, connection_record) -> None:
         cursor = dbapi_connection.cursor()
-        cursor.execute('SET search_path TO "public"')
+        cursor.execute(f'SET search_path TO "{schema}"')
         cursor.close()
+
 
     try:
         with Session(engine) as session:
