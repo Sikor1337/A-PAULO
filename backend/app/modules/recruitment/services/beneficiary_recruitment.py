@@ -30,10 +30,8 @@ from app.modules.recruitment.services.form_fields import (
 
 
 class BeneficiaryRecruitmentService(
-    ConfigurableFormFieldService[
-        BeneficiaryRecruitmentField,
-        RecruitmentFieldDraft,
-    ]
+    ConfigurableFormFieldService,
+        RecruitmentFieldDraft
 ):
     def __init__(
         self,
