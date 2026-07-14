@@ -46,7 +46,7 @@ class FormFieldDraft(Protocol):
     def is_active(self) -> bool: ...
 
 
-class FormFieldRepository[FieldT: FormFieldEntity](Protocol):
+class FormFieldRepository[FieldT](Protocol):
     def list_fields(self, *, active_only: bool = False) -> list[FieldT]: ...
 
     def create_field(self, request: FormFieldWrite) -> FieldT: ...
@@ -63,6 +63,36 @@ class FieldSaveErrors:
     unknown_field: str
     missing_system_field: str
     invalid_system_field: str
+
+
+class ConfigurableFormFieldService[
+    FieldT,
+    DraftT: FormFieldDraft,
+]:
+    """Shared field-list and field-editor workflow for configurable forms."""
+
+    def __init__(
+        self,
+        repo: FormFieldRepository[FieldT],
+        *,
+        defaults: Sequence[Mapping[str, Any]],
+        errors: FieldSaveErrors,
+    ) -> None:
+        self._form_field_repo = repo
+        self._form_field_defaults = defaults
+        self._form_field_errors = errors
+
+    def list_fields(self, *, active_only: bool = False) -> list[FieldT]:
+        ensure_default_fields(self._form_field_repo, self._form_field_defaults)
+        return self._form_field_repo.list_fields(active_only=active_only)
+
+    def save_fields(self, drafts: list[DraftT]) -> list[FieldT]:
+        ensure_default_fields(self._form_field_repo, self._form_field_defaults)
+        return save_field_drafts(
+            self._form_field_repo,
+            drafts,
+            errors=self._form_field_errors,
+        )
 
 
 def allocate_field_key(label: str, used_keys: set[str]) -> str:
@@ -88,22 +118,25 @@ def save_field_drafts[FieldT: FormFieldEntity, DraftT: FormFieldDraft](
     repo: FormFieldRepository[FieldT],
     drafts: Sequence[DraftT],
     *,
-    system_field_is_valid: Callable[[FieldT, DraftT], bool],
     errors: FieldSaveErrors,
 ) -> list[FieldT]:
     """Replace the editable form definition in one transaction."""
     try:
         current = repo.list_fields()
-        by_id = {field.id: field for field in current}
+        by_id = {_as_form_field(field).id: field for field in current}
         submitted_ids = {draft.id for draft in drafts if draft.id is not None}
         if submitted_ids - set(by_id):
             raise NotFoundError(errors.unknown_field)
 
-        system_ids = {field.id for field in current if field.is_system}
+        system_ids = {
+            field_data.id
+            for field in current
+            if (field_data := _as_form_field(field)).is_system
+        }
         if not system_ids.issubset(submitted_ids):
             raise ConflictError(errors.missing_system_field)
 
-        used_keys = {field.key for field in current}
+        used_keys = {_as_form_field(field).key for field in current}
         for position, draft in enumerate(drafts):
             if draft.id is None:
                 repo.create_field(
@@ -122,18 +155,23 @@ def save_field_drafts[FieldT: FormFieldEntity, DraftT: FormFieldDraft](
                 continue
 
             field = by_id[draft.id]
-            if field.is_system and not system_field_is_valid(field, draft):
+            field_data = _as_form_field(field)
+            if field_data.is_system and (
+                draft.field_type != field_data.field_type
+                or draft.required != field_data.required
+                or not draft.is_active
+            ):
                 raise ConflictError(errors.invalid_system_field)
-            field.label = draft.label
-            field.field_type = draft.field_type
-            field.required = draft.required
-            field.placeholder = draft.placeholder
-            field.options = draft.options
-            field.position = position
-            field.is_active = draft.is_active
+            field_data.label = draft.label
+            field_data.field_type = draft.field_type
+            field_data.required = draft.required
+            field_data.placeholder = draft.placeholder
+            field_data.options = draft.options
+            field_data.position = position
+            field_data.is_active = draft.is_active
 
         for field in current:
-            if field.id not in submitted_ids:
+            if _as_form_field(field).id not in submitted_ids:
                 repo.delete_field(field)
 
         repo.commit(skip_audit=True)

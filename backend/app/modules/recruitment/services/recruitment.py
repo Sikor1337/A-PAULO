@@ -29,6 +29,7 @@ from app.modules.recruitment.schemas.commands import (
     RecruitmentVolunteerWrite,
 )
 from app.modules.recruitment.services.form_fields import (
+    ConfigurableFormFieldService,
     FieldSaveErrors,
     save_field_drafts,
 )
@@ -36,7 +37,9 @@ from app.modules.security.models.constants import STAFF_GROUP_KEY
 from app.modules.security.services.permissions import PermissionService
 
 
-class RecruitmentService:
+class RecruitmentService(
+    ConfigurableFormFieldService[RecruitmentField, RecruitmentFieldDraft]
+):
     def __init__(
         self,
         repo: RecruitmentRepository,
@@ -46,6 +49,17 @@ class RecruitmentService:
         self.repo = repo
         self.permissions = permissions
         self.audit = audit
+        super().__init__(
+            repo,
+            defaults=DEFAULT_FIELDS,
+            errors=FieldSaveErrors(
+                unknown_field="Co najmniej jedno pole formularza nie istnieje",
+                missing_system_field="Nie można usunąć podstawowego pola formularza",
+                invalid_system_field=(
+                    "Podstawowe pola kontaktowe muszą pozostać aktywne i wymagane"
+                ),
+            ),
+        )
 
     def _record_entity(
         self,

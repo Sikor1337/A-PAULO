@@ -23,12 +23,18 @@ from app.modules.recruitment.schemas.recruitment import (
     RecruitmentSubmissionCreate,
 )
 from app.modules.recruitment.services.form_fields import (
+    ConfigurableFormFieldService,
     FieldSaveErrors,
     save_field_drafts,
 )
 
 
-class BeneficiaryRecruitmentService:
+class BeneficiaryRecruitmentService(
+    ConfigurableFormFieldService[
+        BeneficiaryRecruitmentField,
+        RecruitmentFieldDraft,
+    ]
+):
     def __init__(
         self,
         repo: BeneficiaryRecruitmentRepository,
@@ -63,6 +69,12 @@ class BeneficiaryRecruitmentService:
                 ),
             ),
         )
+
+    def get_public_form(self) -> dict:
+        return {
+            "fields": self.list_fields(active_only=True),
+            "form_token": create_form_token(),
+        }
 
     def submit(self, request: BeneficiaryRecruitmentSubmissionCreate):
         if request.website:
