@@ -43,8 +43,6 @@ class NoOpAudit:
 def load_sample_data(session: Session) -> None:
     """Populate an empty schema with a complete, deterministic demo data set."""
     load_required_data(session)
-    if session.query(User).first():
-        raise RuntimeError("public already contains users; refusing duplicate seed")
 
     admin = User(
         username="demo.admin",
@@ -282,16 +280,18 @@ def main() -> None:
     )
     args = parser.parse_args()
     settings = get_settings()
-    if settings.database_schema != "public":
-        raise SystemExit("Sample data may only be loaded into the public schema")
 
     engine = create_engine(settings.database_url, pool_pre_ping=True)
+
+
+    schema = settings.database_schema or "public"
 
     @event.listens_for(engine, "connect")
     def set_search_path(dbapi_connection, connection_record) -> None:
         cursor = dbapi_connection.cursor()
-        cursor.execute('SET search_path TO "public"')
+        cursor.execute(f'SET search_path TO "{schema}"')
         cursor.close()
+
 
     try:
         with Session(engine) as session:
