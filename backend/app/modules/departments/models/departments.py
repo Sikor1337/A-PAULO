@@ -2,13 +2,20 @@
 
 Departments are archived, never hard-deleted, so member history survives.
 """
-from datetime import datetime
-from enum import StrEnum
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
-from sqlalchemy.orm import Mapped, mapped_column
+from __future__ import annotations
+
+from datetime import date, datetime
+from enum import StrEnum
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Date, DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.sql.base import Base
+
+if TYPE_CHECKING:
+    from app.modules.pi.models.volunteer import Volunteer
 
 
 class MembershipStatus(StrEnum):
@@ -82,3 +89,38 @@ class DepartmentMember(Base):
             f"<DepartmentMember dept={self.department_id} "
             f"volunteer={self.volunteer_id}>"
         )
+
+
+class DepartmentInventoryItem(Base):
+    """One item stored in a department warehouse (PAP-92)."""
+
+    __tablename__ = "department_inventory_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    department_id: Mapped[int] = mapped_column(
+        ForeignKey("departments.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    location: Mapped[str] = mapped_column(String(300), nullable=False)
+    borrowed_by_volunteer_id: Mapped[int | None] = mapped_column(
+        ForeignKey("volunteers.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    borrowed_by_volunteer: Mapped[Volunteer | None] = relationship(
+        foreign_keys=[borrowed_by_volunteer_id],
+        lazy="joined",
+    )
+    borrowed_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    @property
+    def borrowed_by_volunteer_name(self) -> str | None:
+        volunteer = self.borrowed_by_volunteer
+        return volunteer.full_name if volunteer else None

@@ -10,6 +10,9 @@ vi.mock('@/hooks/useUnsavedChanges', () => ({
 vi.mock('@/hooks/usePermissions', () => ({
   useSecurityGroups: vi.fn(),
 }));
+vi.mock('@/features/audit/HistoryButton', () => ({
+  default: () => <button type="button">Historia</button>,
+}));
 
 const mockedUseSecurityGroups = vi.mocked(useSecurityGroups);
 const saveMutate = vi.fn();

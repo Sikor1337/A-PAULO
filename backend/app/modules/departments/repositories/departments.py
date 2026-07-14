@@ -6,8 +6,14 @@ from sqlalchemy.orm import Session
 from app.infrastructure.sql.repository import SQLRepository
 from app.modules.departments.models.departments import (
     Department,
+    DepartmentInventoryItem,
     DepartmentMember,
     MembershipStatus,
+)
+from app.modules.departments.schemas.departments import (
+    DepartmentCreateRequest,
+    DepartmentInventoryItemInput,
+    DepartmentUpdateRequest,
 )
 from app.modules.pi.models.volunteer import Volunteer
 
@@ -38,15 +44,26 @@ class DepartmentRepository(SQLRepository):
             .first()
         )
 
-    def create(self, **kwargs) -> Department:
-        department = Department(**kwargs)
+    def create(self, request: DepartmentCreateRequest) -> Department:
+        department = Department(
+            name=request.name,
+            icon=request.icon,
+            description=request.description,
+        )
         self.session.add(department)
         return department
 
-    def update(self, department: Department, **kwargs) -> Department:
-        for key, value in kwargs.items():
-            if hasattr(department, key):
-                setattr(department, key, value)
+    def update(
+        self, department: Department, request: DepartmentUpdateRequest
+    ) -> Department:
+        if request.name is not None:
+            department.name = request.name
+        if request.icon is not None:
+            department.icon = request.icon
+        if request.description is not None:
+            department.description = request.description
+        if request.is_archived is not None:
+            department.is_archived = request.is_archived
         return department
 
     def member_counts(self) -> dict[int, int]:
@@ -59,18 +76,19 @@ class DepartmentRepository(SQLRepository):
             .group_by(DepartmentMember.department_id)
             .all()
         )
-        return dict(rows)
+        return {department_id: count for department_id, count in rows}
 
     def list_members(
         self, department_id: int
     ) -> list[tuple[DepartmentMember, Volunteer]]:
-        return (
+        rows = (
             self.session.query(DepartmentMember, Volunteer)
             .join(Volunteer, Volunteer.id == DepartmentMember.volunteer_id)
             .filter(DepartmentMember.department_id == department_id)
             .order_by(Volunteer.full_name)
             .all()
         )
+        return [(member, volunteer) for member, volunteer in rows]
 
     def get_member(
         self, department_id: int, volunteer_id: int
@@ -115,3 +133,60 @@ class DepartmentRepository(SQLRepository):
             .filter(func.lower(Volunteer.email) == email.lower())
             .first()
         )
+
+    def list_inventory(self, department_id: int) -> list[DepartmentInventoryItem]:
+        return (
+            self.session.query(DepartmentInventoryItem)
+            .filter(DepartmentInventoryItem.department_id == department_id)
+            .order_by(DepartmentInventoryItem.name, DepartmentInventoryItem.id)
+            .all()
+        )
+
+    def get_inventory_item(
+        self, department_id: int, item_id: int
+    ) -> DepartmentInventoryItem | None:
+        return (
+            self.session.query(DepartmentInventoryItem)
+            .filter(
+                DepartmentInventoryItem.department_id == department_id,
+                DepartmentInventoryItem.id == item_id,
+            )
+            .first()
+        )
+
+    def create_inventory_item(
+        self, department_id: int, request: DepartmentInventoryItemInput
+    ) -> DepartmentInventoryItem:
+        item = DepartmentInventoryItem(
+            department_id=department_id,
+            name=request.name,
+            location=request.location,
+            borrowed_by_volunteer_id=request.borrowed_by_volunteer_id,
+            borrowed_by_volunteer=(
+                self.session.get(Volunteer, request.borrowed_by_volunteer_id)
+                if request.borrowed_by_volunteer_id is not None
+                else None
+            ),
+            borrowed_at=request.borrowed_at,
+        )
+        self.session.add(item)
+        return item
+
+    def update_inventory_item(
+        self,
+        item: DepartmentInventoryItem,
+        request: DepartmentInventoryItemInput,
+    ) -> DepartmentInventoryItem:
+        item.name = request.name
+        item.location = request.location
+        item.borrowed_by_volunteer_id = request.borrowed_by_volunteer_id
+        item.borrowed_by_volunteer = (
+            self.session.get(Volunteer, request.borrowed_by_volunteer_id)
+            if request.borrowed_by_volunteer_id is not None
+            else None
+        )
+        item.borrowed_at = request.borrowed_at
+        return item
+
+    def delete_inventory_item(self, item: DepartmentInventoryItem) -> None:
+        self.session.delete(item)

@@ -50,7 +50,7 @@ def create_volunteer(
     user: User = Depends(require_permission(CAN_MANAGE_VOLUNTEERS)),
 ):
     """Create new volunteer."""
-    return service.create_volunteer(actor=user, **request.model_dump())
+    return service.create_volunteer(actor=user, request=request)
 
 
 @router.get("/{volunteer_id}", response_model=VolunteerResponse)
@@ -71,9 +71,7 @@ def update_volunteer(
     user: User = Depends(require_permission(CAN_MANAGE_VOLUNTEERS)),
 ):
     """Update volunteer."""
-    # Only update provided fields
-    update_data = request.model_dump(exclude_unset=True)
-    return service.update_volunteer(volunteer_id, actor=user, **update_data)
+    return service.update_volunteer(volunteer_id, actor=user, request=request)
 
 
 @router.delete("/{volunteer_id}")

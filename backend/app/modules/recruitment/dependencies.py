@@ -9,13 +9,25 @@ from app.core.audit import AuditPort
 from app.core.dependencies import get_db
 from app.modules.audit.dependencies import get_audit_service
 from app.modules.core_data.models import User
+from app.modules.pi.dependencies import get_beneficiary_service
+from app.modules.pi.services.beneficiaries import BeneficiaryService
 from app.modules.recruitment.access import is_valid_recruitment_access_token
+from app.modules.recruitment.beneficiary_access import is_valid_beneficiary_access_token
+from app.modules.recruitment.beneficiary_constants import (
+    BENEFICIARY_RECRUITMENT_TOKEN_HEADER,
+)
 from app.modules.recruitment.constants import (
     NEW_VOLUNTEER_STATUS,
     RECRUITMENT_TOKEN_HEADER,
 )
-from app.modules.recruitment.repositories import RecruitmentRepository
-from app.modules.recruitment.services import RecruitmentService
+from app.modules.recruitment.repositories import (
+    BeneficiaryRecruitmentRepository,
+    RecruitmentRepository,
+)
+from app.modules.recruitment.services import (
+    BeneficiaryRecruitmentService,
+    RecruitmentService,
+)
 from app.modules.security.dependencies import get_current_user, get_permission_service
 from app.modules.security.services.permissions import PermissionService
 
@@ -32,6 +44,35 @@ def get_recruitment_service(
     audit: AuditPort = Depends(get_audit_service),
 ) -> RecruitmentService:
     return RecruitmentService(repo, permissions, audit)
+
+
+def get_beneficiary_recruitment_repository(
+    session: Session = Depends(get_db),
+) -> BeneficiaryRecruitmentRepository:
+    return BeneficiaryRecruitmentRepository(session)
+
+
+def get_beneficiary_recruitment_service(
+    repo: BeneficiaryRecruitmentRepository = Depends(
+        get_beneficiary_recruitment_repository
+    ),
+    beneficiaries: BeneficiaryService = Depends(get_beneficiary_service),
+) -> BeneficiaryRecruitmentService:
+    return BeneficiaryRecruitmentService(repo, beneficiaries)
+
+
+def require_beneficiary_recruitment_access(
+    token: Annotated[
+        str | None, Header(alias=BENEFICIARY_RECRUITMENT_TOKEN_HEADER)
+    ] = None,
+) -> str:
+    if not is_valid_beneficiary_access_token(token):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie znaleziono formularza zgłoszeniowego",
+        )
+    assert token is not None
+    return token
 
 
 def require_recruitment_access(

@@ -6,6 +6,10 @@ from app.modules.core_data.models import User
 from app.modules.pi.audit_state import beneficiary_audit_state
 from app.modules.pi.models.beneficiary import Beneficiary
 from app.modules.pi.repositories.beneficiaries import BeneficiaryRepository
+from app.modules.pi.schemas.beneficiaries import (
+    BeneficiaryCreateRequest,
+    BeneficiaryUpdateRequest,
+)
 
 
 class BeneficiaryService:
@@ -73,33 +77,45 @@ class BeneficiaryService:
         beneficiaries = [self._enrich_beneficiary(b) for b in beneficiaries]
         return beneficiaries, count
 
-    def create_beneficiary(self, actor: User, **kwargs) -> Beneficiary:
+    def prepare_beneficiary(
+        self, actor: User, request: BeneficiaryCreateRequest
+    ) -> Beneficiary:
+        """Create and audit a beneficiary without committing the transaction."""
+        beneficiary = self.repo.create(request)
+        self.repo.flush()
+        self.repo.refresh(beneficiary)
+        self._record(
+            "CREATE",
+            beneficiary.id,
+            actor,
+            {},
+            beneficiary_audit_state(beneficiary),
+        )
+        return self._enrich_beneficiary(beneficiary)
+
+    def create_beneficiary(
+        self, actor: User, request: BeneficiaryCreateRequest
+    ) -> Beneficiary:
         """Create new beneficiary."""
         try:
-            beneficiary = self.repo.create(**kwargs)
-            self.repo.flush()
-            self.repo.refresh(beneficiary)
-            self._record(
-                "CREATE",
-                beneficiary.id,
-                actor,
-                {},
-                beneficiary_audit_state(beneficiary),
-            )
+            beneficiary = self.prepare_beneficiary(actor, request)
             self.repo.commit()
-            return self._enrich_beneficiary(beneficiary)
+            return beneficiary
         except Exception:
             self.repo.rollback()
             raise
 
     def update_beneficiary(
-        self, beneficiary_id: int, actor: User, **kwargs
+        self,
+        beneficiary_id: int,
+        actor: User,
+        request: BeneficiaryUpdateRequest,
     ) -> Beneficiary:
         """Update beneficiary."""
         try:
             beneficiary = self.get_beneficiary_by_id(beneficiary_id)
             old_state = beneficiary_audit_state(beneficiary)
-            beneficiary = self.repo.update(beneficiary, **kwargs)
+            beneficiary = self.repo.update(beneficiary, request)
             self.repo.flush()
             self.repo.refresh(beneficiary)
             new_state = beneficiary_audit_state(beneficiary)

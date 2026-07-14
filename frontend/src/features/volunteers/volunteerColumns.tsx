@@ -1,6 +1,7 @@
 import type { Column } from '@/components/ui/DataTable';
 import GroupNameCell from '@/components/ui/GroupNameCell';
 import StatusBadge from '@/components/ui/StatusBadge';
+import { appDialog } from '@/lib/appDialog';
 import type { Volunteer } from '@/types';
 
 interface Handlers {
@@ -103,8 +104,8 @@ export function buildVolunteerColumns({ onSelect, onEdit, onDelete, canManage }:
           </button>
           {v.status === 'Aktywny' && (
             <button
-              onClick={() => {
-                if (confirm('Usunąć?')) onDelete(v.id);
+              onClick={async () => {
+                if (await appDialog.confirm('Usunąć tego wolontariusza?', { title: 'Usuwanie wolontariusza', confirmLabel: 'Usuń', tone: 'error' })) onDelete(v.id);
               }}
               className="bg-[#ef4444] text-white p-1.5 rounded hover:opacity-80"
             >

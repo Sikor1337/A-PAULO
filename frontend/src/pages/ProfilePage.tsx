@@ -57,8 +57,8 @@ const ProfilePage = () => {
   const newPassword = watch('new_password');
   const confirmDiscard = useUnsavedChanges(isEditing && isDirty && !isSaving);
 
-  const cancelEdit = () => {
-    if (!confirmDiscard()) return;
+  const cancelEdit = async () => {
+    if (!await confirmDiscard()) return;
     if (profile) {
       reset({
         email: profile.email,

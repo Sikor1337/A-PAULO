@@ -2,6 +2,10 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import SurveyFieldBuilder from './SurveyFieldBuilder';
 
+vi.mock('@/hooks/useUnsavedChanges', () => ({
+  useUnsavedChanges: () => async () => true,
+}));
+
 const field = {
   id: 1,
   label: 'Dlaczego?',
@@ -14,6 +18,25 @@ const field = {
 };
 
 describe('SurveyFieldBuilder', () => {
+  it('shows readable field type and status badges', () => {
+    render(
+      <SurveyFieldBuilder
+        title="Pytania"
+        description="Opis"
+        fields={[{ ...field, is_system: true }]}
+        isLoading={false}
+        isSaving={false}
+        canManage
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Długa odpowiedź')).toBeInTheDocument();
+    expect(screen.getByText('Wymagane')).toBeInTheDocument();
+    expect(screen.getByText('Podstawowe')).toBeInTheDocument();
+    expect(screen.queryByText(/textarea · wymagane/i)).not.toBeInTheDocument();
+  });
+
   it('uses one edit-and-save flow for every survey definition', () => {
     const onSave = vi.fn((_fields, onSuccess: () => void) => onSuccess());
     render(

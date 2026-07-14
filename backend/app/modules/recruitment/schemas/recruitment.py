@@ -2,8 +2,9 @@
 
 import json
 import re
+from collections.abc import Sequence
 from datetime import date, datetime
-from typing import Any, Literal
+from typing import Any, Literal, NoReturn, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -18,7 +19,15 @@ from app.modules.recruitment.constants import (
     MULTIPLE_CHOICE_FIELD_TYPES,
     SINGLE_CHOICE_FIELD_TYPES,
 )
-from app.modules.recruitment.models import RecruitmentField
+
+
+class AnswerField(Protocol):
+    key: str
+    label: str
+    field_type: str
+    required: bool
+    options: list[str]
+
 
 FieldType = Literal[
     "text",
@@ -123,7 +132,7 @@ class RecruitmentSubmissionCreate(BaseModel):
             raise ValueError("Formularz zawiera zbyt dużo danych")
         return self
 
-    def validated_answers(self, fields: list[RecruitmentField]) -> list[dict[str, Any]]:
+    def validated_answers(self, fields: Sequence[AnswerField]) -> list[dict[str, Any]]:
         """Validate answers against the current form definition."""
 
         result: list[dict[str, Any]] = []
@@ -158,6 +167,7 @@ class RecruitmentSubmissionCreate(BaseModel):
             if (
                 not empty
                 and field.field_type in MULTIPLE_CHOICE_FIELD_TYPES
+                and isinstance(value, list)
                 and (
                     len(value) != len(set(value))
                     or any(item not in field.options for item in value)
@@ -204,7 +214,7 @@ class RecruitmentSubmissionCreate(BaseModel):
         return result
 
     @staticmethod
-    def _invalid_answer(label: str) -> None:
+    def _invalid_answer(label: str) -> NoReturn:
         raise ValidationException(f"Nieprawidłowa odpowiedź w polu „{label}”")
 
 

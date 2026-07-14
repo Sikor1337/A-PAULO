@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { createMemoryRouter, Link, RouterProvider } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useUnsavedChanges } from './useUnsavedChanges';
+import { appDialog } from '@/lib/appDialog';
 
 const Editor = () => {
   const [dirty, setDirty] = useState(false);
@@ -26,21 +27,21 @@ const renderEditor = () => {
 describe('useUnsavedChanges', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('keeps the user on the page after cancelling navigation', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
+  it('keeps the user on the page after cancelling navigation', async () => {
+    const confirm = vi.spyOn(appDialog, 'confirm').mockResolvedValue(false);
     renderEditor();
     fireEvent.click(screen.getByRole('button', { name: 'Zmień' }));
     fireEvent.click(screen.getByRole('link', { name: 'Wyjdź' }));
-    expect(window.confirm).toHaveBeenCalledOnce();
+    await waitFor(() => expect(confirm).toHaveBeenCalledOnce());
     expect(screen.getByRole('button', { name: 'Zmień' })).toBeInTheDocument();
   });
 
-  it('allows conscious navigation away from dirty data', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  it('allows conscious navigation away from dirty data', async () => {
+    vi.spyOn(appDialog, 'confirm').mockResolvedValue(true);
     renderEditor();
     fireEvent.click(screen.getByRole('button', { name: 'Zmień' }));
     fireEvent.click(screen.getByRole('link', { name: 'Wyjdź' }));
-    expect(screen.getByText('Inna strona')).toBeInTheDocument();
+    expect(await screen.findByText('Inna strona')).toBeInTheDocument();
   });
 
   it('registers the native browser close warning while dirty', () => {

@@ -1,6 +1,7 @@
 import type { Column } from '@/components/ui/DataTable';
 import GroupNameCell from '@/components/ui/GroupNameCell';
 import StatusBadge from '@/components/ui/StatusBadge';
+import { appDialog } from '@/lib/appDialog';
 import type { Beneficiary } from '@/types';
 
 interface Handlers {
@@ -86,8 +87,8 @@ export function buildBeneficiaryColumns({ onSelect, onEdit, onDelete, canManage 
             ✏️
           </button>
           <button
-            onClick={() => {
-              if (confirm('Usunąć?')) onDelete(b.id);
+            onClick={async () => {
+              if (await appDialog.confirm('Usunąć tego podopiecznego?', { title: 'Usuwanie podopiecznego', confirmLabel: 'Usuń', tone: 'error' })) onDelete(b.id);
             }}
             className="bg-[#ef4444] text-white p-1.5 rounded hover:opacity-80"
           >

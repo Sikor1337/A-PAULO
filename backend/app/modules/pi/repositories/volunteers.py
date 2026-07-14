@@ -8,6 +8,10 @@ from app.modules.pi.models.beneficiary import Beneficiary
 from app.modules.pi.models.function import Function, volunteer_function
 from app.modules.pi.models.group import BeneficiaryAssignment, Group
 from app.modules.pi.models.volunteer import Volunteer
+from app.modules.pi.schemas.volunteers import (
+    VolunteerCreateRequest,
+    VolunteerUpdateRequest,
+)
 
 
 class VolunteerRepository(SQLRepository):
@@ -64,17 +68,42 @@ class VolunteerRepository(SQLRepository):
 
         return query.scalar() or 0
 
-    def create(self, **kwargs) -> Volunteer:
+    def create(self, request: VolunteerCreateRequest) -> Volunteer:
         """Create new volunteer."""
-        volunteer = Volunteer(**kwargs)
+        volunteer = Volunteer(
+            full_name=request.full_name,
+            email=str(request.email),
+            phone=request.phone,
+            social_link=request.social_link,
+            status=request.status,
+            join_date=request.join_date,
+            notes=request.notes,
+            history=request.history,
+        )
         self.session.add(volunteer)
         return volunteer
 
-    def update(self, volunteer: Volunteer, **kwargs) -> Volunteer:
+    def update(
+        self, volunteer: Volunteer, request: VolunteerUpdateRequest
+    ) -> Volunteer:
         """Update volunteer."""
-        for key, value in kwargs.items():
-            if hasattr(volunteer, key):
-                setattr(volunteer, key, value)
+        fields = request.model_fields_set
+        if "full_name" in fields and request.full_name is not None:
+            volunteer.full_name = request.full_name
+        if "email" in fields and request.email is not None:
+            volunteer.email = str(request.email)
+        if "phone" in fields:
+            volunteer.phone = request.phone
+        if "social_link" in fields:
+            volunteer.social_link = request.social_link
+        if "status" in fields and request.status is not None:
+            volunteer.status = request.status
+        if "join_date" in fields and request.join_date is not None:
+            volunteer.join_date = request.join_date
+        if "notes" in fields and request.notes is not None:
+            volunteer.notes = request.notes
+        if "history" in fields and request.history is not None:
+            volunteer.history = request.history
         return volunteer
 
     def delete(self, volunteer: Volunteer) -> None:

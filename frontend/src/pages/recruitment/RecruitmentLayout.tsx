@@ -10,9 +10,12 @@ const RecruitmentLayout = () => {
   const location = useLocation();
   const inSurveys = location.pathname.startsWith('/recruitment/surveys');
   const departure = location.pathname.includes('/departure/');
-  const surveyBase = departure
-    ? '/recruitment/surveys/departure'
-    : '/recruitment/surveys/recruitment';
+  const beneficiary = location.pathname.includes('/beneficiary/');
+  const surveyBase = beneficiary
+    ? '/recruitment/surveys/beneficiary'
+    : departure
+      ? '/recruitment/surveys/departure'
+      : '/recruitment/surveys/recruitment';
 
   return (
     <PageShell>
@@ -28,9 +31,10 @@ const RecruitmentLayout = () => {
       </nav>
 
       {inSurveys && <>
-        <nav className="mb-4 grid gap-2 sm:grid-cols-2" aria-label="Rodzaj ankiety">
-          <NavLink to="/recruitment/surveys/recruitment/editor" className={({ isActive }) => `rounded-xl border px-4 py-3 text-center text-sm font-bold ${!departure || isActive ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'}`}>Rekrutacja</NavLink>
-          <NavLink to="/recruitment/surveys/departure/editor" className={({ isActive }) => `rounded-xl border px-4 py-3 text-center text-sm font-bold ${departure || isActive ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'}`}>Ankieta odejścia</NavLink>
+        <nav className="mb-4 grid gap-2 sm:grid-cols-3" aria-label="Rodzaj ankiety">
+          <NavLink to="/recruitment/surveys/recruitment/editor" className={({ isActive }) => `rounded-xl border px-4 py-3 text-center text-sm font-bold ${(!departure && !beneficiary) || isActive ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'}`}>Wolontariusze</NavLink>
+          <NavLink to="/recruitment/surveys/beneficiary/editor" className={({ isActive }) => `rounded-xl border px-4 py-3 text-center text-sm font-bold ${beneficiary || isActive ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'text-gray-500 hover:bg-gray-50'}`}>Podopieczni</NavLink>
+          <NavLink to="/recruitment/surveys/departure/editor" className={({ isActive }) => `rounded-xl border px-4 py-3 text-center text-sm font-bold ${departure || isActive ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'}`}>Odejścia</NavLink>
         </nav>
         <nav className="mb-6 flex gap-1 border-b" aria-label="Widok ankiety">
           <NavLink to={`${surveyBase}/editor`} className={({ isActive }) => `border-b-2 px-5 py-3 text-sm font-bold ${isActive ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500'}`}>Edycja</NavLink>

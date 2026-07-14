@@ -4,6 +4,7 @@ import { useBugReportActions, useBugReportList, useMyBugReports } from '@/hooks/
 import { useHasPermission } from '@/hooks/usePermissions';
 import { formatDate } from '@/lib/date';
 import { bugReportService, BUG_REPORT_ACCEPT } from '@/services/bugReportService';
+import { appDialog } from '@/lib/appDialog';
 import type { BugReport, BugReportStatus } from '@/types';
 
 const STATUS_OPTIONS: BugReportStatus[] = ['NOWY', 'W_TRAKCIE', 'ROZWIĄZANY', 'ODRZUCONY'];
@@ -66,12 +67,12 @@ const BugReportsPage: React.FC = () => {
     try {
       await bugReportService.downloadFile(report);
     } catch {
-      alert('Nie udało się pobrać pliku.');
+      appDialog.error('Nie udało się pobrać pliku.');
     }
   };
 
-  const deleteReport = (report: BugReport) => {
-    if (confirm(`Usunąć zgłoszenie „${report.title}”? Załącznik zostanie usunięty z serwera.`)) {
+  const deleteReport = async (report: BugReport) => {
+    if (await appDialog.confirm(`Usunąć zgłoszenie „${report.title}”? Załącznik zostanie usunięty z serwera.`, { title: 'Usuwanie zgłoszenia', confirmLabel: 'Usuń', tone: 'error' })) {
       remove.mutate(report.id);
     }
   };

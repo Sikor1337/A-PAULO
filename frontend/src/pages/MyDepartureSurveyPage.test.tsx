@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDepartureFields, useMyDepartureSurvey } from '@/hooks/useDepartures';
 import MyDepartureSurveyPage from './MyDepartureSurveyPage';
+import { appDialog } from '@/lib/appDialog';
 
 const authState = vi.hoisted(() => ({ status: 'regular' }));
 
@@ -64,9 +65,9 @@ describe('MyDepartureSurveyPage', () => {
     } as unknown as ReturnType<typeof useDepartureFields>);
   });
 
-  it('lets the volunteer submit their own answers', () => {
+  it('lets the volunteer submit their own answers', async () => {
     const mutate = mockSurvey();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.spyOn(appDialog, 'confirm').mockResolvedValue(true);
     render(<MyDepartureSurveyPage />);
 
     expect(screen.getByText('Jan Kowalski')).toBeInTheDocument();
@@ -75,9 +76,9 @@ describe('MyDepartureSurveyPage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Wyślij ankietę' }));
 
-    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
       departure_reason: 'Zmiana planów',
-    }));
+    })));
   });
 
   it('lets the volunteer edit the original submitted answers', () => {

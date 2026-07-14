@@ -4,6 +4,7 @@ import { useDepartureFields, useMyDepartureSurvey } from '@/hooks/useDepartures'
 import { parseApiError } from '@/lib/errors';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { appDialog } from '@/lib/appDialog';
 import type { DepartureAnswer, DepartureField } from '@/types';
 
 const inputClass = 'mt-1 min-h-11 w-full rounded-lg border border-gray-200 px-3 outline-none focus:border-indigo-500';
@@ -110,9 +111,9 @@ const MyDepartureSurveyPage = () => {
   const error = isAdminPreview ? fieldsPreview.error : survey.error;
   const hasData = isAdminPreview ? Boolean(fieldsPreview.data) : Boolean(survey.data);
 
-  const submit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!interview && !window.confirm('Wysłać ankietę odejścia?')) return;
+    if (!interview && !await appDialog.confirm('Wysłać ankietę odejścia?', { title: 'Wyślij ankietę', confirmLabel: 'Wyślij' })) return;
     survey.save.mutate(answers);
   };
 

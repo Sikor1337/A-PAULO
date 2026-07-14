@@ -1,9 +1,12 @@
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
 from app.core.errors import ConflictError, NotFoundError, ValidationException
+from app.modules.pi.schemas.beneficiaries import BeneficiaryCreateRequest
+from app.modules.pi.schemas.volunteers import VolunteerCreateRequest
 from app.modules.pi.services.beneficiaries import BeneficiaryService
 from app.modules.pi.services.functions import FunctionService
 from app.modules.pi.services.groups import BeneficiaryAssignmentService, GroupService
@@ -78,7 +81,14 @@ def test_volunteer_create_rejects_duplicate_email(session: MagicMock) -> None:
     repo.exists.return_value = True
 
     with pytest.raises(ConflictError):
-        service.create_volunteer(actor=actor(), email="taken@example.com")
+        service.create_volunteer(
+            actor=actor(),
+            request=VolunteerCreateRequest(
+                full_name="Zajęty Wolontariusz",
+                email="taken@example.com",
+                join_date=datetime(2026, 1, 1),
+            ),
+        )
 
     repo.create.assert_not_called()
     session.rollback.assert_called_once()
@@ -110,15 +120,22 @@ def test_volunteer_create_syncs_functions_and_enriches(
 
     result = service.create_volunteer(
         actor=actor(),
-        full_name="Nowy Wolontariusz",
-        email="new@example.com",
-        function_ids=[1, 2],
+        request=VolunteerCreateRequest(
+            full_name="Nowy Wolontariusz",
+            email="new@example.com",
+            join_date=datetime(2026, 1, 1),
+            function_ids=[1, 2],
+        ),
     )
 
     assert result is volunteer
     repo.create.assert_called_once_with(
-        full_name="Nowy Wolontariusz",
-        email="new@example.com",
+        VolunteerCreateRequest(
+            full_name="Nowy Wolontariusz",
+            email="new@example.com",
+            join_date=datetime(2026, 1, 1),
+            function_ids=[1, 2],
+        )
     )
     sync_functions.assert_called_once_with(5, [1, 2])
     session.commit.assert_called_once()
@@ -159,11 +176,14 @@ def test_beneficiary_create_commits_and_enriches(
     monkeypatch.setattr(service, "_enrich_beneficiary", enrich)
 
     result = service.create_beneficiary(
-        actor=actor(), full_name="Podopieczny", address="Adres"
+        actor=actor(),
+        request=BeneficiaryCreateRequest(full_name="Podopieczny", address="Adres"),
     )
 
     assert result is beneficiary
-    repo.create.assert_called_once_with(full_name="Podopieczny", address="Adres")
+    repo.create.assert_called_once_with(
+        BeneficiaryCreateRequest(full_name="Podopieczny", address="Adres")
+    )
     session.refresh.assert_called_once_with(beneficiary)
     session.commit.assert_called_once()
     enrich.assert_called_once_with(beneficiary)

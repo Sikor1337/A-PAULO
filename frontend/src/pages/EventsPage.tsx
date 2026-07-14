@@ -6,6 +6,7 @@ import EventFormModal from '@/features/calendar/EventFormModal';
 import { expandOccurrences, occurrenceDays } from '@/features/calendar/recurrence';
 import { useCalendarEvents } from '@/hooks/useCalendar';
 import { useHasPermission } from '@/hooks/usePermissions';
+import { appDialog } from '@/lib/appDialog';
 import type { CalendarEvent, CalendarEventStatus, CalendarEventVisibility } from '@/types';
 
 const weekdays = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nie'];
@@ -214,8 +215,12 @@ const EventsPage = () => {
           canManage={canManage}
           onClose={() => setSelected(null)}
           onEdit={() => { setEditing(selected); setSelected(null); }}
-          onCancel={() => confirm('Anulować wydarzenie?') && eventsQuery.cancel.mutate(selected.id, { onSuccess: () => setSelected(null) })}
-          onDelete={() => confirm('Trwale usunąć wydarzenie?') && eventsQuery.remove.mutate(selected.id, { onSuccess: () => setSelected(null) })}
+          onCancel={async () => {
+            if (await appDialog.confirm('Anulować wydarzenie?', { title: 'Anulowanie wydarzenia', confirmLabel: 'Anuluj wydarzenie', tone: 'warning' })) eventsQuery.cancel.mutate(selected.id, { onSuccess: () => setSelected(null) });
+          }}
+          onDelete={async () => {
+            if (await appDialog.confirm('Trwale usunąć wydarzenie?', { title: 'Usuwanie wydarzenia', confirmLabel: 'Usuń', tone: 'error' })) eventsQuery.remove.mutate(selected.id, { onSuccess: () => setSelected(null) });
+          }}
         />
       )}
       {subscriptionOpen && <CalendarSubscriptionModal onClose={() => setSubscriptionOpen(false)} />}

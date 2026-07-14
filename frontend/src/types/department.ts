@@ -19,6 +19,25 @@ export interface DepartmentMember {
   created_at: string;
 }
 
+export interface DepartmentInventoryItem {
+  id: number;
+  department_id: number;
+  name: string;
+  location: string;
+  borrowed_by_volunteer_id: number | null;
+  borrowed_by_volunteer_name: string | null;
+  borrowed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DepartmentInventoryItemInput {
+  name: string;
+  location: string;
+  borrowed_by_volunteer_id: number | null;
+  borrowed_at: string | null;
+}
+
 export interface DepartmentDetail {
   id: number;
   name: string;

@@ -1,5 +1,6 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useBlocker } from 'react-router-dom';
+import { appDialog } from '@/lib/appDialog';
 
 export const UNSAVED_CHANGES_MESSAGE =
   'Masz niezapisane zmiany. Czy na pewno chcesz opuścić tę stronę?';
@@ -10,11 +11,25 @@ export const useUnsavedChanges = (
   message = UNSAVED_CHANGES_MESSAGE,
 ) => {
   const blocker = useBlocker(isDirty);
+  const handlingBlocker = useRef(false);
 
   useEffect(() => {
-    if (blocker.state !== 'blocked') return;
-    if (window.confirm(message)) blocker.proceed();
-    else blocker.reset();
+    if (blocker.state !== 'blocked') {
+      handlingBlocker.current = false;
+      return;
+    }
+    if (handlingBlocker.current) return;
+    handlingBlocker.current = true;
+    void appDialog.confirm(message, {
+      title: 'Niezapisane zmiany',
+      confirmLabel: 'Opuść stronę',
+      tone: 'warning',
+    }).then((accepted) => {
+      if (accepted) blocker.proceed();
+      else blocker.reset();
+    }).finally(() => {
+      handlingBlocker.current = false;
+    });
   }, [blocker, message]);
 
   useEffect(() => {
@@ -28,7 +43,9 @@ export const useUnsavedChanges = (
   }, [isDirty]);
 
   return useCallback(
-    () => !isDirty || window.confirm(message),
+    () => isDirty
+      ? appDialog.confirm(message, { title: 'Niezapisane zmiany', confirmLabel: 'Odrzuć zmiany', tone: 'warning' })
+      : Promise.resolve(true),
     [isDirty, message],
   );
 };

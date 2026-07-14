@@ -1,4 +1,5 @@
 """Beneficiary model for PI domain."""
+
 from datetime import date, datetime
 
 from sqlalchemy import Date, DateTime, ForeignKey, String, func
@@ -12,6 +13,9 @@ class Beneficiary(Base):
     """Beneficiary model."""
 
     __tablename__ = "beneficiaries"
+    __allow_unmapped__ = True
+
+    group_name: str | None
 
     id: Mapped[int] = mapped_column(primary_key=True)
     full_name: Mapped[str] = mapped_column(String(200), index=True)
@@ -40,7 +44,6 @@ class Beneficiary(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
-
 
     @validates("status")
     def _validate_status(self, key: str, value: str) -> str:

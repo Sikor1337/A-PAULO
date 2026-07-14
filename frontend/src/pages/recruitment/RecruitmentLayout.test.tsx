@@ -21,8 +21,12 @@ describe('RecruitmentLayout', () => {
 
     expect(screen.getByRole('link', { name: 'Ankiety' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Wdrażanie' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Rekrutacja' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Ankieta odejścia' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Wolontariusze' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Podopieczni' })).toHaveAttribute(
+      'href',
+      '/recruitment/surveys/beneficiary/editor',
+    );
+    expect(screen.getByRole('link', { name: 'Odejścia' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Edycja' })).toHaveAttribute(
       'href',
       '/recruitment/surveys/recruitment/editor',

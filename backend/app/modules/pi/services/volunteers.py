@@ -6,6 +6,10 @@ from app.modules.core_data.models import User
 from app.modules.pi.audit_state import volunteer_audit_state
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.pi.repositories.volunteers import VolunteerRepository
+from app.modules.pi.schemas.volunteers import (
+    VolunteerCreateRequest,
+    VolunteerUpdateRequest,
+)
 
 
 class VolunteerService:
@@ -70,19 +74,18 @@ class VolunteerService:
         volunteers = [self._enrich_volunteer(v) for v in volunteers]
         return volunteers, count
 
-    def create_volunteer(self, actor: User, **kwargs) -> Volunteer:
+    def create_volunteer(
+        self, actor: User, request: VolunteerCreateRequest
+    ) -> Volunteer:
         """Create new volunteer."""
         try:
-            function_ids = kwargs.pop("function_ids", [])
-            # Check if email already exists
-            if self.repo.exists(kwargs.get("email")):
-                raise ConflictError(
-                    f"Volunteer with email '{kwargs.get('email')}' already exists"
-                )
+            email = str(request.email)
+            if self.repo.exists(email):
+                raise ConflictError(f"Volunteer with email '{email}' already exists")
 
-            volunteer = self.repo.create(**kwargs)
+            volunteer = self.repo.create(request)
             self.repo.flush()
-            self._sync_functions(volunteer.id, function_ids)
+            self._sync_functions(volunteer.id, request.function_ids)
             self.repo.refresh(volunteer)
             volunteer = self._enrich_volunteer(volunteer)
             self._record(
@@ -94,27 +97,30 @@ class VolunteerService:
             self.repo.rollback()
             raise
 
-    def update_volunteer(self, volunteer_id: int, actor: User, **kwargs) -> Volunteer:
+    def update_volunteer(
+        self,
+        volunteer_id: int,
+        actor: User,
+        request: VolunteerUpdateRequest,
+    ) -> Volunteer:
         """Update volunteer."""
         try:
-            function_ids = kwargs.pop("function_ids", None)
             volunteer = self.get_volunteer_by_id(volunteer_id)
             old_state = volunteer_audit_state(volunteer)
 
-            # If email is being updated, check uniqueness (excluding current volunteer)
+            email = str(request.email) if request.email is not None else None
             if (
-                "email" in kwargs
-                and kwargs["email"] != volunteer.email
-                and self.repo.exists(kwargs["email"])
+                "email" in request.model_fields_set
+                and email is not None
+                and email != volunteer.email
+                and self.repo.exists(email)
             ):
-                raise ConflictError(
-                    f"Volunteer with email '{kwargs['email']}' already exists"
-                )
+                raise ConflictError(f"Volunteer with email '{email}' already exists")
 
-            volunteer = self.repo.update(volunteer, **kwargs)
+            volunteer = self.repo.update(volunteer, request)
             self.repo.flush()
-            if function_ids is not None:
-                self._sync_functions(volunteer.id, function_ids)
+            if "function_ids" in request.model_fields_set:
+                self._sync_functions(volunteer.id, request.function_ids or [])
             self.repo.refresh(volunteer)
             volunteer = self._enrich_volunteer(volunteer)
             new_state = volunteer_audit_state(volunteer)

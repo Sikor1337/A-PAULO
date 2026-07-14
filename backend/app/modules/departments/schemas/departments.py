@@ -1,7 +1,9 @@
 """Department schemas."""
-from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from datetime import date, datetime
+from typing import Self
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class DepartmentCreateRequest(BaseModel):
@@ -48,6 +50,40 @@ class DepartmentMemberResponse(BaseModel):
     status: str
     membership_status: str
     created_at: datetime
+
+
+class DepartmentInventoryItemInput(BaseModel):
+    """Create or replace one warehouse item."""
+
+    name: str = Field(..., min_length=1, max_length=200)
+    location: str = Field(..., min_length=1, max_length=300)
+    borrowed_by_volunteer_id: int | None = Field(default=None, ge=1)
+    borrowed_at: date | None = None
+
+    @field_validator("name", "location", mode="before")
+    @classmethod
+    def strip_required_text(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def borrower_and_date_must_be_set_together(self) -> Self:
+        if (self.borrowed_by_volunteer_id is None) != (self.borrowed_at is None):
+            raise ValueError("Wolontariusz i data pobrania muszą być ustawione razem")
+        return self
+
+
+class DepartmentInventoryItemResponse(BaseModel):
+    id: int
+    department_id: int
+    name: str
+    location: str
+    borrowed_by_volunteer_id: int | None
+    borrowed_by_volunteer_name: str | None
+    borrowed_at: date | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DepartmentDetailResponse(BaseModel):

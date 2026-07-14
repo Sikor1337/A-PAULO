@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCrudResource } from './useCrudResource';
+import { appDialog } from '@/lib/appDialog';
 
 interface Item {
   id: number;
@@ -30,7 +31,6 @@ describe('useCrudResource', () => {
         mutations: { retry: false },
       },
     });
-    vi.spyOn(window, 'alert').mockImplementation(() => undefined);
   });
 
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -94,7 +94,7 @@ describe('useCrudResource', () => {
 
   it('alerts when deleting a record fails', async () => {
     const service = createService();
-    const alert = vi.spyOn(window, 'alert').mockImplementation(() => undefined);
+    const alert = vi.spyOn(appDialog, 'error').mockImplementation(() => undefined);
     service.getAll.mockResolvedValue([]);
     service.delete.mockRejectedValue(new Error('boom'));
 

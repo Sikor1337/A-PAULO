@@ -16,8 +16,8 @@ interface FormModalProps {
 const FormModal = ({ title, onClose, onSubmit, isPending, children, submitLabel = 'Zatwierdź' }: FormModalProps) => {
   const [isDirty, setIsDirty] = useState(false);
   const confirmDiscard = useUnsavedChanges(isDirty && !isPending);
-  const close = () => {
-    if (confirmDiscard()) onClose();
+  const close = async () => {
+    if (await confirmDiscard()) onClose();
   };
 
   return (

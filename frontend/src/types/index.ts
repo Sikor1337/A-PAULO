@@ -15,6 +15,8 @@ export type { Beneficiary, BeneficiaryStatus, BeneficiaryInput } from './benefic
 export type {
   DepartmentDetail,
   DepartmentInput,
+  DepartmentInventoryItem,
+  DepartmentInventoryItemInput,
   DepartmentListItem,
   DepartmentMember,
 } from './department';
@@ -64,6 +66,12 @@ export type {
   RecruitmentStatus,
   RecruitmentSubmission,
 } from './recruitment';
+export type {
+  BeneficiaryRecruitmentFieldDraft,
+  BeneficiaryRecruitmentForm,
+  BeneficiaryRecruitmentStatus,
+  BeneficiaryRecruitmentSubmission,
+} from './beneficiaryRecruitment';
 export type {
   DepartureAnswer,
   DepartureField,

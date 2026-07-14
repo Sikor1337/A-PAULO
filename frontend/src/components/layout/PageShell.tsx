@@ -5,20 +5,18 @@ import Sidebar from '@/components/Sidebar';
 interface PageShellProps {
   /** Page content, rendered inside the main card. */
   children: ReactNode;
-  /** Optional node injected into the Sidebar's Groups row (used by GroupsPage). */
-  sidebarSlot?: ReactNode;
   /** Override the main card classes (GroupsPage and Dashboard use custom shells). */
   cardClassName?: string;
 }
 
 const DEFAULT_CARD = 'min-h-[calc(100dvh-88px)] rounded-xl bg-white p-4 shadow-lg sm:p-6 lg:min-h-[calc(100dvh-48px)]';
 
-const PageShell = ({ children, sidebarSlot, cardClassName = DEFAULT_CARD }: PageShellProps) => {
+const PageShell = ({ children, cardClassName = DEFAULT_CARD }: PageShellProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-dvh bg-[#1e2330]">
-      <Sidebar groupsSlot={sidebarSlot} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {sidebarOpen && (
         <button

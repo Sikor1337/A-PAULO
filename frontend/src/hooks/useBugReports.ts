@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { bugReportService } from '@/services/bugReportService';
 import { parseApiError } from '@/lib/errors';
+import { appDialog } from '@/lib/appDialog';
 import type { BugReportSubmitInput, BugReportUpdateInput } from '@/types';
 
 /** All reports (developer view), optionally filtered by status. */
@@ -35,20 +36,20 @@ export function useBugReportActions(options?: { onSubmitted?: () => void }) {
       invalidate();
       options?.onSubmitted?.();
     },
-    onError: (error) => alert(parseApiError(error)),
+    onError: (error) => appDialog.error(parseApiError(error)),
   });
 
   const update = useMutation({
     mutationFn: ({ id, data }: { id: number; data: BugReportUpdateInput }) =>
       bugReportService.update(id, data),
     onSuccess: invalidate,
-    onError: (error) => alert(parseApiError(error)),
+    onError: (error) => appDialog.error(parseApiError(error)),
   });
 
   const remove = useMutation({
     mutationFn: (id: number) => bugReportService.remove(id),
     onSuccess: invalidate,
-    onError: (error) => alert(parseApiError(error)),
+    onError: (error) => appDialog.error(parseApiError(error)),
   });
 
   return { submit, update, remove };
