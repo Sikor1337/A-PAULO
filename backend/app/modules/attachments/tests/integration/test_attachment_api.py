@@ -25,6 +25,7 @@ from app.modules.pi.repositories import (
     VolunteerRepository,
 )
 from app.modules.pi.schemas.beneficiaries import BeneficiaryCreateRequest
+from app.modules.pi.schemas.functions import FunctionCreateRequest
 from app.modules.pi.schemas.volunteers import VolunteerCreateRequest
 from app.modules.pi.services.beneficiaries import BeneficiaryService
 from app.modules.pi.services.functions import FunctionService
@@ -40,7 +41,7 @@ def test_bo_card_attachment_api_flow(
 ) -> None:
     audit = SqlAuditService(AuditRepository(db_session))
     function = FunctionService(FunctionRepository(db_session)).create_function(
-        name="Odwiedziny"
+        FunctionCreateRequest(name="Odwiedziny")
     )
     volunteer = VolunteerService(
         VolunteerRepository(db_session), audit

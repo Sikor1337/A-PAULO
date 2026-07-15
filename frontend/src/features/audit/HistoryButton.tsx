@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import axiosClient from '@/lib/api';
-import type { AuditEvent } from '@/types';
+import { useAuditHistory } from '@/hooks/useAudit';
 
 interface HistoryButtonProps {
   path: string;
@@ -12,14 +10,7 @@ interface HistoryButtonProps {
 const HistoryButton = ({ path, entityName, className = '' }: HistoryButtonProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const { data: events, isLoading } = useQuery({
-    queryKey: ['audit-history', path],
-    queryFn: async () => {
-      const response = await axiosClient.get<AuditEvent[]>(path);
-      return response.data;
-    },
-    enabled: isOpen,
-  });
+  const { data: events, isLoading } = useAuditHistory(path, isOpen);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('pl-PL');

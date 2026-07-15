@@ -109,11 +109,33 @@ class UserRepository(SQLRepository):
         self.session.add(user)
         return user
 
-    def update(self, user: User, **kwargs) -> User:
+    def update(
+        self,
+        user: User,
+        *,
+        username: str | None = None,
+        email: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        status: str | None = None,
+        is_active: bool | None = None,
+        hashed_password: str | None = None,
+    ) -> User:
         """Update user fields."""
-        for key, value in kwargs.items():
-            if value is not None and hasattr(user, key):
-                setattr(user, key, value)
+        if username is not None:
+            user.username = username
+        if email is not None:
+            user.email = email
+        if first_name is not None:
+            user.first_name = first_name
+        if last_name is not None:
+            user.last_name = last_name
+        if status is not None:
+            user.status = status
+        if is_active is not None:
+            user.is_active = is_active
+        if hashed_password is not None:
+            user.hashed_password = hashed_password
         return user
 
     def exists(self, username: str | None = None, email: str | None = None) -> bool:

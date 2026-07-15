@@ -18,6 +18,7 @@ from app.modules.pi.repositories import (
     VolunteerRepository,
 )
 from app.modules.pi.schemas.beneficiaries import BeneficiaryCreateRequest
+from app.modules.pi.schemas.functions import FunctionCreateRequest
 from app.modules.pi.schemas.volunteers import VolunteerCreateRequest
 from app.modules.pi.services.beneficiaries import BeneficiaryService
 from app.modules.pi.services.functions import FunctionService
@@ -38,7 +39,9 @@ def test_services_create_group_assignments_and_enriched_volunteer(
     beneficiary_service = BeneficiaryService(BeneficiaryRepository(db_session), audit)
     group_service = GroupService(GroupRepository(db_session), audit)
 
-    function = function_service.create_function(name="Odwiedziny")
+    function = function_service.create_function(
+        FunctionCreateRequest(name="Odwiedziny")
+    )
     volunteer = volunteer_service.create_volunteer(
         actor=actor,
         request=VolunteerCreateRequest(

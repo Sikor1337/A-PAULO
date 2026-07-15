@@ -2,16 +2,21 @@
 
 from datetime import datetime, timedelta
 
-from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.audit import AuditEntry, AuditPort, EntityType, calculate_delta
 from app.core.config import get_settings
-from app.core.errors import AuthenticationError, ConflictError, NotFoundError
+from app.core.errors import (
+    AuthenticationError,
+    BadRequestError,
+    ConflictError,
+    NotFoundError,
+)
 from app.modules.core_data.audit_state import user_audit_state
 from app.modules.core_data.models.user import User
 from app.modules.core_data.repositories.users import UserRepository
+from app.modules.core_data.schemas.users import UserCreateRequest, UserUpdateRequest
 from app.modules.security.services.password import hash_password
 from app.modules.security.services.permissions import PermissionService
 
@@ -192,34 +197,28 @@ class UserService:
 
     def create_user(
         self,
-        username: str,
-        email: str,
-        password: str,
+        request: UserCreateRequest,
         *,
         actor: User,
-        first_name: str = "",
-        last_name: str = "",
-        status: str = "regular",
-        is_active: bool = True,
     ) -> User:
         """Create a user from the admin panel."""
         try:
-            normalized_username = username.strip().lower()
-            normalized_email = email.strip().lower()
+            normalized_username = request.username.strip().lower()
+            normalized_email = str(request.email).strip().lower()
 
             if self.user_repo.get_by_username(normalized_username):
-                raise ConflictError(f"Username '{username}' already exists")
+                raise ConflictError(f"Username '{request.username}' already exists")
             if self.user_repo.get_by_email(normalized_email):
-                raise ConflictError(f"Email '{email}' already exists")
+                raise ConflictError(f"Email '{request.email}' already exists")
 
             user = self.user_repo.create(
                 username=normalized_username,
                 email=normalized_email,
-                hashed_password=hash_password(password),
-                first_name=first_name,
-                last_name=last_name,
-                status=status,
-                is_active=is_active,
+                hashed_password=hash_password(request.password),
+                first_name=request.first_name,
+                last_name=request.last_name,
+                status=request.status,
+                is_active=request.is_active,
             )
             self.user_repo.flush()
             self.user_repo.refresh(user)
@@ -231,34 +230,45 @@ class UserService:
             self.user_repo.rollback()
             raise
 
-    def update_user(self, user_id: int, actor: User, **kwargs) -> User:
+    def update_user(
+        self, user_id: int, request: UserUpdateRequest, actor: User
+    ) -> User:
         """Update a user from the admin panel."""
         try:
             user = self.get_user_by_id(user_id)
             old_state = self._state(user)
-            update_data = {
-                key: value for key, value in kwargs.items() if value is not None
-            }
+            username = (
+                request.username.strip().lower()
+                if request.username is not None
+                else None
+            )
+            email = (
+                str(request.email).strip().lower()
+                if request.email is not None
+                else None
+            )
 
-            if "username" in update_data:
-                update_data["username"] = update_data["username"].strip().lower()
-                existing = self.user_repo.get_by_username(update_data["username"])
+            if username is not None:
+                existing = self.user_repo.get_by_username(username)
                 if existing and existing.id != user.id:
-                    raise ConflictError(
-                        f"Username '{kwargs['username']}' already exists"
-                    )
+                    raise ConflictError(f"Username '{request.username}' already exists")
 
-            if "email" in update_data:
-                update_data["email"] = update_data["email"].strip().lower()
-                existing = self.user_repo.get_by_email(update_data["email"])
+            if email is not None:
+                existing = self.user_repo.get_by_email(email)
                 if existing and existing.id != user.id:
-                    raise ConflictError(f"Email '{kwargs['email']}' already exists")
+                    raise ConflictError(f"Email '{request.email}' already exists")
 
-            password = update_data.pop("password", None)
-            if password:
-                update_data["hashed_password"] = hash_password(password)
-
-            user = self.user_repo.update(user, **update_data)
+            password = request.password
+            user = self.user_repo.update(
+                user,
+                username=username,
+                email=email,
+                first_name=request.first_name,
+                last_name=request.last_name,
+                status=request.status,
+                is_active=request.is_active,
+                hashed_password=hash_password(password) if password else None,
+            )
             self.user_repo.flush()
             self.user_repo.refresh(user)
             new_state = self._state(user)
@@ -289,10 +299,7 @@ class UserService:
     def delete_user(self, user_id: int, actor: User) -> None:
         """Delete a user from the admin panel."""
         if actor.id == user_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="You cannot delete your own account",
-            )
+            raise BadRequestError("You cannot delete your own account")
 
         try:
             user = self.get_user_by_id(user_id)

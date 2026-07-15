@@ -1,4 +1,5 @@
 """User model for core data domain."""
+
 from datetime import datetime
 
 from sqlalchemy import DateTime, String, func

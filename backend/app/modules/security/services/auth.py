@@ -1,6 +1,11 @@
-from fastapi import HTTPException, status
-
 from app.core.audit import AuditEntry, AuditPort, EntityType, calculate_delta
+from app.core.errors import (
+    APIError,
+    AuthenticationError,
+    BadRequestError,
+    ConflictError,
+    ValidationException,
+)
 from app.modules.core_data.audit_state import user_audit_state
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
@@ -80,17 +85,13 @@ class AuthService:
             if recruitment_token and not is_valid_recruitment_access_token(
                 recruitment_token
             ):
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    detail="Link rekrutacyjny jest nieprawidłowy lub nieaktualny",
+                raise ValidationException(
+                    "Link rekrutacyjny jest nieprawidłowy lub nieaktualny"
                 )
 
             # Check if user already exists
             if self.repo.get_by_username(normalized_username):
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=f"Username '{username}' already exists",
-                )
+                raise ConflictError(f"Username '{username}' already exists")
             existing_email_user = self.repo.get_by_email(normalized_email)
             is_migrated_candidate = bool(
                 existing_email_user
@@ -98,10 +99,7 @@ class AuthService:
                 and existing_email_user.hashed_password == MIGRATED_RECRUITMENT_PASSWORD
             )
             if existing_email_user and not is_migrated_candidate:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=f"Email '{email}' already exists",
-                )
+                raise ConflictError(f"Email '{email}' already exists")
 
             # Hash password
             hashed_password = hash_password(password)
@@ -144,7 +142,7 @@ class AuthService:
             )
             self.repo.commit()
             return user
-        except HTTPException:
+        except APIError:
             self.repo.rollback()
             raise
         except Exception:
@@ -168,10 +166,7 @@ class AuthService:
                 user.hashed_password,
             )
         ):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials",
-            )
+            raise AuthenticationError("Invalid credentials")
         return self._issue_tokens(user)
 
     def update_profile(self, user: User, data: ProfileUpdateRequest) -> User:
@@ -179,36 +174,27 @@ class AuthService:
         try:
             if data.new_password:
                 if not data.current_password:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Podaj obecne hasło, aby je zmienić.",
-                    )
+                    raise BadRequestError("Podaj obecne hasło, aby je zmienić.")
                 if not verify_password(data.current_password, user.hashed_password):
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Nieprawidłowe obecne hasło.",
-                    )
+                    raise BadRequestError("Nieprawidłowe obecne hasło.")
 
             if data.email and data.email != user.email:
                 normalized_email = data.email.strip().lower()
                 existing = self.repo.get_by_email(normalized_email)
                 if existing and existing.id != user.id:
-                    raise HTTPException(
-                        status_code=status.HTTP_409_CONFLICT,
-                        detail=f"Email '{data.email}' already exists",
-                    )
+                    raise ConflictError(f"Email '{data.email}' already exists")
                 data.email = normalized_email
 
             old_state = self._state(user)
-            update_fields = {
-                "email": data.email,
-                "first_name": data.first_name,
-                "last_name": data.last_name,
-            }
-            if data.new_password:
-                update_fields["hashed_password"] = hash_password(data.new_password)
-
-            user = self.repo.update(user, **update_fields)
+            user = self.repo.update(
+                user,
+                email=data.email,
+                first_name=data.first_name,
+                last_name=data.last_name,
+                hashed_password=(
+                    hash_password(data.new_password) if data.new_password else None
+                ),
+            )
             self.repo.flush()
             self.repo.refresh(user)
             new_state = self._state(user)
@@ -231,7 +217,7 @@ class AuthService:
             )
             self.repo.commit()
             return user
-        except HTTPException:
+        except APIError:
             self.repo.rollback()
             raise
         except Exception:
@@ -241,11 +227,11 @@ class AuthService:
     def refresh(self, refresh_token: str) -> Token:
         payload = self.token_service.decode_token(refresh_token)
         if not payload or payload.get("type") != "refresh":
-            raise HTTPException(status_code=401, detail="Invalid refresh token")
+            raise AuthenticationError("Invalid refresh token")
         user_id = payload.get("sub")
         if not isinstance(user_id, str):
-            raise HTTPException(status_code=401, detail="Invalid refresh token")
+            raise AuthenticationError("Invalid refresh token")
         user = self.repo.get_by_id(int(user_id))
         if not user or not user.is_active:
-            raise HTTPException(status_code=401, detail="User not found")
+            raise AuthenticationError("User not found")
         return self._issue_tokens(user)

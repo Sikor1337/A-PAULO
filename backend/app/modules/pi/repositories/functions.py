@@ -50,17 +50,24 @@ class FunctionRepository(SQLRepository):
 
         return query.scalar() or 0
 
-    def create(self, **kwargs) -> Function:
+    def create(self, *, name: str) -> Function:
         """Create new function."""
-        function = Function(**kwargs)
+        function = Function(name=name)
         self.session.add(function)
         return function
 
-    def update(self, function: Function, **kwargs) -> Function:
+    def update(
+        self,
+        function: Function,
+        *,
+        name: str | None,
+        is_active: bool | None,
+    ) -> Function:
         """Update function."""
-        for key, value in kwargs.items():
-            if hasattr(function, key):
-                setattr(function, key, value)
+        if name is not None:
+            function.name = name
+        if is_active is not None:
+            function.is_active = is_active
         return function
 
     def delete(self, function: Function) -> None:

@@ -7,9 +7,7 @@ from app.modules.recruitment.beneficiary_constants import (
 
 
 def _headers() -> dict[str, str]:
-    return {
-        BENEFICIARY_RECRUITMENT_TOKEN_HEADER: get_beneficiary_access_token()
-    }
+    return {BENEFICIARY_RECRUITMENT_TOKEN_HEADER: get_beneficiary_access_token()}
 
 
 def _answers() -> dict:

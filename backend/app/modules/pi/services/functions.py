@@ -3,6 +3,10 @@
 from app.core.errors import ConflictError, NotFoundError, ValidationException
 from app.modules.pi.models.function import Function
 from app.modules.pi.repositories.functions import FunctionRepository
+from app.modules.pi.schemas.functions import (
+    FunctionCreateRequest,
+    FunctionUpdateRequest,
+)
 
 
 class FunctionService:
@@ -32,10 +36,10 @@ class FunctionService:
         count = self.repo.count(name=name, is_active=is_active)
         return functions, count
 
-    def create_function(self, **kwargs) -> Function:
+    def create_function(self, request: FunctionCreateRequest) -> Function:
         """Create new function."""
         try:
-            name = kwargs.get("name", "").strip()
+            name = request.name.strip()
             if not name:
                 raise ValidationException("Function name is required")
             if self.repo.get_by_name(name):
@@ -50,21 +54,25 @@ class FunctionService:
             self.repo.rollback()
             raise
 
-    def update_function(self, function_id: int, **kwargs) -> Function:
+    def update_function(
+        self, function_id: int, request: FunctionUpdateRequest
+    ) -> Function:
         """Update function."""
         try:
             function = self.get_function_by_id(function_id)
 
-            if "name" in kwargs and kwargs["name"] is not None:
-                name = kwargs["name"].strip()
+            name = request.name.strip() if request.name is not None else None
+            if name is not None:
                 if not name:
                     raise ValidationException("Function name is required")
                 existing = self.repo.get_by_name(name)
                 if existing and existing.id != function_id:
                     raise ConflictError(f"Function '{name}' already exists")
-                kwargs["name"] = name
-
-            function = self.repo.update(function, **kwargs)
+            function = self.repo.update(
+                function,
+                name=name,
+                is_active=request.is_active,
+            )
             self.repo.flush()
             self.repo.refresh(function)
             self.repo.commit(skip_audit=True)

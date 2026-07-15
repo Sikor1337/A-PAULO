@@ -1,10 +1,11 @@
 """Global error handling and custom exceptions."""
+
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 
-class APIException(Exception):
+class APIError(Exception):
     """Base exception for API errors."""
 
     def __init__(self, message: str, status_code: int = status.HTTP_400_BAD_REQUEST):
@@ -13,46 +14,50 @@ class APIException(Exception):
         super().__init__(message)
 
 
-class NotFoundError(APIException):
+class BadRequestError(APIError):
+    """Invalid operation or malformed domain request."""
+
+
+class NotFoundError(APIError):
     """Resource not found."""
 
     def __init__(self, message: str = "Resource not found"):
         super().__init__(message, status.HTTP_404_NOT_FOUND)
 
 
-class ConflictError(APIException):
+class ConflictError(APIError):
     """Resource conflict (e.g., unique constraint violation)."""
 
     def __init__(self, message: str = "Resource conflict"):
         super().__init__(message, status.HTTP_409_CONFLICT)
 
 
-class AuthenticationError(APIException):
+class AuthenticationError(APIError):
     """Authentication failed."""
 
     def __init__(self, message: str = "Authentication failed"):
         super().__init__(message, status.HTTP_401_UNAUTHORIZED)
 
 
-class PermissionError(APIException):
+class PermissionError(APIError):
     """Permission denied."""
 
     def __init__(self, message: str = "Permission denied"):
         super().__init__(message, status.HTTP_403_FORBIDDEN)
 
 
-class ValidationException(APIException):
+class ValidationException(APIError):  # noqa: N818
     """Validation error."""
 
     def __init__(self, message: str = "Validation error"):
-        super().__init__(message, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        super().__init__(message, status.HTTP_422_UNPROCESSABLE_CONTENT)
 
 
 def register_error_handlers(app: FastAPI) -> None:
     """Register global error handlers."""
 
-    @app.exception_handler(APIException)
-    async def api_exception_handler(request: Request, exc: APIException):
+    @app.exception_handler(APIError)
+    async def api_exception_handler(request: Request, exc: APIError):
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.message},
@@ -61,7 +66,7 @@ def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ValidationError)
     async def validation_exception_handler(request: Request, exc: ValidationError):
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={"detail": exc.errors()},
         )
 

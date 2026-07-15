@@ -1,4 +1,5 @@
 """Task schemas."""
+
 from datetime import date, datetime
 from typing import Self
 
@@ -30,9 +31,7 @@ class TaskCreateRequest(BaseModel):
         if not isinstance(value, list):
             return value
         return [
-            label.strip()
-            for label in value
-            if isinstance(label, str) and label.strip()
+            label.strip() for label in value if isinstance(label, str) and label.strip()
         ]
 
 

@@ -40,8 +40,8 @@ class PermissionRepository(SQLRepository):
     def get_group_by_system_key(self, system_key: str) -> UserGroup | None:
         return self.session.query(UserGroup).filter_by(system_key=system_key).first()
 
-    def create_group(self, **values) -> UserGroup:
-        group = UserGroup(**values)
+    def create_group(self, *, name: str, description: str) -> UserGroup:
+        group = UserGroup(name=name, description=description)
         self.session.add(group)
         return group
 

@@ -4,7 +4,7 @@ import re
 import unicodedata
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, cast
 
 from app.core.errors import ConflictError, NotFoundError
 from app.modules.recruitment.schemas.form_fields import FormFieldWrite
@@ -75,22 +75,21 @@ class ConfigurableFormFieldService[
         self,
         repo: FormFieldRepository[FieldT],
         *,
-        defaults: Sequence[Mapping[str, Any]],
+        system_field_is_valid: Callable[[FieldT, DraftT], bool],
         errors: FieldSaveErrors,
     ) -> None:
         self._form_field_repo = repo
-        self._form_field_defaults = defaults
+        self._system_field_is_valid = system_field_is_valid
         self._form_field_errors = errors
 
     def list_fields(self, *, active_only: bool = False) -> list[FieldT]:
-        ensure_default_fields(self._form_field_repo, self._form_field_defaults)
         return self._form_field_repo.list_fields(active_only=active_only)
 
     def save_fields(self, drafts: list[DraftT]) -> list[FieldT]:
-        ensure_default_fields(self._form_field_repo, self._form_field_defaults)
         return save_field_drafts(
             self._form_field_repo,
             drafts,
+            system_field_is_valid=self._system_field_is_valid,
             errors=self._form_field_errors,
         )
 
@@ -114,10 +113,16 @@ def allocate_field_key(label: str, used_keys: set[str]) -> str:
     return key
 
 
-def save_field_drafts[FieldT: FormFieldEntity, DraftT: FormFieldDraft](
+def _as_form_field(field: object) -> FormFieldEntity:
+    """Expose mapped ORM fields through the structural editor contract."""
+    return cast(FormFieldEntity, field)
+
+
+def save_field_drafts[FieldT, DraftT: FormFieldDraft](
     repo: FormFieldRepository[FieldT],
     drafts: Sequence[DraftT],
     *,
+    system_field_is_valid: Callable[[FieldT, DraftT], bool],
     errors: FieldSaveErrors,
 ) -> list[FieldT]:
     """Replace the editable form definition in one transaction."""
@@ -156,11 +161,7 @@ def save_field_drafts[FieldT: FormFieldEntity, DraftT: FormFieldDraft](
 
             field = by_id[draft.id]
             field_data = _as_form_field(field)
-            if field_data.is_system and (
-                draft.field_type != field_data.field_type
-                or draft.required != field_data.required
-                or not draft.is_active
-            ):
+            if field_data.is_system and not system_field_is_valid(field, draft):
                 raise ConflictError(errors.invalid_system_field)
             field_data.label = draft.label
             field_data.field_type = draft.field_type

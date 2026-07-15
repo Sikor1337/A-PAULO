@@ -1,4 +1,5 @@
 """Pydantic schemas for users."""
+
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field

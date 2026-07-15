@@ -5,7 +5,6 @@ from datetime import date
 from typing import Any
 
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
 from app.core.errors import ConflictError, NotFoundError, ValidationException
 from app.modules.core_data.models import User
@@ -34,9 +33,23 @@ class DepartureAnswerField:
 class DepartureService(
     ConfigurableFormFieldService[DepartureField, DepartureFieldDraft]
 ):
-    def __init__(self, session: Session):
-        self.session = session
-        self.repo = DepartureRepository(session)
+    def __init__(self, repo: DepartureRepository):
+        self.repo = repo
+        super().__init__(
+            repo,
+            system_field_is_valid=lambda field, draft: (
+                draft.field_type == field.field_type
+                and draft.required == field.required
+                and draft.is_active
+            ),
+            errors=FieldSaveErrors(
+                unknown_field="Nie znaleziono pola ankiety odejścia",
+                missing_system_field="Nie można usunąć podstawowych pól ankiety",
+                invalid_system_field=(
+                    "Podstawowe pola muszą zachować typ, wymagalność i aktywność"
+                ),
+            ),
+        )
 
     def list_fields(self, *, active_only: bool = False) -> list[DepartureField]:
         return self.repo.list_fields(active_only=active_only)
@@ -44,7 +57,12 @@ class DepartureService(
     def save_fields(self, drafts: list[DepartureFieldDraft]) -> list[DepartureField]:
         return save_field_drafts(
             self.repo,
-            defaults=DEFAULT_DEPARTURE_FIELDS,
+            drafts,
+            system_field_is_valid=lambda field, draft: (
+                draft.field_type == field.field_type
+                and draft.required == field.required
+                and draft.is_active
+            ),
             errors=FieldSaveErrors(
                 unknown_field="Nie znaleziono pola ankiety odejścia",
                 missing_system_field="Nie można usunąć podstawowych pól ankiety",
@@ -162,10 +180,10 @@ class DepartureService(
             self.repo.commit(skip_audit=True)
             return self.get_interview(interview.id)
         except IntegrityError as error:
-            self.session.rollback()
+            self.repo.rollback()
             raise ConflictError("Ankieta odejścia już istnieje") from error
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def get_self_service(self, user: User) -> dict:
@@ -207,7 +225,7 @@ class DepartureService(
             self.repo.commit(skip_audit=True)
             return self.get_interview(interview.id)
         except Exception:
-            self.session.rollback()
+            self.repo.rollback()
             raise
 
     def list_interviews(self, *, skip: int, limit: int) -> list[DepartureInterview]:

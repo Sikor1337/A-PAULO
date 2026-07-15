@@ -1,6 +1,6 @@
 """Function schemas for PI domain."""
+
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -14,8 +14,8 @@ class FunctionCreateRequest(BaseModel):
 class FunctionUpdateRequest(BaseModel):
     """Function update request."""
 
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    is_active: Optional[bool] = None
+    name: str | None = Field(None, min_length=1, max_length=100)
+    is_active: bool | None = None
 
 
 class FunctionResponse(BaseModel):

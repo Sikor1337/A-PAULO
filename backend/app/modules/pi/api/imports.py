@@ -19,9 +19,7 @@ def _csv_attachment(template: CsvTemplate) -> Response:
     return Response(
         content=template.content.encode("utf-8-sig"),
         media_type="text/csv; charset=utf-8",
-        headers={
-            "Content-Disposition": f'attachment; filename="{template.filename}"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="{template.filename}"'},
     )
 
 

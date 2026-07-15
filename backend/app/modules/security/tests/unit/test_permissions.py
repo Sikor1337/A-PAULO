@@ -1,13 +1,17 @@
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.errors import BadRequestError
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories import UserRepository
 from app.modules.security.models import Permission, UserGroup
 from app.modules.security.repositories import PermissionRepository
+from app.modules.security.schemas.permissions import (
+    UserGroupSaveRequest,
+    UserGroupUpdateRequest,
+)
 from app.modules.security.services.permissions import PermissionService
 
 
@@ -59,8 +63,12 @@ def test_system_group_definition_cannot_be_modified(db_session: Session) -> None
     db_session.add(group)
     db_session.commit()
 
-    with pytest.raises(HTTPException) as error:
-        _service(db_session).update_group(group.id, actor=group, name="Changed")
+    with pytest.raises(BadRequestError) as error:
+        _service(db_session).update_group(
+            group.id,
+            UserGroupUpdateRequest(name="Changed"),
+            actor=group,
+        )
 
     assert error.value.status_code == 400
 
@@ -77,7 +85,7 @@ def test_system_group_permission_matrix_cannot_be_modified(
     db_session.add(group)
     db_session.commit()
 
-    with pytest.raises(HTTPException) as error:
+    with pytest.raises(BadRequestError) as error:
         _service(db_session).replace_group_permissions(group.id, [], actor=group)
 
     assert error.value.status_code == 400
@@ -110,10 +118,12 @@ def test_staff_group_permissions_are_editable_but_metadata_stays_locked(
 
     saved = service.save_group(
         group.id,
-        name="Staff",
-        description="Protected",
-        permission_codes=["CAN_VIEW_USERS", "CAN_MANAGE_USERS"],
-        user_ids=[],
+        UserGroupSaveRequest(
+            name="Staff",
+            description="Protected",
+            permission_codes=["CAN_VIEW_USERS", "CAN_MANAGE_USERS"],
+            user_ids=[],
+        ),
         actor=actor,
     )
     assert {permission.code for permission in saved["permissions"]} == {
@@ -121,13 +131,15 @@ def test_staff_group_permissions_are_editable_but_metadata_stays_locked(
         "CAN_MANAGE_USERS",
     }
 
-    with pytest.raises(HTTPException) as error:
+    with pytest.raises(BadRequestError) as error:
         service.save_group(
             group.id,
-            name="Inna nazwa",
-            description="Protected",
-            permission_codes=["CAN_VIEW_USERS", "CAN_MANAGE_USERS"],
-            user_ids=[],
+            UserGroupSaveRequest(
+                name="Inna nazwa",
+                description="Protected",
+                permission_codes=["CAN_VIEW_USERS", "CAN_MANAGE_USERS"],
+                user_ids=[],
+            ),
             actor=actor,
         )
     assert error.value.status_code == 400
