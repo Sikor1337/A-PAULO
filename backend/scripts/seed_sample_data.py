@@ -11,7 +11,7 @@ from app.core.config import get_settings
 from app.modules.core_data.models import User
 from app.modules.core_data.repositories.users import UserRepository
 from app.modules.pi.models.beneficiary import Beneficiary
-from app.modules.pi.models.group import Group, group_volunteer
+from app.modules.pi.models.group import BeneficiaryAssignment, Group, group_volunteer
 from app.modules.pi.models.volunteer import Volunteer
 from app.modules.recruitment.constants import ONBOARDING_MEETING_TYPES
 from app.modules.recruitment.models import (
@@ -101,16 +101,21 @@ def load_sample_data(session: Session) -> None:
         .order_by(Group.system_key)
         .all()
     )
-    session.execute(
-        group_volunteer.insert(),
-        [
+    members_by_group: dict[int, list[Volunteer]] = {group.id: [] for group in groups}
+    group_membership_rows = []
+    for index, volunteer in enumerate(volunteers):
+        group = groups[index % len(groups)]
+        if index < len(groups):
+            group.leader_id = volunteer.id
+        members_by_group[group.id].append(volunteer)
+        group_membership_rows.append(
             {
-                "group_id": groups[index % len(groups)].id,
+                "group_id": group.id,
                 "volunteer_id": volunteer.id,
             }
-            for index, volunteer in enumerate(volunteers)
-        ],
-    )
+        )
+
+    session.execute(group_volunteer.insert(), group_membership_rows)
 
     beneficiary_names = [
         "Zofia Przykładowa",
@@ -142,6 +147,23 @@ def load_sample_data(session: Session) -> None:
     ]
     session.add_all(beneficiaries)
     session.flush()
+    beneficiary_assignments = []
+    for index, beneficiary in enumerate(beneficiaries, start=1):
+        if beneficiary.group_id is None:
+            raise RuntimeError("Seeded beneficiary must belong to a group")
+        group_members = members_by_group[beneficiary.group_id]
+        main_volunteer = group_members[
+            ((index - 1) // len(groups)) % len(group_members)
+        ]
+        beneficiary_assignments.append(
+            BeneficiaryAssignment(
+                beneficiary_id=beneficiary.id,
+                volunteer_id=main_volunteer.id,
+                is_main=True,
+                additional_info="Glowny kontakt z danych demonstracyjnych.",
+            )
+        )
+    session.add_all(beneficiary_assignments)
 
     fields = session.query(RecruitmentField).order_by(RecruitmentField.position).all()
     answer_values = {
